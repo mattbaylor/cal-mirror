@@ -1,0 +1,18 @@
+# Build artifacts
+*.app/
+*.bin
+
+# Local runtime data (never commit real calendar config / logs)
+config.json
+status.json
+*.log
+
+# Signing / secrets
+*.certSigningRequest
+*.p12
+*.cer
+*.mobileprovision
+*.key
+
+# macOS
+.DS_Store

@@ -1,0 +1,16 @@
+{
+  "paused": false,
+  "intervalSeconds": 900,
+  "mirrors": [
+    {
+      "id": "work",
+      "name": "Work → Personal",
+      "source": { "title": "Work",        "account": "you@work.example.com" },
+      "dest":   { "title": "Work (Copy)",  "account": "you@personal.example.com" },
+      "enabled": true,
+      "showHeartbeat": true,
+      "windowPastDays": 30,
+      "windowFutureDays": 365
+    }
+  ]
+}
