@@ -1,6 +1,7 @@
 # Build artifacts
 *.app/
 *.bin
+dist/
 
 # Local runtime data (never commit real calendar config / logs)
 config.json

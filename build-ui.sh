@@ -15,6 +15,11 @@ rm -f /tmp/CalMirrorMenu.bin
 
 echo "==> Signing"
 SIGN_ID="${CM_SIGN_ID:--}"
-codesign -s "$SIGN_ID" --force --deep "$APP"
-[ "$SIGN_ID" = "-" ] && echo "    ad-hoc signed (set CM_SIGN_ID to a Developer ID to persist Calendar access)"
+if [ "$SIGN_ID" = "-" ]; then
+  codesign -s - --force --deep "$APP"
+  echo "    ad-hoc signed (set CM_SIGN_ID to a Developer ID to persist Calendar access)"
+else
+  codesign -s "$SIGN_ID" --force --deep --options runtime --timestamp "$APP"
+  echo "    signed: $SIGN_ID (hardened runtime)"
+fi
 echo "    built: $APP"

@@ -148,6 +148,26 @@ Icon = worst mirror: ✓ ok · ⚠︎ stale (last run > 2× interval) · ✗ err
 - A stable code-signing identity ties the grant to the app so it **survives rebuilds**. Ad-hoc signatures change every build and re-prompt; set `CM_SIGN_ID` to a Developer ID to avoid that.
 - **TCC tip:** if a prompt won't appear, macOS has muted it (usually from rapid repeat requests). Reset with `killall tccd; tccutil reset Calendar <bundle-id>`, unload the agents, then launch **one** instance via `open`. Verify via a scheduled (launchd) run — a direct shell exec is attributed to the shell and shows a false “denied”.
 
+## 📦 Releases (maintainers)
+
+Signed **and notarized** builds pass Gatekeeper with no warning. One-time, store
+a notary credential (an [app-specific password](https://support.apple.com/en-us/102654)):
+
+```sh
+xcrun notarytool store-credentials cal-mirror-notary \
+  --apple-id "you@example.com" --team-id "YOURTEAMID" --password "xxxx-xxxx-xxxx-xxxx"
+```
+
+Then build → notarize → staple → package, and publish:
+
+```sh
+CM_SIGN_ID="Developer ID Application: Your Name (TEAMID)" ./release.sh v1.0.0
+gh release create v1.0.0 dist/*-v1.0.0.zip -t v1.0.0 -n "Signed & notarized build."
+```
+
+`release.sh` signs with hardened runtime + secure timestamp, submits each app to
+Apple, staples the ticket, and drops zips in `./dist`.
+
 ## 🧑‍💻 Development
 
 Pure Swift, no package manager — two single-file targets built with `swiftc`:
