@@ -39,6 +39,11 @@ final class AppModel: ObservableObject {
         BackgroundSync.schedule(after: TimeInterval(config.intervalSeconds))
     }
 
+    /// Would a (source -> dest) mirror reverse an existing one? Returns it.
+    func wouldReverse(source: CalRef, dest: CalRef, excluding id: String) -> Mirror? {
+        engine.reverseConflict(source: source, dest: dest, in: config.mirrors, excluding: id)
+    }
+
     func addMirror() {
         config.mirrors.append(Mirror(
             id: "m\(Int(Date().timeIntervalSince1970))", name: "New mirror",

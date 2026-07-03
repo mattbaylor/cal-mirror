@@ -46,9 +46,42 @@ public final class MirrorEngine {
     @discardableResult
     public func syncAll(_ config: Config, now: Date = Date(),
                         log: ((String) -> Void)? = nil) -> [MirrorResult] {
-        config.mirrors.map { m in
-            m.enabled ? syncMirror(m, allMirrors: config.mirrors, now: now, log: log)
-                      : MirrorResult(id: m.id, name: m.name, ok: true, error: "disabled")
+        let reversed = reversedMirrorIds(in: config)
+        return config.mirrors.map { m in
+            if !m.enabled { return MirrorResult(id: m.id, name: m.name, ok: true, error: "disabled") }
+            if reversed.contains(m.id) {
+                log?("[\(m.id)] REFUSED: reverse of another mirror — would create a copy loop")
+                return MirrorResult(id: m.id, name: m.name, ok: false,
+                                    error: "Reverse of another mirror — refused to avoid a loop")
+            }
+            return syncMirror(m, allMirrors: config.mirrors, now: now, log: log)
+        }
+    }
+
+    /// Mirror ids that form an A->B / B->A reverse pair — both sides are refused.
+    private func reversedMirrorIds(in config: Config) -> Set<String> {
+        func pair(_ m: Mirror) -> (String, String)? {
+            guard let s = findCalendar(m.source)?.calendarIdentifier,
+                  let d = findCalendar(m.dest)?.calendarIdentifier else { return nil }
+            return (s, d)
+        }
+        let pairs = config.mirrors.filter { $0.enabled }.compactMap { m in pair(m).map { (m.id, $0) } }
+        var rev = Set<String>()
+        for a in pairs { for b in pairs where b.0 != a.0 {
+            if b.1.0 == a.1.1 && b.1.1 == a.1.0 { rev.insert(a.0); rev.insert(b.0) } } }
+        return rev
+    }
+
+    /// For the UI: would a (source -> dest) mirror reverse an existing one?
+    /// Returns the conflicting mirror if so.
+    public func reverseConflict(source: CalRef, dest: CalRef,
+                                in mirrors: [Mirror], excluding id: String? = nil) -> Mirror? {
+        guard let s = findCalendar(source)?.calendarIdentifier,
+              let d = findCalendar(dest)?.calendarIdentifier else { return nil }
+        return mirrors.first { m in
+            m.id != id
+                && findCalendar(m.source)?.calendarIdentifier == d
+                && findCalendar(m.dest)?.calendarIdentifier == s
         }
     }
 
@@ -175,7 +208,7 @@ public final class MirrorEngine {
             let ev = heartbeat ?? EKEvent(eventStore: store)
             ev.calendar = dest
             ev.isAllDay = true; ev.startDate = dayStart; ev.endDate = dayStart
-            ev.title = "🔄 \(m.name) ✓ \(r.total) events · \(tf.string(from: now))"
+            ev.title = "🗓️ \(m.name) ✓ \(r.total) events · \(tf.string(from: now))"
             ev.url = Markers.heartbeatURL(mirrorId: m.id)
             try? store.save(ev, span: .thisEvent, commit: true)
         }

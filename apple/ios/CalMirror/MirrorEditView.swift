@@ -4,6 +4,7 @@ import CalMirrorKit
 struct MirrorEditView: View {
     @EnvironmentObject var model: AppModel
     @Binding var mirror: Mirror
+    @State private var conflict: String?
 
     var body: some View {
         Form {
@@ -19,6 +20,10 @@ struct MirrorEditView: View {
                 Picker("Destination", selection: destSelection) {
                     Text("— choose —").tag("")
                     ForEach(model.calendars.filter { $0.writable }) { Text($0.label).tag($0.identifier) }
+                }
+                if let conflict {
+                    Label(conflict, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red).font(.caption)
                 }
             }
             Section("Options") {
@@ -45,9 +50,12 @@ struct MirrorEditView: View {
         Binding(
             get: { identifier(forTitle: mirror.source.title, account: mirror.source.account) },
             set: { id in
-                if let c = model.calendars.first(where: { $0.identifier == id }) {
-                    mirror.source = CalRef(title: c.title, account: c.account); model.save()
+                guard let c = model.calendars.first(where: { $0.identifier == id }) else { return }
+                let newSource = CalRef(title: c.title, account: c.account)
+                if let clash = model.wouldReverse(source: newSource, dest: mirror.dest, excluding: mirror.id) {
+                    conflict = "Can’t reverse “\(clash.name)” — the copy would loop back."; return
                 }
+                conflict = nil; mirror.source = newSource; model.save()
             })
     }
 
@@ -55,9 +63,12 @@ struct MirrorEditView: View {
         Binding(
             get: { identifier(forTitle: mirror.dest.title, account: mirror.dest.account) },
             set: { id in
-                if let c = model.calendars.first(where: { $0.identifier == id }) {
-                    mirror.dest = CalRef(title: c.title, account: c.account); model.save()
+                guard let c = model.calendars.first(where: { $0.identifier == id }) else { return }
+                let newDest = CalRef(title: c.title, account: c.account)
+                if let clash = model.wouldReverse(source: mirror.source, dest: newDest, excluding: mirror.id) {
+                    conflict = "Can’t reverse “\(clash.name)” — the copy would loop back."; return
                 }
+                conflict = nil; mirror.dest = newDest; model.save()
             })
     }
 
