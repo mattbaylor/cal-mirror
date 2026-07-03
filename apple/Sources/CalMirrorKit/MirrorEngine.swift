@@ -59,17 +59,15 @@ public final class MirrorEngine {
     }
 
     /// Mirror ids that form an A->B / B->A reverse pair — both sides are refused.
+    /// Resolves each mirror to calendar identifiers, then defers to the pure
+    /// `ReverseDetector` (unit-tested without EventKit).
     private func reversedMirrorIds(in config: Config) -> Set<String> {
-        func pair(_ m: Mirror) -> (String, String)? {
+        let pairs: [ReverseDetector.Pair] = config.mirrors.filter { $0.enabled }.compactMap { m in
             guard let s = findCalendar(m.source)?.calendarIdentifier,
                   let d = findCalendar(m.dest)?.calendarIdentifier else { return nil }
-            return (s, d)
+            return ReverseDetector.Pair(id: m.id, source: s, dest: d)
         }
-        let pairs = config.mirrors.filter { $0.enabled }.compactMap { m in pair(m).map { (m.id, $0) } }
-        var rev = Set<String>()
-        for a in pairs { for b in pairs where b.0 != a.0 {
-            if b.1.0 == a.1.1 && b.1.1 == a.1.0 { rev.insert(a.0); rev.insert(b.0) } } }
-        return rev
+        return ReverseDetector.reversedIds(pairs)
     }
 
     /// For the UI: would a (source -> dest) mirror reverse an existing one?

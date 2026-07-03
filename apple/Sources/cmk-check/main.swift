@@ -48,5 +48,26 @@ do {
     check(false, "config decode threw: \(error)")
 }
 
+print("ReverseDetector:")
+func P(_ id: String, _ s: String, _ d: String) -> ReverseDetector.Pair { .init(id: id, source: s, dest: d) }
+// A->B and B->A: both flagged
+do {
+    let r = ReverseDetector.reversedIds([P("a", "A", "B"), P("b", "B", "A")])
+    check(r == ["a", "b"], "A→B + B→A flags both")
+}
+// A->B and A->C: no reverse
+check(ReverseDetector.reversedIds([P("a", "A", "B"), P("c", "A", "C")]).isEmpty, "same source, different dest → none")
+// unrelated pair stays clear; only the reverse pair is flagged
+do {
+    let r = ReverseDetector.reversedIds([P("a", "A", "B"), P("b", "B", "A"), P("x", "C", "D")])
+    check(r == ["a", "b"], "unrelated mirror not flagged")
+}
+check(ReverseDetector.reversedIds([P("a", "A", "B")]).isEmpty, "single mirror → none")
+// 3-cycle (A→B→C→A) is NOT a direct reverse — documents the intentional limit
+check(ReverseDetector.reversedIds([P("a", "A", "B"), P("b", "B", "C"), P("c", "C", "A")]).isEmpty,
+      "3-way cycle not treated as a reverse pair (by design)")
+// self-referential (source == dest) is not a reverse of itself
+check(ReverseDetector.reversedIds([P("a", "A", "A")]).isEmpty, "source==dest is not a reverse")
+
 print(failures == 0 ? "\nALL CHECKS PASSED" : "\n\(failures) CHECK(S) FAILED")
 exit(failures == 0 ? 0 : 1)
