@@ -3,10 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cal-mirror — mirror any Mac calendar into any other</title>
-<meta name="description" content="A macOS menu-bar utility that mirrors any calendar into any other — one-way, idempotent, no credentials. Signed &amp; notarized.">
+<title>cal-mirror — keep a copy of one Mac calendar inside another</title>
+<meta name="description" content="A small Mac app that keeps a one-way copy of one calendar inside another. Your original is never touched, and nothing leaves your Mac. Free and open source.">
+<link rel="icon" href="icon.png">
 <meta property="og:title" content="cal-mirror">
-<meta property="og:description" content="Mirror any Mac calendar into any other — one-way, idempotent, with a menu-bar UI.">
+<meta property="og:description" content="Keep a copy of one Mac calendar inside another — one direction, nothing leaves your Mac.">
+<meta property="og:image" content="icon.png">
 <meta property="og:type" content="website">
 <style>
   :root{
@@ -31,8 +33,7 @@
 
   nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
   .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
-  .brand .logo{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;
-    background:linear-gradient(135deg,var(--accent),var(--accent2));font-size:17px}
+  .brand .logo{width:30px;height:30px;border-radius:8px;display:block}
   .nav-links{display:flex;gap:22px;align-items:center;font-size:14px;color:var(--mut)}
   .nav-links a{text-decoration:none}.nav-links a:hover{color:var(--tx)}
 
@@ -40,9 +41,9 @@
   .pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
   .pill{font-size:12px;color:var(--mut);border:1px solid var(--line);background:var(--card);
     padding:5px 11px;border-radius:999px}
-  h1{font-size:clamp(38px,6vw,66px);line-height:1.02;margin:.1em 0 .18em;letter-spacing:-1.4px;font-weight:800}
+  h1{font-size:clamp(38px,6vw,64px);line-height:1.04;margin:.1em 0 .18em;letter-spacing:-1.3px;font-weight:800}
   .grad{background:linear-gradient(120deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .lede{font-size:clamp(17px,2.4vw,21px);color:var(--mut);max-width:620px;margin:0 auto 30px}
+  .lede{font-size:clamp(17px,2.4vw,20px);color:var(--mut);max-width:640px;margin:0 auto 30px}
   .cta{display:flex;gap:13px;justify-content:center;flex-wrap:wrap}
   .btn{display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:12px;
     font-weight:650;text-decoration:none;font-size:15px;border:1px solid transparent;transition:.15s transform,.15s box-shadow}
@@ -54,8 +55,8 @@
 
   section{padding:52px 0}
   .eyebrow{font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent2);text-align:center}
-  h2{font-size:clamp(26px,3.6vw,36px);text-align:center;margin:.25em 0 .1em;letter-spacing:-.6px}
-  .muted{color:var(--mut);text-align:center;max-width:640px;margin:0 auto}
+  h2{font-size:clamp(26px,3.6vw,34px);text-align:center;margin:.25em 0 .1em;letter-spacing:-.5px}
+  .muted{color:var(--mut);text-align:center;max-width:660px;margin:0 auto}
 
   .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
   @media(max-width:820px){.grid{grid-template-columns:1fr}}
@@ -67,11 +68,8 @@
   .show{display:grid;grid-template-columns:1.05fr .95fr;gap:34px;align-items:center;margin-top:34px}
   @media(max-width:820px){.show{grid-template-columns:1fr}}
   .show h3{font-size:22px;margin:0 0 .3em;letter-spacing:-.4px}
-  .show p{color:var(--mut);margin:.2em 0}
-  .show ul{color:var(--mut);padding-left:18px;margin:.6em 0 0}
-  .show li{margin:.3em 0}
+  .show p{color:var(--mut);margin:.5em 0}
 
-  /* macOS menu mockup */
   .menu{background:var(--card2);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
     padding:7px;font-size:13.5px;max-width:340px;margin:0 auto;width:100%}
   .menu .row{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px}
@@ -81,7 +79,6 @@
   .menu .sep{height:1px;background:var(--line);margin:5px 8px}
   .menu .sp{margin-left:auto;color:var(--dim);font-size:12px}
   .menu .sel .sp{color:#06121f;opacity:.8}
-  .chk{color:var(--good)}
 
   .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
   @media(max-width:820px){.steps{grid-template-columns:1fr}}
@@ -91,7 +88,7 @@
   .step h3{margin:.1em 0 .3em;font-size:16px}.step p{margin:0;color:var(--mut);font-size:14px}
 
   pre{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow:auto;
-    font:13.5px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--tx);max-width:720px;margin:22px auto 0}
+    font:13.5px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--tx);max-width:640px;margin:18px auto 0}
   pre .c{color:var(--dim)}pre .k{color:var(--accent2)}
 
   footer{border-top:1px solid var(--line);margin-top:30px;padding:28px 0 46px;color:var(--dim);
@@ -103,11 +100,11 @@
 <div class="wrap">
 
   <nav>
-    <div class="brand"><span class="logo">🔄</span> cal-mirror</div>
+    <div class="brand"><img class="logo" src="icon.png" alt="cal-mirror icon"> cal-mirror</div>
     <div class="nav-links">
-      <a href="#features">Features</a>
+      <a href="#what">What it does</a>
       <a href="#how">How it works</a>
-      <a href="#install">Install</a>
+      <a href="#get">Get it</a>
       <a href="https://github.com/mattbaylor/cal-mirror">GitHub ↗</a>
     </div>
   </nav>
@@ -115,98 +112,96 @@
   <header class="hero">
     <div class="pills">
       <span class="pill">macOS 14+</span>
-      <span class="pill">Swift · EventKit · SwiftUI</span>
-      <span class="pill">Signed &amp; Notarized</span>
-      <span class="pill">MIT</span>
+      <span class="pill">Nothing leaves your Mac</span>
+      <span class="pill">Notarized by Apple</span>
+      <span class="pill">Free &amp; open source</span>
     </div>
-    <h1>Mirror any Mac calendar<br>into <span class="grad">any other</span>.</h1>
-    <p class="lede">A tiny menu-bar utility that keeps a copy of one calendar in another —
-      one-way, idempotent, and scheduled. No servers, no credentials.</p>
+    <h1>Keep a copy of one calendar<br><span class="grad">inside another</span>.</h1>
+    <p class="lede">Point cal-mirror at a calendar you can see but can't share — a work
+      schedule, a subscribed feed — and it keeps an up-to-date copy in a calendar you
+      control. It only copies one way, so your original is never touched.</p>
     <div class="cta">
-      <a class="btn primary" href="https://github.com/mattbaylor/cal-mirror/releases/latest">⬇ Download for macOS</a>
+      <a class="btn primary" href="https://github.com/mattbaylor/cal-mirror/releases/latest">Download for macOS</a>
       <a class="btn ghost" href="https://github.com/mattbaylor/cal-mirror">View source</a>
     </div>
-    <div class="sub">Notarized by Apple · opens with no Gatekeeper warning</div>
+    <div class="sub">Notarized by Apple — it opens with no warning.</div>
   </header>
 
-  <section id="features">
-    <div class="eyebrow">Why</div>
-    <h2>A re-shareable copy of a calendar you can't reshare</h2>
-    <p class="muted">Subscribed work feeds, read-only team calendars, accounts you don't control —
-      cal-mirror makes an editable copy on a calendar you do, then lets macOS sync it wherever that account goes.</p>
+  <section id="what">
+    <div class="eyebrow">What it does</div>
+    <h2>A copy you can actually use</h2>
+    <p class="muted">Some calendars you can see but not share: a subscribed work schedule, a
+      read-only team calendar, an account that isn't yours. cal-mirror copies one into a
+      calendar you own — so you can reshare it, recolor it, or just see it beside everything
+      else. And because the copy lives in your own account, it shows up on your phone and
+      other devices on its own.</p>
     <div class="grid">
-      <div class="card"><div class="ic">↔️</div><h3>Any → any</h3><p>Mirror any calendar into any other. Configure as many pairs as you like.</p></div>
-      <div class="card"><div class="ic">♻️</div><h3>Idempotent &amp; one-way</h3><p>Re-runs never duplicate. The source is authoritative and is never written to.</p></div>
-      <div class="card"><div class="ic">🔁</div><h3>Recurring-safe</h3><p>Recurring events are expanded into occurrences — no RRULE translation, exceptions resolved.</p></div>
-      <div class="card"><div class="ic">🛡️</div><h3>Non-destructive</h3><p>Each pair tags only its own copies, so shared destinations and hand-added events stay safe.</p></div>
-      <div class="card"><div class="ic">📊</div><h3>Menu-bar UI</h3><p>Health at a glance, Sync now, pause, interval, and pickers to add or edit pairs.</p></div>
-      <div class="card"><div class="ic">🔑</div><h3>No credentials</h3><p>Works through EventKit on your Mac. Server sync is macOS's job, not another password.</p></div>
+      <div class="card"><div class="ic">🗓️</div><h3>Any calendar into any other</h3><p>Copy from one calendar into another, and set up as many pairs as you want.</p></div>
+      <div class="card"><div class="ic">➡️</div><h3>One direction, always</h3><p>The copy follows the original. Your original is never changed — and anything you add to the copy by hand stays put.</p></div>
+      <div class="card"><div class="ic">🔁</div><h3>Repeating events just work</h3><p>Weekly meetings, all-day events, the odd moved appointment — they all come across correctly.</p></div>
+      <div class="card"><div class="ic">🔒</div><h3>No accounts, no passwords</h3><p>It works through the calendars already set up on your Mac. Nothing to log into, nothing stored.</p></div>
+      <div class="card"><div class="ic">📊</div><h3>Lives in your menu bar</h3><p>See that it's working, update now, or pause — all from a small icon up top.</p></div>
+      <div class="card"><div class="ic">⏱️</div><h3>Runs on its own</h3><p>Pick how often it updates and forget about it. The copy stays current in the background.</p></div>
     </div>
   </section>
 
   <section>
-    <div class="eyebrow">The UI</div>
-    <h2>Everything from the menu bar</h2>
+    <div class="eyebrow">The app</div>
+    <h2>Tells you it's working, then gets out of the way</h2>
     <div class="show">
       <div class="menu" aria-hidden="true">
-        <div class="row head">cal-mirror — Last sync 2 min ago</div>
+        <div class="row head">cal-mirror — updated 2 min ago</div>
         <div class="sep"></div>
         <div class="row sel">✓&nbsp; Work → Personal <span class="sp">439 events ▸</span></div>
         <div class="sep"></div>
-        <div class="row item">Sync now</div>
-        <div class="row item">Pause syncing</div>
-        <div class="row item">Sync interval <span class="sp">15 min ▸</span></div>
+        <div class="row item">Update now</div>
+        <div class="row item">Pause</div>
+        <div class="row item">How often <span class="sp">every 15 min ▸</span></div>
         <div class="sep"></div>
-        <div class="row item">Manage mirrors…</div>
+        <div class="row item">Manage copies…</div>
         <div class="row item">Open Calendar</div>
-        <div class="row item">Open log</div>
         <div class="sep"></div>
         <div class="row item">Quit</div>
       </div>
       <div>
-        <h3>Glanceable, then out of the way</h3>
-        <p>The icon reflects the worst mirror at a glance:</p>
-        <ul>
-          <li><span class="chk">✓</span> synced recently</li>
-          <li>⚠︎ stale — last run older than twice the interval</li>
-          <li>✗ error · ⏸ paused</li>
-        </ul>
-        <p style="margin-top:.8em"><b>Manage mirrors…</b> opens a native window where you add pairs with
-          dropdowns of your actual calendars — destinations limited to writable ones. An optional all-day
-          <b>heartbeat banner</b> writes “last synced” right into the destination calendar as a liveness signal.</p>
+        <h3>One glance at the menu bar</h3>
+        <p>The icon says how things are going: a check when the copy is current, a warning if it
+          has fallen behind, a pause symbol when you've stopped it.</p>
+        <p>To add a copy, open the window and pick two calendars from your own list — the one to
+          copy from, and the one to copy into (only calendars you can edit show up as the target).</p>
+        <p>There's also an optional little note it leaves on the copy showing when it last ran, so
+          you can tell at a glance that it's still doing its job.</p>
       </div>
     </div>
   </section>
 
   <section id="how">
     <div class="eyebrow">How it works</div>
-    <h2>Three moving parts</h2>
-    <p class="muted">A scheduled engine does the sync; a menu-bar app is a thin window onto it; two small JSON files carry state.</p>
+    <h2>Three steps, then it's automatic</h2>
     <div class="steps">
-      <div class="step"><div class="n">1</div><h3>Read &amp; expand</h3><p>Each interval, the engine reads the source over a rolling window and expands recurring events into occurrences.</p></div>
-      <div class="step"><div class="n">2</div><h3>Upsert &amp; tag</h3><p>It creates/updates/deletes copies in the destination, each tagged so its sweep only touches its own events.</p></div>
-      <div class="step"><div class="n">3</div><h3>Sync out</h3><p>macOS pushes the destination up to iCloud / CalDAV / Exchange automatically — no credentials stored anywhere.</p></div>
+      <div class="step"><div class="n">1</div><h3>Pick two calendars</h3><p>Choose the one to copy from and the one to copy into — both already on your Mac.</p></div>
+      <div class="step"><div class="n">2</div><h3>It copies the events</h3><p>Every event comes across, and the copy keeps matching the original as things change — one direction only.</p></div>
+      <div class="step"><div class="n">3</div><h3>See it everywhere</h3><p>Since the copy lives in your account, it reaches your phone and other devices by itself.</p></div>
     </div>
   </section>
 
-  <section id="install">
+  <section id="get">
     <div class="eyebrow">Get it</div>
-    <h2>Download, or build from source</h2>
-    <p class="muted">Grab the notarized apps from the latest release, or clone and run the installer.</p>
-    <pre><span class="c"># From source (macOS 14+, Xcode Command Line Tools)</span>
-git clone https://github.com/mattbaylor/cal-mirror.git
-<span class="k">cd</span> cal-mirror
-./install.sh        <span class="c"># builds both apps, installs the LaunchAgents</span>
-
-<span class="c"># Then grant Calendar access when prompted, and add a pair from the menu bar.</span></pre>
-    <div class="cta" style="margin-top:26px">
-      <a class="btn primary" href="https://github.com/mattbaylor/cal-mirror/releases/latest">⬇ Download for macOS</a>
+    <h2>Download, or build it yourself</h2>
+    <p class="muted">Grab the ready-to-run app from the latest release. It's signed and checked by
+      Apple, so it opens without a fuss.</p>
+    <div class="cta" style="margin-top:24px">
+      <a class="btn primary" href="https://github.com/mattbaylor/cal-mirror/releases/latest">Download for macOS</a>
       <a class="btn ghost" href="https://github.com/mattbaylor/cal-mirror#readme">Read the docs</a>
     </div>
+    <p class="muted" style="margin-top:34px">Prefer to build it from source?</p>
+    <pre>git clone https://github.com/mattbaylor/cal-mirror.git
+<span class="k">cd</span> cal-mirror
+./install.sh</pre>
   </section>
 
   <footer>
-    <div>🔄 cal-mirror · MIT © Matt Baylor</div>
+    <div>cal-mirror · a small, private Mac utility · MIT © Matt Baylor</div>
     <div>
       <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a> ·
       <a href="https://github.com/mattbaylor/cal-mirror/releases/latest">Releases</a> ·
