@@ -12,6 +12,8 @@ rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS"
 cp "$DIR/Info-ui.plist" "$APP/Contents/Info.plist"
 cp /tmp/CalMirrorMenu.bin "$APP/Contents/MacOS/CalMirrorMenu"; chmod +x "$APP/Contents/MacOS/CalMirrorMenu"
 rm -f /tmp/CalMirrorMenu.bin
+mkdir -p "$APP/Contents/Resources"
+[ -f "$DIR/assets/AppIcon.icns" ] && cp "$DIR/assets/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
 echo "==> Signing"
 SIGN_ID="${CM_SIGN_ID:--}"

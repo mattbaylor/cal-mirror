@@ -274,6 +274,9 @@ struct ManageView: View {
         }
         .formStyle(.grouped)
         .frame(minWidth: 640, minHeight: 480)
+        // Drop back to a menu-bar-only (no Dock, no app menu) app when the
+        // management window closes. It only becomes a regular app while open.
+        .onDisappear { NSApp.setActivationPolicy(.accessory) }
     }
 }
 
