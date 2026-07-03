@@ -2,14 +2,6 @@ import SwiftUI
 import BackgroundTasks
 import CalMirrorKit
 
-/// Where the iOS app keeps its config (its own Documents container).
-enum AppPaths {
-    static var configURL: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("config.json")
-    }
-}
-
 /// Background refresh. iOS grants these *opportunistically* — this is a
 /// best-effort top-up, NOT a guaranteed schedule. The reliable path is
 /// on-open / pull-to-refresh in the UI.
@@ -26,7 +18,7 @@ enum BackgroundSync {
     static func run() async -> Bool {
         let engine = MirrorEngine()
         guard await engine.requestAccess() else { return false }
-        let cfg = ConfigStore.load(from: AppPaths.configURL)
+        let cfg = ConfigStore.load(from: Store.configURL)
         guard !cfg.paused else { return true }
         let results = engine.syncAll(cfg)
         UserDefaults.standard.set(Date(), forKey: "lastRun")
@@ -36,7 +28,7 @@ enum BackgroundSync {
 
 @main
 struct CalMirrorApp: App {
-    @StateObject private var model = AppModel()
+    @StateObject private var model = Store()
 
     var body: some Scene {
         WindowGroup {

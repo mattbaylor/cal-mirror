@@ -2,7 +2,7 @@ import SwiftUI
 import CalMirrorKit
 
 struct MirrorEditView: View {
-    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var model: Store
     @Binding var mirror: Mirror
 
     var body: some View {

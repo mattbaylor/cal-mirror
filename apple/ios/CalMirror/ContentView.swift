@@ -2,7 +2,7 @@ import SwiftUI
 import CalMirrorKit
 
 struct ContentView: View {
-    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var model: Store
     @Environment(\.scenePhase) private var phase
 
     var body: some View {

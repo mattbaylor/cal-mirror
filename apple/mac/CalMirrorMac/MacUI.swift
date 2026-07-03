@@ -4,7 +4,7 @@ import CalMirrorKit
 // MARK: - Menu bar dropdown
 
 struct MenuContent: View {
-    @ObservedObject var model: MacModel
+    @ObservedObject var model: Store
     @Environment(\.openWindow) private var openWindow
     private let intervals: [(String, Int)] = [("5 min", 300), ("15 min", 900), ("30 min", 1800), ("1 hour", 3600)]
 
@@ -59,7 +59,7 @@ struct MenuContent: View {
 // MARK: - Management window
 
 struct ManageView: View {
-    @ObservedObject var model: MacModel
+    @ObservedObject var model: Store
 
     var body: some View {
         Form {
@@ -90,7 +90,7 @@ struct ManageView: View {
 }
 
 struct MacMirrorRow: View {
-    @ObservedObject var model: MacModel
+    @ObservedObject var model: Store
     @Binding var m: Mirror
 
     var body: some View {

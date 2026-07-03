@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct CalMirrorMacApp: App {
-    @StateObject private var model = MacModel()
+    @StateObject private var model = Store()
 
     var body: some Scene {
         MenuBarExtra {
