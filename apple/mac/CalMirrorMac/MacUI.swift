@@ -92,46 +92,13 @@ struct ManageView: View {
 struct MacMirrorRow: View {
     @ObservedObject var model: MacModel
     @Binding var m: Mirror
-    @State private var conflict: String?
-
-    private func calId(_ title: String, _ account: String?) -> String {
-        if let a = account, let c = model.calendars.first(where: { $0.title == title && $0.account == a }) { return c.identifier }
-        return model.calendars.first(where: { $0.title == title })?.identifier ?? ""
-    }
-    private func picker(_ isSource: Bool) -> Binding<String> {
-        Binding(
-            get: { isSource ? calId(m.source.title, m.source.account) : calId(m.dest.title, m.dest.account) },
-            set: { id in
-                guard let c = model.calendars.first(where: { $0.identifier == id }) else { return }
-                let newSource = isSource ? CalRef(title: c.title, account: c.account) : m.source
-                let newDest   = isSource ? m.dest : CalRef(title: c.title, account: c.account)
-                if let clash = model.reverseConflict(source: newSource, dest: newDest, excluding: m.id) {
-                    conflict = "Can’t reverse “\(clash.name)” — the copy would loop back."; return
-                }
-                conflict = nil
-                if isSource { m.source = newSource } else { m.dest = newDest }
-                model.save()
-            })
-    }
 
     var body: some View {
-        TextField("Name", text: $m.name).onSubmit { model.save() }
-        Picker("Source", selection: picker(true)) {
-            Text("— choose —").tag("")
-            ForEach(model.calendars) { c in Text(c.label).tag(c.identifier) }
-        }
-        Picker("Destination", selection: picker(false)) {
-            Text("— choose —").tag("")
-            ForEach(model.calendars.filter { $0.writable }) { c in Text(c.label).tag(c.identifier) }
-        }
-        if let conflict {
-            Label(conflict, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.red)
-        }
-        Toggle("Heartbeat banner", isOn: $m.showHeartbeat).onChange(of: m.showHeartbeat) { _, _ in model.save() }
-        Stepper("History window: \(Int(m.windowPastDays)) days", value: $m.windowPastDays, in: 1...3650, step: 5)
-            .onChange(of: m.windowPastDays) { _, _ in model.save() }
-        Stepper("Future window: \(Int(m.windowFutureDays)) days", value: $m.windowFutureDays, in: 1...3650, step: 30)
-            .onChange(of: m.windowFutureDays) { _, _ in model.save() }
+        MirrorFields(
+            mirror: $m,
+            calendars: model.calendars,
+            reverseConflict: { s, d in model.reverseConflict(source: s, dest: d, excluding: m.id) },
+            onChange: { model.save() })
         Button(role: .destructive) { model.delete(m.id) } label: { Label("Remove mirror", systemImage: "trash") }
     }
 }

@@ -26,6 +26,7 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - CalMirror
+      - ../Shared
     dependencies:
       - package: CalMirrorKit
         product: CalMirrorKit

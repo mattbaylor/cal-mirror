@@ -25,6 +25,7 @@ targets:
     deploymentTarget: "14.0"
     sources:
       - CalMirrorMac
+      - ../Shared
     dependencies:
       - package: CalMirrorKit
         product: CalMirrorKit
