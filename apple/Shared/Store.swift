@@ -24,7 +24,8 @@ final class Store: ObservableObject {
     private let engine = MirrorEngine()
 
     /// Config lives in the app container's Application Support (sandbox-safe).
-    static var configURL: URL {
+    /// `nonisolated` so background code (iOS `BackgroundSync`) can read it too.
+    nonisolated static var configURL: URL {
         let dir = try! FileManager.default.url(for: .applicationSupportDirectory,
             in: .userDomainMask, appropriateFor: nil, create: true)
         return dir.appendingPathComponent("config.json")
