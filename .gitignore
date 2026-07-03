@@ -25,5 +25,8 @@ DerivedData/
 *.mobileprovision
 *.key
 
+# Private working notes / session log (never published)
+/.notes/
+
 # macOS
 .DS_Store
