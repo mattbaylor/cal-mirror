@@ -154,6 +154,22 @@ final class Model: ObservableObject {
         }
     }
 
+    // Reverse-direction guard: does (source -> dest) reverse some other mirror
+    // that goes dest -> source? Returns that mirror if so (config would loop).
+    func calId(_ title: String, _ account: String) -> String? {
+        calendars.first { $0.title == title && $0.account == account }?.identifier
+            ?? calendars.first { $0.title == title }?.identifier
+    }
+    func reverseConflict(sourceTitle: String, sourceAccount: String,
+                         destTitle: String, destAccount: String, excluding id: String) -> MirrorCfg? {
+        guard let s = calId(sourceTitle, sourceAccount), let d = calId(destTitle, destAccount) else { return nil }
+        return mirrors.first { m in
+            m.id != id
+                && calId(m.sourceTitle, m.sourceAccount) == d
+                && calId(m.destTitle, m.destAccount) == s
+        }
+    }
+
     // ---- Shell actions ----
     @discardableResult
     private func run(_ path: String, _ args: [String]) -> Int32 {
@@ -283,16 +299,26 @@ struct ManageView: View {
 struct MirrorRow: View {
     @ObservedObject var model: Model
     @Binding var m: MirrorCfg
+    @State private var conflict: String?
 
     private func binding(_ isSource: Bool) -> Binding<String> {
         Binding(
             get: { isSource ? m.sourceIdentifierGuess(model.calendars) : m.destIdentifierGuess(model.calendars) },
             set: { newId in
-                if let c = model.calendars.first(where: { $0.identifier == newId }) {
-                    if isSource { m.sourceTitle = c.title; m.sourceAccount = c.account }
-                    else { m.destTitle = c.title; m.destAccount = c.account }
-                    model.saveConfig()
+                guard let c = model.calendars.first(where: { $0.identifier == newId }) else { return }
+                let sT = isSource ? c.title : m.sourceTitle
+                let sA = isSource ? c.account : m.sourceAccount
+                let dT = isSource ? m.destTitle : c.title
+                let dA = isSource ? m.destAccount : c.account
+                if let clash = model.reverseConflict(sourceTitle: sT, sourceAccount: sA,
+                                                     destTitle: dT, destAccount: dA, excluding: m.id) {
+                    conflict = "Can’t reverse “\(clash.name)” — the copy would loop back."
+                    return   // reject the change
                 }
+                conflict = nil
+                if isSource { m.sourceTitle = c.title; m.sourceAccount = c.account }
+                else { m.destTitle = c.title; m.destAccount = c.account }
+                model.saveConfig()
             })
     }
 
@@ -305,6 +331,10 @@ struct MirrorRow: View {
         Picker("Destination", selection: binding(false)) {
             Text("— choose —").tag("")
             ForEach(model.calendars.filter { $0.writable }) { c in Text(c.label).tag(c.identifier) }
+        }
+        if let conflict {
+            Label(conflict, systemImage: "exclamationmark.triangle.fill")
+                .font(.caption).foregroundStyle(.red)
         }
         Toggle("Enabled", isOn: $m.enabled).onChange(of: m.enabled) { _, _ in model.saveConfig() }
         Toggle("Heartbeat banner", isOn: $m.showHeartbeat).onChange(of: m.showHeartbeat) { _, _ in model.saveConfig() }

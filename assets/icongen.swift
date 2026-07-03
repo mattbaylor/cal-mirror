@@ -33,16 +33,45 @@ func render(_ px: Int, rounded: Bool) -> Data {
                           end: CGPoint(x: rect.maxX, y: rect.minY), options: [])
     cg.restoreGState()
 
-    // White refresh glyph, centered.
-    let glyphPt = rect.width * 0.5
-    let conf = NSImage.SymbolConfiguration(pointSize: glyphPt, weight: .semibold)
-        .applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
-    if let base = NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: nil),
-       let sym = base.withSymbolConfiguration(conf) {
-        let gs = sym.size
-        sym.draw(in: NSRect(x: rect.midX - gs.width/2, y: rect.midY - gs.height/2,
-                            width: gs.width, height: gs.height))
+    // Two calendars with a single one-way curved arrow (source → copy).
+    func drawSymbol(_ name: String, center: CGPoint, pointSize: CGFloat) {
+        let conf = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .medium)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
+        guard let base = NSImage(systemSymbolName: name, accessibilityDescription: nil),
+              let sym = base.withSymbolConfiguration(conf) else { return }
+        let s = sym.size
+        sym.draw(in: NSRect(x: center.x - s.width/2, y: center.y - s.height/2, width: s.width, height: s.height))
     }
+
+    let R = rect
+    let calPt = R.width * 0.30
+    drawSymbol("calendar", center: CGPoint(x: R.minX + R.width * 0.29, y: R.minY + R.height * 0.40), pointSize: calPt)
+    drawSymbol("calendar", center: CGPoint(x: R.minX + R.width * 0.71, y: R.minY + R.height * 0.40), pointSize: calPt)
+
+    // Curved one-way arrow arcing from the left calendar to the right one.
+    let start = CGPoint(x: R.minX + R.width * 0.35, y: R.minY + R.height * 0.60)
+    let end   = CGPoint(x: R.minX + R.width * 0.65, y: R.minY + R.height * 0.60)
+    let ctrl  = CGPoint(x: R.midX,                  y: R.minY + R.height * 0.84)
+    cg.setStrokeColor(NSColor.white.cgColor)
+    cg.setLineWidth(R.width * 0.045)
+    cg.setLineCap(.round)
+    let arc = CGMutablePath(); arc.move(to: start); arc.addQuadCurve(to: end, control: ctrl)
+    cg.addPath(arc); cg.strokePath()
+
+    // Arrowhead at the end, along the curve's tangent (into the right calendar).
+    let dx = end.x - ctrl.x, dy = end.y - ctrl.y
+    let len = max(hypot(dx, dy), 0.0001); let ux = dx / len, uy = dy / len
+    let ah = R.width * 0.095
+    let tip = CGPoint(x: end.x + ux * ah * 0.2, y: end.y + uy * ah * 0.2)
+    let backX = end.x - ux * ah, backY = end.y - uy * ah
+    let w = ah * 0.5
+    let head = CGMutablePath()
+    head.move(to: tip)
+    head.addLine(to: CGPoint(x: backX + -uy * w, y: backY + ux * w))
+    head.addLine(to: CGPoint(x: backX - -uy * w, y: backY - ux * w))
+    head.closeSubpath()
+    cg.setFillColor(NSColor.white.cgColor); cg.addPath(head); cg.fillPath()
+
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
 }

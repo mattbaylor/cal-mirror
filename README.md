@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🔄 cal-mirror
+<img src="assets/AppIcon-ios-1024.png" width="96" alt="cal-mirror icon">
+
+# cal-mirror
 
 **One-way mirror between any two calendars on your Mac — with a menu-bar UI.**
 

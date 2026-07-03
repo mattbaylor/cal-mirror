@@ -280,7 +280,7 @@ func syncMirror(_ m: Mirror) -> MirrorResult {
         let ev = heartbeatEvent ?? EKEvent(eventStore: store)
         ev.calendar = dest
         ev.isAllDay = true; ev.startDate = dayStart; ev.endDate = dayStart
-        ev.title = "🔄 \(m.name) ✓ \(r.total) events · \(tf.string(from: now))"
+        ev.title = "🗓️ \(m.name) ✓ \(r.total) events · \(tf.string(from: now))"
         ev.url = URL(string: "\(HEARTBEAT_SCHEME):\(m.id)")
         ev.notes = "Heartbeat for mirror '\(m.id)', auto-updated by cal-mirror.\n"
             + "Last run: \(ISO8601DateFormatter().string(from: now))\n"
@@ -291,11 +291,37 @@ func syncMirror(_ m: Mirror) -> MirrorResult {
     return r
 }
 
+// ---- Guard: refuse reverse-direction pairs (A->B and B->A) ---------------
+// Two mirrors pointing opposite directions between the same calendars would
+// copy each other's copies forever. Resolve to calendar identifiers and refuse
+// BOTH sides until the user removes one.
+func resolvedPair(_ m: Mirror) -> (String, String)? {
+    guard let s = findCalendar(m.source)?.calendarIdentifier,
+          let d = findCalendar(m.dest)?.calendarIdentifier else { return nil }
+    return (s, d)
+}
+var enabledPairs: [(id: String, pair: (String, String))] = []
+for m in cfg.mirrors where m.enabled { if let p = resolvedPair(m) { enabledPairs.append((m.id, p)) } }
+var reversedIds = Set<String>()
+for a in enabledPairs {
+    for b in enabledPairs where b.id != a.id {
+        if b.pair.0 == a.pair.1 && b.pair.1 == a.pair.0 { reversedIds.insert(a.id); reversedIds.insert(b.id) }
+    }
+}
+
 // ---- Run all enabled mirrors --------------------------------------------
 var results: [MirrorResult] = []
 for m in cfg.mirrors {
-    if m.enabled { results.append(syncMirror(m)) }
-    else { results.append(MirrorResult(id: m.id, name: m.name, ok: true, error: "disabled")) }
+    if !m.enabled {
+        results.append(MirrorResult(id: m.id, name: m.name, ok: true, error: "disabled")); continue
+    }
+    if reversedIds.contains(m.id) {
+        log("[\(m.id)] REFUSED: reverse of another mirror — would create a copy loop")
+        results.append(MirrorResult(id: m.id, name: m.name, ok: false,
+            error: "Reverse of another mirror — refused to avoid a loop"))
+        continue
+    }
+    results.append(syncMirror(m))
 }
 writeStatus(paused: false, results: results)
 log("all mirrors done (\(results.filter { $0.ok }.count)/\(results.count) ok)\(dryRun ? "  (DRY RUN)" : "")")
