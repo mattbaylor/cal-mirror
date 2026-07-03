@@ -1,12 +1,17 @@
-# CalMirrorKit + iOS/iPadOS app
+# CalMirrorKit + the Apple apps
 
-Shared engine and an iOS/iPadOS companion app for cal-mirror — for people who
-**don't have a Mac in the mix** (iPhone/iPad only) or can't get a calendar onto
-a Mac. It is an *alternative*, not a replacement for the macOS version.
+The shared engine plus two SwiftUI apps built on it: an **iOS/iPadOS** app and a
+**sandboxed macOS (App Store)** app. Both run the engine in-process — no
+LaunchAgent, no `launchctl` — which is what the current direct-download macOS
+build (in the repo root) will eventually be replaced by.
 
 ```
-CalMirrorKit  (Config · Markers · MirrorEngine — pure EventKit)   ← shared, tested
-   └── ios/CalMirror   (SwiftUI app: pair list, pickers, Sync now, background refresh)
+apple/
+  Sources/CalMirrorKit/   shared engine (Config · Markers · MirrorEngine · ReverseDetector)
+  Sources/cmk-check/      runnable self-check (no Xcode needed)
+  Shared/                 shared SwiftUI: Store (view-model) + MirrorFields (editor)
+  ios/                    iOS/iPadOS shell (NavigationStack + BGAppRefreshTask)
+  mac/                    macOS App Store shell (MenuBarExtra + Timer + SMAppService, sandboxed)
 ```
 
 ## Shared package — `CalMirrorKit`
@@ -15,54 +20,54 @@ Platform-agnostic (macOS 14+, iOS 17+). Everything that isn't scheduling or UI:
 
 | File | Contents |
 |------|----------|
-| `Config.swift` | `Config` / `Mirror` / `CalRef` (Codable, lenient) + `ConfigStore` load/save |
+| `Config.swift` | `Config` / `Mirror` / `CalRef` (Codable, lenient) + `ConfigStore` |
 | `Markers.swift` | Per-mirror tagging (`x-calmirror:<id>~<key>`) + legacy adoption |
-| `MirrorEngine.swift` | `requestAccess()`, `calendars()`, `syncAll(_:)`, `purge(_:)` |
+| `ReverseDetector.swift` | Pure A→B / B→A reverse-pair detection (unit-tested) |
+| `MirrorEngine.swift` | `requestAccess()`, `calendars()`, `syncAll(_:)`, `purge(_:)`, `reverseConflict(...)` |
 
-Verify the pure logic (works with Command Line Tools — no Xcode needed):
+Verify the pure logic (works with Command Line Tools — no full Xcode needed):
 
 ```sh
 cd apple
 swift build          # builds the library
-swift run cmk-check  # runs the marker/config self-checks
+swift run cmk-check  # 23 marker/config/reverse-detector self-checks
 ```
 
-> The macOS engine (`../main.swift`) predates this package and still ships as its
-> own single-file build. Migrating it onto `CalMirrorKit` is a clean follow-up —
-> the logic here is a faithful port of it.
+## Shared SwiftUI — `Shared/`
 
-## iOS / iPadOS app
+- **`Store.swift`** — one `@MainActor` view-model for both apps. Cross-platform
+  logic (config, calendars, `syncNow`, add/delete/toggle, reverse-guard, health)
+  is shared; only the macOS `Timer` + `SMAppService` login item are `#if os(macOS)`.
+- **`MirrorForm.swift`** — `MirrorFields`, the per-mirror editor (name, source/dest
+  pickers, reverse-guard warning, toggles, window steppers), used by both apps.
 
-SwiftUI, depends on `CalMirrorKit`. The project is defined by `ios/project.yml`
-([XcodeGen](https://github.com/yonaskolb/XcodeGen)) so it's reproducible from text:
+## Building the apps
+
+Each app has its own XcodeGen spec so it's reproducible from text:
 
 ```sh
 brew install xcodegen
-cd apple/ios
-xcodegen generate
-open CalMirror.xcodeproj      # set your signing team, then Run
+cd apple/ios  && xcodegen generate && open CalMirror.xcodeproj      # iOS/iPadOS
+cd apple/mac  && xcodegen generate && open CalMirrorMac.xcodeproj   # macOS App Store
 ```
 
-| File | Role |
-|------|------|
-| `App.swift` | App entry, `BGAppRefreshTask` registration, config path |
-| `AppModel.swift` | Calendar access, load/save config, `syncNow()` |
-| `ContentView.swift` | Pair list + status, Sync now, pull-to-refresh |
-| `MirrorEditView.swift` | Per-pair editor with calendar pickers |
-| `Info.plist` | Calendar usage strings, background-task id, background modes |
+Set your signing team, then Run.
 
-### Honest limits (iOS ≠ macOS)
+### iOS/iPadOS (`ios/`)
+`NavigationStack` list + `MirrorEditView`. Background freshness = **on-open /
+pull-to-refresh** (reliable) plus **`BGAppRefreshTask`** (opportunistic — iOS
+decides when, never if force-quit). A plugged-in iPad behaves closest to always-on.
 
-- **No cron.** iOS has no LaunchAgent. Freshness comes from **opening the app /
-  pull-to-refresh** (reliable) plus **`BGAppRefreshTask`** (opportunistic — the
-  system decides when, often a few times a day, never if you force-quit). The UI
-  shows "last sync" so staleness is visible.
-- **A plugged-in iPad** behaves closest to the always-on Mac.
-- **Distribution** to other people means TestFlight / App Store (calendar-access
-  privacy label required) — there's no notarized-download story like macOS.
+### macOS App Store (`mac/`)
+`MenuBarExtra` menu + management window. Sandboxed (`app-sandbox` +
+`personal-information.calendars` entitlements). Syncs on an in-app **`Timer`**,
+launches at login via **`SMAppService`**, stores config in the app container.
+No LaunchAgent / `launchctl` / `PlistBuddy` — all forbidden by the sandbox.
 
-### Status vs. the macOS app
+## Verification status
 
-This is a **scaffold**: it builds against the verified `CalMirrorKit` and is
-structured to run, but it hasn't been through an on-device test pass. Treat it as
-a starting point for the iOS port, not a shipped app.
+- `CalMirrorKit` + `cmk-check`: **built + 23/23 pass**.
+- macOS app + `Shared`: **type-checks with 0 errors** (Command Line Tools `swiftc`).
+- Both Xcode project specs: **generate cleanly** with XcodeGen.
+- iOS full compile requires Xcode (Command Line Tools has no iOS SDK) — the sources
+  syntax-parse clean but haven't been through a real device/simulator build yet.
