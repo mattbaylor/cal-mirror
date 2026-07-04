@@ -23,14 +23,42 @@ public struct MirrorResult: Identifiable, Sendable {
 
 /// Cross-platform EventKit sync engine. Identical on macOS and iOS/iPadOS —
 /// only scheduling and UI differ per platform.
-public final class MirrorEngine {
+/// `@unchecked Sendable`: the store and `lastOwned` are touched only during a
+/// sync, and callers serialize syncs (the Store's `!syncing` guard), so the one
+/// long-lived engine can be handed to a background task safely.
+public final class MirrorEngine: @unchecked Sendable {
     private let store = EKEventStore()
+    /// Owned-copy count from each mirror's last successful sync, used by
+    /// `SnapshotGuard` to veto reconciling against a collapsed/stale view.
+    /// Meaningful only on a long-lived engine (reuse one instance across syncs).
+    private var lastOwned: [String: Int] = [:]
     public init() {}
 
     // MARK: Access
 
     public func requestAccess() async -> Bool {
         do { return try await store.requestFullAccessToEvents() } catch { return false }
+    }
+
+    /// Ask EventKit to pull the local CalDAV cache up to date. Cheap and async on
+    /// the daemon side; the per-mirror stability check below is what actually waits
+    /// for the snapshot to settle before we reconcile.
+    public func refreshSources() { store.refreshSourcesIfNecessary() }
+
+    /// Diagnostic: totals + duplicate-group count for a destination, read through
+    /// the engine's OWN store (the authoritative one in production).
+    public func debugStats(title: String, pastDays: Double = 400, futureDays: Double = 400)
+        -> (total: Int, unique: Int, dupGroups: Int) {
+        guard let cal = store.calendars(for: .event).first(where: { $0.title == title }) else { return (-1, -1, -1) }
+        let now = Date()
+        let evs = store.events(matching: store.predicateForEvents(
+            withStart: now.addingTimeInterval(-pastDays * 86400),
+            end: now.addingTimeInterval(futureDays * 86400), calendars: [cal]))
+        var fp: [String: Int] = [:]
+        for e in evs where (e.url?.scheme ?? "").hasPrefix("x-calmirror") && !(e.url?.scheme ?? "").contains("status") {
+            fp[fingerprint(e, now: now), default: 0] += 1
+        }
+        return (evs.count, fp.count, fp.filter { $0.value > 1 }.count)
     }
 
     public func calendars() -> [CalendarInfo] {
@@ -147,6 +175,33 @@ public final class MirrorEngine {
         let winStart = now.addingTimeInterval(-m.windowPastDays * 86400)
         let winEnd = now.addingTimeInterval(m.windowFutureDays * 86400)
 
+        // --- Stale-snapshot protection ---------------------------------------
+        // A fresh EKEventStore serves a partial CalDAV snapshot until it settles.
+        // Refresh, then wait until the destination's owned-copy count is stable
+        // across reads; SnapshotGuard then vetoes acting on an unsettled or
+        // collapsed view (which is what created/kept duplicates). Runs on a
+        // background queue, so the brief blocking waits are fine.
+        store.refreshSourcesIfNecessary()
+        func ownedCount() -> Int {
+            store.events(matching: store.predicateForEvents(
+                withStart: winStart.addingTimeInterval(-86400),
+                end: winEnd.addingTimeInterval(86400), calendars: [dest]))
+                .reduce(0) { Markers.owner(of: $1.url, mirrors: allMirrors)?.id == m.id ? $0 + 1 : $0 }
+        }
+        var prev = -1, stableReads = 0, waited = 0.0
+        let pollStep = 1.5, pollMax = 12.0
+        while stableReads < 2 && waited <= pollMax {
+            let c = ownedCount()
+            if c == prev { stableReads += 1 } else { stableReads = 0; prev = c }
+            if stableReads < 2 { Thread.sleep(forTimeInterval: pollStep); waited += pollStep }
+        }
+        if case let .skip(why) = SnapshotGuard.decide(
+            stabilized: stableReads >= 2, count: prev, lastKnown: lastOwned[m.id]) {
+            r.ok = true; r.error = "deferred: \(why)"
+            log?("[\(m.id)] DEFER — \(why)")
+            return r
+        }
+
         let srcEvents = store.events(matching:
             store.predicateForEvents(withStart: winStart, end: winEnd, calendars: [source]))
         var srcList: [EKEvent] = []
@@ -240,6 +295,10 @@ public final class MirrorEngine {
             ev.url = Markers.heartbeatURL(mirrorId: m.id)
             try? store.save(ev, span: .thisEvent, commit: true)
         }
+
+        // Trust this cycle's owned-copy count as the baseline the guard compares
+        // future (possibly stale) snapshots against.
+        lastOwned[m.id] = r.total
 
         log?("[\(m.id)] +\(r.created) ~\(r.updated) =\(r.unchanged) -\(r.deleted)")
         return r
