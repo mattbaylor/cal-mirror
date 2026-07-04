@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cal-mirror — Privacy</title>
+<meta name="description" content="Your calendar data is yours. cal-mirror collects nothing, has no server, and makes no network requests. Everything happens on your device.">
+<link rel="icon" href="icon.png">
+<style>
+  :root{ --bg:#0b0e14; --card:#151b28; --line:#232c3d; --tx:#e6edf3; --mut:#93a1b5;
+    --accent:#3aa0ff; --accent2:#28c8b6; }
+  @media (prefers-color-scheme: light){ :root{ --bg:#f6f8fc; --card:#fff; --line:#e2e8f2;
+    --tx:#0d1220; --mut:#4a5568; } }
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--tx);background:radial-gradient(1000px 500px at 80% -10%, rgba(58,160,255,.14), transparent 60%),var(--bg);
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:720px;margin:0 auto;padding:40px 22px 80px}
+  a{color:var(--accent)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;margin-bottom:28px}
+  .brand img{width:30px;height:30px;border-radius:8px}
+  h1{font-size:32px;letter-spacing:-.5px;margin:.2em 0 .1em}
+  .sub{color:var(--mut);margin:0 0 28px}
+  h2{font-size:19px;margin:1.7em 0 .3em;letter-spacing:-.3px}
+  .lead{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:22px 0;font-size:17px}
+  .lead strong{color:var(--accent2)}
+  .foot{color:var(--mut);font-size:13.5px;margin-top:40px;border-top:1px solid var(--line);padding-top:18px}
+  .foot a{color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><img src="icon.png" alt=""> cal-mirror</div>
+  <h1>Privacy</h1>
+  <p class="sub">Last updated: July 2026</p>
+
+  <p class="lead"><strong>Your calendar belongs to you — not to me, and not to a
+    server.</strong> cal-mirror has no account, no backend, and makes no network
+    requests of its own. It never sends your calendar anywhere. There is nothing
+    for me to collect, because I collect nothing.</p>
+
+  <h2>What the app does</h2>
+  <p>You tell cal-mirror which calendar to copy and where to copy it. It reads
+     events from the source and writes copies into the destination, using Apple's
+     Calendar framework on your device. That's the whole job. The list of pairs you
+     set up is stored only on your device.</p>
+
+  <h2>No collection, no tracking</h2>
+  <p>No analytics. No advertising or tracking SDKs. No behavioral data. No crash or
+     usage telemetry sent to me. cal-mirror ships with none of that and never will —
+     surveillance isn't a feature I'm interested in building.</p>
+
+  <h2>No credentials, ever</h2>
+  <p>cal-mirror works through calendars that are already set up on your device, so
+     it never asks for, sees, or stores any account passwords or tokens.</p>
+
+  <h2>The one thing I can't control — and won't pretend to</h2>
+  <p>If your destination calendar lives in an account like iCloud, Google, or
+     Exchange, then once a copy lands there, <em>that provider</em> syncs and retains
+     it under <em>their</em> policies — exactly as it would for any event you added
+     to that calendar yourself. cal-mirror isn't part of that sync and can't reach
+     into it. That's the honest boundary: on your device, cal-mirror keeps to
+     itself; beyond it, your account provider's terms apply. If that matters to you,
+     point cal-mirror at a local or self-hosted calendar as the destination.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy ever changes, the update will be here and in the source, which
+     is public. The bar it has to clear is simple: still collect nothing.</p>
+
+  <h2>Contact</h2>
+  <p>Questions or concerns:
+     <a href="https://github.com/mattbaylor/cal-mirror/issues">github.com/mattbaylor/cal-mirror</a>.</p>
+
+  <div class="foot"><a href="./">← cal-mirror</a> · MIT © Matt Baylor</div>
+</div>
+</body>
+</html>
