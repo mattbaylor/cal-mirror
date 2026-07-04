@@ -69,5 +69,67 @@ check(ReverseDetector.reversedIds([P("a", "A", "B"), P("b", "B", "C"), P("c", "C
 // self-referential (source == dest) is not a reverse of itself
 check(ReverseDetector.reversedIds([P("a", "A", "A")]).isEmpty, "source==dest is not a reverse")
 
+print("Reconciler:")
+func D(_ key: String, _ fp: String) -> Reconciler.Desired { .init(key: key, fingerprint: fp) }
+func E(_ ref: Int, _ key: String, _ fp: String) -> Reconciler.Existing { .init(ref: ref, key: key, fingerprint: fp) }
+
+// Steady state: one source event, one matching copy → match, no create/delete.
+do {
+    let p = Reconciler.plan(desired: [D("k1", "fpA")], existing: [E(0, "k1", "fpA")])
+    check(p.match == [0: 0] && p.create.isEmpty && p.delete.isEmpty, "steady state → match only")
+}
+// New source event, no copy yet → create.
+do {
+    let p = Reconciler.plan(desired: [D("k1", "fpA")], existing: [])
+    check(p.create == [0] && p.match.isEmpty && p.delete.isEmpty, "new event → create")
+}
+// Stale copy, source gone → delete.
+do {
+    let p = Reconciler.plan(desired: [], existing: [E(0, "k1", "fpA")])
+    check(p.delete == [0] && p.match.isEmpty && p.create.isEmpty, "source gone → delete copy")
+}
+// THE ISSUE #2 BUG: identical-key duplicate twins collapse to one, extra deleted.
+do {
+    let p = Reconciler.plan(desired: [D("k1", "fpA")], existing: [E(0, "k1", "fpA"), E(1, "k1", "fpA")])
+    check(p.match == [0: 0] && p.delete == [1] && p.create.isEmpty,
+          "identical-key twins → keep one, delete the twin")
+}
+// Three-way identical-key pileup → keep lowest ref, delete the other two.
+do {
+    let p = Reconciler.plan(desired: [D("k1", "fpA")],
+                            existing: [E(0, "k1", "fpA"), E(1, "k1", "fpA"), E(2, "k1", "fpA")])
+    check(p.match == [0: 0] && p.delete == [1, 2], "3 identical-key copies → keep one")
+}
+// Divergent-key duplicate (same content, different keys) → fuzzy-match one, delete other.
+do {
+    let p = Reconciler.plan(desired: [D("k1", "fpA")], existing: [E(0, "kX", "fpA"), E(1, "kY", "fpA")])
+    check(p.match.count == 1 && p.delete.count == 1 && p.create.isEmpty,
+          "divergent-key dupes → adopt one by fingerprint, delete the rest (no new copy)")
+}
+// Fuzzy adoption: copy exists with a stale key but same content → reuse, don't create.
+do {
+    let p = Reconciler.plan(desired: [D("newkey", "fpA")], existing: [E(0, "oldkey", "fpA")])
+    check(p.match == [0: 0] && p.create.isEmpty && p.delete.isEmpty,
+          "stale-key copy adopted by fingerprint (no duplicate created)")
+}
+// Exact key wins over fingerprint even when a same-fp decoy is present.
+do {
+    let p = Reconciler.plan(desired: [D("k1", "fpA")], existing: [E(0, "k1", "fpA"), E(1, "kZ", "fpA")])
+    check(p.match == [0: 0] && p.delete == [1], "exact-key match preferred; same-fp extra deleted")
+}
+// Reschedule (key + fp both change): old copy deleted, new created — never duplicated.
+do {
+    let p = Reconciler.plan(desired: [D("k2", "fpB")], existing: [E(0, "k1", "fpA")])
+    check(p.create == [0] && p.delete == [0] && p.match.isEmpty, "rescheduled event → replace, not duplicate")
+}
+// Determinism: same inputs → identical plan.
+do {
+    let a = Reconciler.plan(desired: [D("k1", "f"), D("k2", "f")],
+                            existing: [E(0, "k1", "f"), E(1, "k2", "f"), E(2, "k1", "f")])
+    let b = Reconciler.plan(desired: [D("k1", "f"), D("k2", "f")],
+                            existing: [E(0, "k1", "f"), E(1, "k2", "f"), E(2, "k1", "f")])
+    check(a == b, "planner is deterministic")
+}
+
 print(failures == 0 ? "\nALL CHECKS PASSED" : "\n\(failures) CHECK(S) FAILED")
 exit(failures == 0 ? 0 : 1)

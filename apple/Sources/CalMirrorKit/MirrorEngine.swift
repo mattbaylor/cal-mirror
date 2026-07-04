@@ -118,6 +118,16 @@ public final class MirrorEngine {
             .replacingOccurrences(of: "=", with: "")
     }
 
+    /// Content signature used as the *fuzzy* dedup axis: two events that match on
+    /// title + start + end + all-day are treated as the same event even if their
+    /// marker keys diverge. Must be computed identically for source and copy.
+    private func fingerprint(_ ev: EKEvent, now: Date) -> String {
+        let t = (ev.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let s = Int((ev.startDate ?? now).timeIntervalSince1970)
+        let e = Int((ev.endDate ?? now).timeIntervalSince1970)
+        return "\(t)|\(s)|\(e)|\(ev.isAllDay)"
+    }
+
     private func syncMirror(_ m: Mirror, allMirrors: [Mirror], now: Date,
                             log: ((String) -> Void)?) -> MirrorResult {
         var r = MirrorResult(id: m.id, name: m.name, ok: true)
@@ -139,13 +149,20 @@ public final class MirrorEngine {
 
         let srcEvents = store.events(matching:
             store.predicateForEvents(withStart: winStart, end: winEnd, calendars: [source]))
-        var desired: [String: EKEvent] = [:]
-        for ev in srcEvents { desired[keyFor(ev, now: now)] = ev }
+        var srcList: [EKEvent] = []
+        var desiredList: [Reconciler.Desired] = []
+        for ev in srcEvents {
+            srcList.append(ev)
+            desiredList.append(.init(key: keyFor(ev, now: now), fingerprint: fingerprint(ev, now: now)))
+        }
 
         let dstEvents = store.events(matching: store.predicateForEvents(
             withStart: winStart.addingTimeInterval(-86400),
             end: winEnd.addingTimeInterval(86400), calendars: [dest]))
-        var existing: [String: EKEvent] = [:]
+        // Collect every mirror-owned copy (NOT a dictionary — duplicate keys must
+        // survive so the reconciler can collapse them). Heartbeat handled apart.
+        var ownedEvents: [EKEvent] = []
+        var ownedRaw: [(key: String, fp: String, id: String)] = []
         var heartbeat: EKEvent?
         let legacyHB = m.legacyScheme.map { $0 + "-status" }
         for ev in dstEvents {
@@ -155,8 +172,18 @@ public final class MirrorEngine {
                 continue
             }
             if let owner = Markers.owner(of: ev.url, mirrors: allMirrors), owner.id == m.id {
-                existing[owner.key] = ev
+                ownedEvents.append(ev)
+                ownedRaw.append((owner.key, fingerprint(ev, now: now), ev.calendarItemIdentifier))
             }
+        }
+        // Sort owned copies by a durable id so the reconciler's survivor pick
+        // (lowest ref) is stable across runs; `ref` indexes `owned`.
+        let sortedIdx = ownedEvents.indices.sorted { ownedRaw[$0].id < ownedRaw[$1].id }
+        var owned: [EKEvent] = []
+        var existingList: [Reconciler.Existing] = []
+        for (ref, old) in sortedIdx.enumerated() {
+            owned.append(ownedEvents[old])
+            existingList.append(.init(ref: ref, key: ownedRaw[old].key, fingerprint: ownedRaw[old].fp))
         }
 
         func differ(_ copy: EKEvent, _ src: EKEvent) -> Bool {
@@ -176,22 +203,25 @@ public final class MirrorEngine {
             if force || pending >= 50 { try? store.commit(); pending = 0 }
         }
 
-        for (key, src) in desired {
-            if let copy = existing[key] {
-                if differ(copy, src) {
-                    apply(copy, src, key: key)
-                    try? store.save(copy, span: .thisEvent, commit: false); pending += 1
-                    r.updated += 1
-                } else { r.unchanged += 1 }
-            } else {
-                let c = EKEvent(eventStore: store); apply(c, src, key: key)
-                try? store.save(c, span: .thisEvent, commit: false); pending += 1
-                r.created += 1
-            }
+        // Pure planner decides create/match/delete and collapses duplicates.
+        let plan = Reconciler.plan(desired: desiredList, existing: existingList)
+        for (di, ref) in plan.match {
+            let copy = owned[ref], src = srcList[di], key = desiredList[di].key
+            if differ(copy, src) {           // includes url != new key → adopted copies re-stamp here
+                apply(copy, src, key: key)
+                try? store.save(copy, span: .thisEvent, commit: false); pending += 1
+                r.updated += 1
+            } else { r.unchanged += 1 }
             maybeCommit()
         }
-        for (key, copy) in existing where desired[key] == nil {
-            try? store.remove(copy, span: .thisEvent, commit: false); pending += 1
+        for di in plan.create {
+            let c = EKEvent(eventStore: store); apply(c, srcList[di], key: desiredList[di].key)
+            try? store.save(c, span: .thisEvent, commit: false); pending += 1
+            r.created += 1
+            maybeCommit()
+        }
+        for ref in plan.delete {             // duplicate twins + stale copies (owned-only, safe)
+            try? store.remove(owned[ref], span: .thisEvent, commit: false); pending += 1
             r.deleted += 1
             maybeCommit()
         }
