@@ -57,7 +57,12 @@ final class Store: ObservableObject {
         guard access, !syncing else { return }
         syncing = true
         let cfg = config
-        let results = await Task.detached { MirrorEngine().syncAll(cfg) }.value
+        // Reuse the ONE long-lived engine/store (not a fresh one per sync): a
+        // persistent EKEventStore stays warm, and the engine's per-mirror
+        // stability guard needs its baseline count to persist across syncs.
+        let eng = engine
+        eng.refreshSources()
+        let results = await Task.detached { eng.syncAll(cfg) }.value
         statuses = Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
         lastRun = Date()
         UserDefaults.standard.set(lastRun, forKey: "lastRun")

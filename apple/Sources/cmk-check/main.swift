@@ -131,5 +131,16 @@ do {
     check(a == b, "planner is deterministic")
 }
 
+print("SnapshotGuard:")
+func isSkip(_ d: SnapshotGuard.Decision) -> Bool { if case .skip = d { return true }; return false }
+check(SnapshotGuard.decide(stabilized: true,  count: 441, lastKnown: 441) == .proceed, "stable, matching count → proceed")
+check(SnapshotGuard.decide(stabilized: true,  count: 441, lastKnown: nil) == .proceed, "stable, first run → proceed")
+check(SnapshotGuard.decide(stabilized: true,  count: 0,   lastKnown: nil) == .proceed, "stable, first run, empty dest → proceed (initial populate)")
+check(isSkip(SnapshotGuard.decide(stabilized: false, count: 441, lastKnown: 441)), "unsettled view → skip")
+check(isSkip(SnapshotGuard.decide(stabilized: true,  count: 0,   lastKnown: 441)), "collapsed to 0 vs known 441 → skip (stale)")
+check(isSkip(SnapshotGuard.decide(stabilized: true,  count: 50,  lastKnown: 441)), "collapsed to <25% → skip (stale)")
+check(SnapshotGuard.decide(stabilized: true, count: 430, lastKnown: 441) == .proceed, "minor drop (deletions) → proceed")
+check(SnapshotGuard.decide(stabilized: true, count: 1, lastKnown: 3) == .proceed, "tiny baseline not treated as collapse")
+
 print(failures == 0 ? "\nALL CHECKS PASSED" : "\n\(failures) CHECK(S) FAILED")
 exit(failures == 0 ? 0 : 1)
