@@ -18,6 +18,9 @@
   <string>$(CURRENT_PROJECT_VERSION)</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
+  <!-- App Store category (required for Mac App Store submission) -->
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.productivity</string>
   <!-- Menu-bar app: no Dock icon -->
   <key>LSUIElement</key>
   <true/>
