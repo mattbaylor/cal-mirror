@@ -21,6 +21,9 @@
   <!-- App Store category (required for Mac App Store submission) -->
   <key>LSApplicationCategoryType</key>
   <string>public.app-category.productivity</string>
+  <!-- No encryption / no network → export-compliance exempt (auto-answers ASC) -->
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
   <!-- Menu-bar app: no Dock icon -->
   <key>LSUIElement</key>
   <true/>
