@@ -5,7 +5,6 @@
 
 import SwiftUI
 import AppKit
-import EventKit
 
 let SUPPORT = ("~/.local/cal-mirror" as NSString).expandingTildeInPath
 let ENGINE_LABEL = "io.github.mattbaylor.cal-mirror"
@@ -25,7 +24,33 @@ struct MirrorCfg: Identifiable, Equatable {
     var showHeartbeat: Bool
     var windowPastDays: Double
     var windowFutureDays: Double
+    // Field projection — mirrors main.swift's Projection. Defaults reproduce the
+    // historical behavior (real title + location, no notes/alarms, source busy).
+    var projTitleRedact: Bool = false
+    var projTitleText: String = "Busy"
+    var projLocation: Bool = true
+    var projNotes: Bool = false
+    var projAlarms: Bool = false
+    var projBusy: Bool = false
+    var projCustom: Bool = false   // UI: user explicitly chose "Custom" (persisted so it sticks)
     var legacyScheme: String?
+}
+
+// The presets the editor offers; Custom is "none of the above".
+enum Preset: Hashable { case details, full, busy, custom }
+func presetOf(_ m: MirrorCfg) -> Preset {
+    if !m.projTitleRedact && m.projLocation && !m.projNotes && !m.projAlarms && !m.projBusy { return .details }
+    if !m.projTitleRedact && m.projLocation && m.projNotes && !m.projAlarms && !m.projBusy { return .full }
+    if m.projTitleRedact && !m.projLocation && !m.projNotes && !m.projAlarms && m.projBusy { return .busy }
+    return .custom
+}
+func applyPreset(_ p: Preset, to m: inout MirrorCfg) {
+    switch p {
+    case .details: m.projTitleRedact = false; m.projLocation = true;  m.projNotes = false; m.projAlarms = false; m.projBusy = false
+    case .full:    m.projTitleRedact = false; m.projLocation = true;  m.projNotes = true;  m.projAlarms = false; m.projBusy = false
+    case .busy:    m.projTitleRedact = true;  m.projLocation = false; m.projNotes = false; m.projAlarms = false; m.projBusy = true
+    case .custom:  break   // reveal the controls, keep current values
+    }
 }
 
 struct MirrorStatus { var ok = false; var error: String?; var created = 0, updated = 0, unchanged = 0, deleted = 0, total = 0 }
@@ -39,25 +64,29 @@ final class Model: ObservableObject {
     @Published var calendars: [CalInfo] = []
     @Published var calendarAccess = false
 
-    private let store = EKEventStore()
     private var timer: Timer?
 
     init() {
-        store.requestFullAccessToEvents { [weak self] ok, _ in
-            DispatchQueue.main.async {
-                self?.calendarAccess = ok
-                if ok { self?.loadCalendars() }
-            }
-        }
+        loadCalendars()
         reload()
-        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.reload() }
+        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            self?.loadCalendars(); self?.loadStatus()
+        }
     }
 
+    // Calendars come from calendars.json, published by the engine (which holds
+    // Calendar access). The UI never touches EventKit, so it needs no TCC grant.
     func loadCalendars() {
-        calendars = store.calendars(for: .event).map {
-            CalInfo(title: $0.title, account: $0.source.title,
-                    identifier: $0.calendarIdentifier, writable: $0.allowsContentModifications)
+        guard let d = FileManager.default.contents(atPath: SUPPORT + "/calendars.json"),
+              let arr = (try? JSONSerialization.jsonObject(with: d)) as? [[String: Any]] else {
+            calendars = []; calendarAccess = false; return
+        }
+        calendars = arr.compactMap { o -> CalInfo? in
+            guard let t = o["title"] as? String, let a = o["account"] as? String,
+                  let id = o["identifier"] as? String else { return nil }
+            return CalInfo(title: t, account: a, identifier: id, writable: o["writable"] as? Bool ?? false)
         }.sorted { ($0.account, $0.title) < ($1.account, $1.title) }
+        calendarAccess = !calendars.isEmpty
     }
 
     private func json(_ name: String) -> [String: Any]? {
@@ -65,45 +94,60 @@ final class Model: ObservableObject {
         return (try? JSONSerialization.jsonObject(with: d)) as? [String: Any]
     }
 
-    func reload() {
-        if let o = json("config.json") {
-            paused = o["paused"] as? Bool ?? false
-            intervalSeconds = o["intervalSeconds"] as? Int ?? 900
-            var list: [MirrorCfg] = []
-            for m in (o["mirrors"] as? [[String: Any]] ?? []) {
-                guard let id = m["id"] as? String,
-                      let s = m["source"] as? [String: Any], let st = s["title"] as? String,
-                      let d = m["dest"] as? [String: Any], let dt = d["title"] as? String else { continue }
-                list.append(MirrorCfg(
-                    id: id, name: m["name"] as? String ?? id,
-                    sourceTitle: st, sourceAccount: s["account"] as? String ?? "",
-                    destTitle: dt, destAccount: d["account"] as? String ?? "",
-                    enabled: m["enabled"] as? Bool ?? true,
-                    showHeartbeat: m["showHeartbeat"] as? Bool ?? true,
-                    windowPastDays: m["windowPastDays"] as? Double ?? 30,
-                    windowFutureDays: m["windowFutureDays"] as? Double ?? 365,
-                    legacyScheme: m["legacyScheme"] as? String))
-            }
-            mirrors = list
+    func reload() { loadConfig(); loadStatus() }
+
+    // Mirror list + settings come from config.json. Loaded at startup and after
+    // our own writes — deliberately NOT on the refresh timer, so a background
+    // reload can never clobber an in-progress edit (e.g. typing a name) or steal
+    // focus from the field being edited.
+    func loadConfig() {
+        guard let o = json("config.json") else { return }
+        paused = o["paused"] as? Bool ?? false
+        intervalSeconds = o["intervalSeconds"] as? Int ?? 900
+        var list: [MirrorCfg] = []
+        for m in (o["mirrors"] as? [[String: Any]] ?? []) {
+            guard let id = m["id"] as? String,
+                  let s = m["source"] as? [String: Any], let st = s["title"] as? String,
+                  let d = m["dest"] as? [String: Any], let dt = d["title"] as? String else { continue }
+            let pj = m["projection"] as? [String: Any] ?? [:]
+            let titleText = (pj["titleText"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Busy"
+            list.append(MirrorCfg(
+                id: id, name: m["name"] as? String ?? id,
+                sourceTitle: st, sourceAccount: s["account"] as? String ?? "",
+                destTitle: dt, destAccount: d["account"] as? String ?? "",
+                enabled: m["enabled"] as? Bool ?? true,
+                showHeartbeat: m["showHeartbeat"] as? Bool ?? true,
+                windowPastDays: m["windowPastDays"] as? Double ?? 30,
+                windowFutureDays: m["windowFutureDays"] as? Double ?? 365,
+                projTitleRedact: (pj["title"] as? String) == "redact",
+                projTitleText: titleText,
+                projLocation: pj["location"] as? Bool ?? true,
+                projNotes: pj["notes"] as? Bool ?? false,
+                projAlarms: pj["alarms"] as? Bool ?? false,
+                projBusy: (pj["availability"] as? String) == "busy",
+                projCustom: pj["custom"] as? Bool ?? false,
+                legacyScheme: m["legacyScheme"] as? String))
         }
-        if let o = json("status.json") {
-            if let v = o["lastRun"] as? String { lastRun = ISO8601DateFormatter().date(from: v) }
-            var map: [String: MirrorStatus] = [:]
-            for r in (o["mirrors"] as? [[String: Any]] ?? []) {
-                guard let id = r["id"] as? String else { continue }
-                var s = MirrorStatus()
-                s.ok = r["ok"] as? Bool ?? false
-                s.error = r["error"] as? String
-                s.created = r["created"] as? Int ?? 0
-                s.updated = r["updated"] as? Int ?? 0
-                s.unchanged = r["unchanged"] as? Int ?? 0
-                s.deleted = r["deleted"] as? Int ?? 0
-                s.total = r["total"] as? Int ?? 0
-                map[id] = s
-            }
-            statuses = map
+        mirrors = list
+    }
+
+    func loadStatus() {
+        guard let o = json("status.json") else { return }
+        if let v = o["lastRun"] as? String { lastRun = ISO8601DateFormatter().date(from: v) }
+        var map: [String: MirrorStatus] = [:]
+        for r in (o["mirrors"] as? [[String: Any]] ?? []) {
+            guard let id = r["id"] as? String else { continue }
+            var s = MirrorStatus()
+            s.ok = r["ok"] as? Bool ?? false
+            s.error = r["error"] as? String
+            s.created = r["created"] as? Int ?? 0
+            s.updated = r["updated"] as? Int ?? 0
+            s.unchanged = r["unchanged"] as? Int ?? 0
+            s.deleted = r["deleted"] as? Int ?? 0
+            s.total = r["total"] as? Int ?? 0
+            map[id] = s
         }
-        objectWillChange.send()
+        statuses = map
     }
 
     // ---- Health ----
@@ -145,6 +189,15 @@ final class Model: ObservableObject {
                 "dest": ["title": m.destTitle, "account": m.destAccount],
                 "enabled": m.enabled, "showHeartbeat": m.showHeartbeat,
                 "windowPastDays": m.windowPastDays, "windowFutureDays": m.windowFutureDays,
+                "projection": [
+                    "title": m.projTitleRedact ? "redact" : "copy",
+                    "titleText": m.projTitleText.isEmpty ? "Busy" : m.projTitleText,
+                    "location": m.projLocation,
+                    "notes": m.projNotes,
+                    "alarms": m.projAlarms,
+                    "availability": m.projBusy ? "busy" : "source",
+                    "custom": m.projCustom,
+                ],
             ]
             if let ls = m.legacyScheme { d["legacyScheme"] = ls }
             return d
@@ -259,37 +312,56 @@ struct MenuContent: View {
 // ---- Management window ----------------------------------------------------
 struct ManageView: View {
     @ObservedObject var model: Model
+    // Which mirror's name field holds keyboard focus. Set on "Add mirror" so the
+    // new row is focused and ready to rename.
+    @FocusState private var focusedName: String?
+    @State private var scrollTarget: String?
 
     var body: some View {
-        Form {
-            Section {
-                HStack {
-                    Text("Mirror pairs").font(.headline)
-                    Spacer()
-                    Button {
-                        let new = MirrorCfg(id: "m\(Int(Date().timeIntervalSince1970))",
-                            name: "New mirror", sourceTitle: "", sourceAccount: "",
-                            destTitle: "", destAccount: "", enabled: true, showHeartbeat: true,
-                            windowPastDays: 30, windowFutureDays: 365, legacyScheme: nil)
-                        model.mirrors.append(new); model.saveConfig()
-                    } label: { Label("Add mirror", systemImage: "plus") }
+        ScrollViewReader { proxy in
+            Form {
+                Section {
+                    HStack {
+                        Text("Mirror pairs").font(.headline)
+                        Spacer()
+                        Button {
+                            let new = MirrorCfg(id: "m\(Int(Date().timeIntervalSince1970))",
+                                name: "New mirror", sourceTitle: "", sourceAccount: "",
+                                destTitle: "", destAccount: "", enabled: true, showHeartbeat: true,
+                                windowPastDays: 30, windowFutureDays: 365, legacyScheme: nil)
+                            model.mirrors.append(new); model.saveConfig()
+                            scrollTarget = new.id   // scroll to + focus it (below)
+                        } label: { Label("Add mirror", systemImage: "plus") }
+                    }
+                    if !model.calendarAccess {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("No calendars detected yet — run a sync so the engine can list them for the pickers.")
+                                .foregroundStyle(.orange)
+                            Button("Sync now") { model.syncNow() }
+                        }
+                    }
+                    if model.mirrors.isEmpty {
+                        Text("No mirrors yet. Click “Add mirror”.").foregroundStyle(.secondary)
+                    }
                 }
-                if !model.calendarAccess {
-                    Text("Calendar access not granted yet — grant it so the pickers can list your calendars.")
-                        .foregroundStyle(.orange)
-                }
-                if model.mirrors.isEmpty {
-                    Text("No mirrors yet. Click “Add mirror”.").foregroundStyle(.secondary)
+                ForEach($model.mirrors) { $m in
+                    Section(header: Text($m.wrappedValue.name.isEmpty ? "Mirror" : $m.wrappedValue.name)) {
+                        MirrorRow(model: model, m: $m, focusedName: $focusedName)
+                    }
+                    .id(m.id)
                 }
             }
-            ForEach($model.mirrors) { $m in
-                Section(header: Text($m.wrappedValue.name.isEmpty ? "Mirror" : $m.wrappedValue.name)) {
-                    MirrorRow(model: model, m: $m)
+            .formStyle(.grouped)
+            .frame(minWidth: 640, minHeight: 480)
+            .onChange(of: scrollTarget) { _, target in
+                guard let target else { return }
+                DispatchQueue.main.async {
+                    withAnimation { proxy.scrollTo(target, anchor: .top) }
+                    focusedName = target
+                    scrollTarget = nil
                 }
             }
         }
-        .formStyle(.grouped)
-        .frame(minWidth: 640, minHeight: 480)
         // Drop back to a menu-bar-only (no Dock, no app menu) app when the
         // management window closes. It only becomes a regular app while open.
         .onDisappear { NSApp.setActivationPolicy(.accessory) }
@@ -299,6 +371,7 @@ struct ManageView: View {
 struct MirrorRow: View {
     @ObservedObject var model: Model
     @Binding var m: MirrorCfg
+    @FocusState.Binding var focusedName: String?
     @State private var conflict: String?
 
     private func binding(_ isSource: Bool) -> Binding<String> {
@@ -323,7 +396,9 @@ struct MirrorRow: View {
     }
 
     var body: some View {
-        TextField("Name", text: $m.name).onSubmit { model.saveConfig() }
+        TextField("Name", text: $m.name)
+            .focused($focusedName, equals: m.id)
+            .onChange(of: m.name) { _, _ in model.saveConfig() }
         Picker("Source", selection: binding(true)) {
             Text("— choose —").tag("")
             ForEach(model.calendars) { c in Text(c.label).tag(c.identifier) }
@@ -338,6 +413,45 @@ struct MirrorRow: View {
         }
         Toggle("Enabled", isOn: $m.enabled).onChange(of: m.enabled) { _, _ in model.saveConfig() }
         Toggle("Heartbeat banner", isOn: $m.showHeartbeat).onChange(of: m.showHeartbeat) { _, _ in model.saveConfig() }
+
+        // "Custom" can't be derived from the fields (it's the absence of a preset
+        // match), so the explicit choice is persisted in m.projCustom — it sticks
+        // across reopens even when the field combo happens to equal a preset.
+        Picker("What to copy", selection: Binding(
+            get: { m.projCustom ? .custom : presetOf(m) },
+            set: { p in
+                if p == .custom { m.projCustom = true }
+                else { m.projCustom = false; applyPreset(p, to: &m) }
+                model.saveConfig()
+            })) {
+            Text("Copy details").tag(Preset.details)
+            Text("Full copy").tag(Preset.full)
+            Text("Busy only").tag(Preset.busy)
+            Text("Custom").tag(Preset.custom)
+        }
+        if m.projTitleRedact {
+            TextField("Shown as", text: $m.projTitleText)
+                .onChange(of: m.projTitleText) { _, _ in model.saveConfig() }
+        }
+        if m.projCustom || presetOf(m) == .custom {
+            Group {
+                Toggle("Redact title", isOn: $m.projTitleRedact).onChange(of: m.projTitleRedact) { _, _ in model.saveConfig() }
+                Toggle("Copy location", isOn: $m.projLocation).onChange(of: m.projLocation) { _, _ in model.saveConfig() }
+                Toggle("Copy notes", isOn: $m.projNotes).onChange(of: m.projNotes) { _, _ in model.saveConfig() }
+                Toggle("Copy alarms", isOn: $m.projAlarms).onChange(of: m.projAlarms) { _, _ in model.saveConfig() }
+                Toggle("Always show as busy", isOn: $m.projBusy).onChange(of: m.projBusy) { _, _ in model.saveConfig() }
+            }
+            .padding(.leading, 12)
+        }
+        DisclosureGroup("Per-event tags") {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Type into a source event's title:").font(.caption).foregroundStyle(.secondary)
+                Text("#nomirror — skip this event entirely").font(.caption)
+                Text("#private — copy as a busy block").font(.caption)
+                Text("#public — copy in full").font(.caption)
+            }
+        }
+
         Stepper("History window: \(Int(m.windowPastDays)) days", value: $m.windowPastDays, in: 1...3650, step: 5)
             .onChange(of: m.windowPastDays) { _, _ in model.saveConfig() }
         Stepper("Future window: \(Int(m.windowFutureDays)) days", value: $m.windowFutureDays, in: 1...3650, step: 30)
