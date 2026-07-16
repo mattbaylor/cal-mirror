@@ -10,7 +10,15 @@
       "enabled": true,
       "showHeartbeat": true,
       "windowPastDays": 30,
-      "windowFutureDays": 365
+      "windowFutureDays": 365,
+      "projection": {
+        "title": "copy",
+        "titleText": "Busy",
+        "location": true,
+        "notes": false,
+        "alarms": false,
+        "availability": "source"
+      }
     }
   ]
 }
