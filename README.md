@@ -31,6 +31,7 @@ normal account, macOS then pushes it wherever that account syncs.
 
 - **Any → any.** Mirror any calendar into any other, configured as a list of pairs.
 - **Idempotent & one-way.** Re-runs never duplicate; the source is authoritative and is never written to.
+- **Per-field privacy.** Choose per mirror what crosses over — from a full copy down to a redacted “Busy” block — and override any single event with a tag in its title.
 - **Recurring-safe.** Recurring events are expanded into occurrences — no RRULE translation, and detached exceptions are already resolved by EventKit.
 - **Non-destructive.** Each pair tags only its own copies, so two mirrors can share a destination and hand-added events are left untouched.
 - **Menu-bar UI.** Health at a glance, Sync now, Pause, interval, and a pickers-driven window to add/edit pairs.
@@ -111,9 +112,48 @@ Code lives in the checkout; **runtime data lives in `~/.local/cal-mirror/`**
 }
 ```
 
-`account` is optional (matching falls back to the calendar title). Copied fields:
-**title, start/end, all-day, location, timezone** — a lightweight free/busy-style
-shadow (no attendees, notes bodies, or attachments).
+`account` is optional (matching falls back to the calendar title). Start/end,
+all-day, and timezone are always copied — they define the block. Everything else
+is governed by `projection` (below).
+
+## 🔒 What crosses over (`projection`)
+
+Each mirror decides, field by field, how much of the source event to replicate.
+An **absent `projection` block keeps the historical behavior** (real title +
+location, no notes/alarms). The menu bar exposes this as three presets plus
+**Custom**; in `config.json` it's:
+
+```jsonc
+"projection": {
+  "title":        "copy",     // "copy" | "redact"
+  "titleText":    "Busy",     // shown when title = "redact"
+  "location":     true,
+  "notes":        false,
+  "alarms":       false,       // off avoids duplicate notifications on the dest
+  "availability": "source"     // "source" | "busy" (force the block to read busy)
+}
+```
+
+| Preset | Meaning |
+|--------|---------|
+| **Copy details** | Real title + location, no notes (the default). |
+| **Full copy** | Adds notes. As complete as EventKit allows. |
+| **Busy only** | Title → `titleText`, drops location/notes, forces busy. |
+
+*Two EventKit limits worth knowing:* **attendees can't be replicated** (no API
+to set participants), and the source event's **URL is unavailable** because that
+field carries cal-mirror's own per-copy marker.
+
+### Per-event tags
+
+Type any of these into a **source** event's title to override its mirror's
+projection for that one event (case-insensitive; the tag is stripped from the copy):
+
+| Tag | Effect |
+|-----|--------|
+| `#nomirror` | Skip this event entirely — never copied, and any prior copy is removed. |
+| `#private` | Copy as a redacted busy block, even on a full-copy mirror. |
+| `#public` | Copy in full, even on a Busy-only mirror. |
 
 ## 🖥️ Menu bar
 
