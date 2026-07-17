@@ -150,7 +150,7 @@ func writeStatus(paused: Bool, results: [MirrorResult]) {
         "paused": paused, "intervalSeconds": cfg.intervalSeconds, "mirrors": mirrors,
     ]
     if let data = try? JSONSerialization.data(withJSONObject: o, options: [.prettyPrinted, .sortedKeys]) {
-        try? data.write(to: URL(fileURLWithPath: STATUS_PATH))
+        try? data.write(to: URL(fileURLWithPath: STATUS_PATH), options: .atomic)
     }
 }
 
@@ -181,7 +181,7 @@ func publishCalendarList() {
          "identifier": c.calendarIdentifier, "writable": c.allowsContentModifications]
     }.sorted { ($0["account"] as! String, $0["title"] as! String) < ($1["account"] as! String, $1["title"] as! String) }
     if let data = try? JSONSerialization.data(withJSONObject: arr, options: [.prettyPrinted, .sortedKeys]) {
-        try? data.write(to: URL(fileURLWithPath: SUPPORT_DIR + "/calendars.json"))
+        try? data.write(to: URL(fileURLWithPath: SUPPORT_DIR + "/calendars.json"), options: .atomic)
     }
 }
 publishCalendarList()
@@ -225,7 +225,7 @@ func keyFor(_ ev: EKEvent) -> String {
         base = ext
     } else {
         let end = Int((ev.endDate ?? ev.startDate ?? now).timeIntervalSince1970)
-        base = "c:\(ev.title ?? "")#\(end)#\(ev.isAllDay ? 1 : 0)"
+        base = "c:\(ev.title ?? "")#\(end)#\(ev.isAllDay ? 1 : 0)#\(ev.location ?? "")"
     }
     return Data("\(base)#\(start)".utf8).base64EncodedString()
         .replacingOccurrences(of: "+", with: "-")
@@ -318,10 +318,17 @@ func syncMirror(_ m: Mirror) -> MirrorResult {
         store.predicateForEvents(withStart: winStart, end: winEnd, calendars: [source]))
     var desired: [String: EKEvent] = [:]
     var skipped = 0, mirrored = 0
-    for ev in srcEvents {
+    // Deterministic order so that when two events hash to the same key (possible
+    // for feed calendars with no external id — keyFor falls back to a content
+    // hash), the collision suffix below is assigned the same way every run and
+    // doesn't churn. Sorting by keyFor also groups colliding events together.
+    for ev in srcEvents.sorted(by: { keyFor($0) < keyFor($1) }) {
         if isMirrorArtifact(ev) { mirrored += 1; continue }         // don't re-mirror a copy/heartbeat
         if scanTags(ev.title ?? "").skip { skipped += 1; continue }  // honor #nomirror
-        desired[keyFor(ev)] = ev
+        let base = keyFor(ev)
+        var key = base, n = 1
+        while desired[key] != nil { key = "\(base)-\(n)"; n += 1 }   // '-' is base64url-safe, '~'-free
+        desired[key] = ev
     }
 
     let dstEvents = store.events(matching:
@@ -378,18 +385,19 @@ func syncMirror(_ m: Mirror) -> MirrorResult {
             alarmSig: alarms ? alarmSig(src.alarms) : "",
             copyAlarms: alarms)
     }
-    func differ(_ copy: EKEvent, _ src: EKEvent) -> Bool {
-        let s = snapshot(src)
-        return copy.title != s.title || copy.startDate != src.startDate ||
+    // differ() and apply() take the precomputed snapshot and the marker key so
+    // the snapshot is built once per event, and the url check compares against
+    // the same key apply() writes (keys may be collision-suffixed).
+    func differ(_ copy: EKEvent, _ src: EKEvent, _ s: Snapshot, key: String) -> Bool {
+        copy.title != s.title || copy.startDate != src.startDate ||
         copy.endDate != src.endDate || copy.isAllDay != src.isAllDay ||
         (copy.location ?? "") != (s.location ?? "") ||
         (copy.notes ?? "") != (s.notes ?? "") ||
         copy.availability != s.busy ||
         alarmSig(copy.alarms) != s.alarmSig ||
-        copy.url != markerURL(m.id, keyFor(src))   // force-upgrade legacy markers
+        copy.url != markerURL(m.id, key)   // force-upgrade legacy markers
     }
-    func apply(_ copy: EKEvent, _ src: EKEvent, key: String) {
-        let s = snapshot(src)
+    func apply(_ copy: EKEvent, _ src: EKEvent, _ s: Snapshot, key: String) {
         copy.title = s.title
         copy.startDate = src.startDate; copy.endDate = src.endDate
         copy.isAllDay = src.isAllDay; copy.timeZone = src.timeZone
@@ -406,13 +414,14 @@ func syncMirror(_ m: Mirror) -> MirrorResult {
     }
 
     for (key, src) in desired {
+        let s = snapshot(src)                       // built once, shared by differ + apply
         if let copy = existing[key] {
-            if differ(copy, src) {
-                if !dryRun { apply(copy, src, key: key); try? store.save(copy, span: .thisEvent, commit: false); pending += 1 }
+            if differ(copy, src, s, key: key) {
+                if !dryRun { apply(copy, src, s, key: key); try? store.save(copy, span: .thisEvent, commit: false); pending += 1 }
                 r.updated += 1
             } else { r.unchanged += 1 }
         } else {
-            if !dryRun { let c = EKEvent(eventStore: store); apply(c, src, key: key); try? store.save(c, span: .thisEvent, commit: false); pending += 1 }
+            if !dryRun { let c = EKEvent(eventStore: store); apply(c, src, s, key: key); try? store.save(c, span: .thisEvent, commit: false); pending += 1 }
             r.created += 1
         }
         maybeCommit()

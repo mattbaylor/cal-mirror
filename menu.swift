@@ -77,16 +77,23 @@ final class Model: ObservableObject {
     // Calendars come from calendars.json, published by the engine (which holds
     // Calendar access). The UI never touches EventKit, so it needs no TCC grant.
     func loadCalendars() {
-        guard let d = FileManager.default.contents(atPath: SUPPORT + "/calendars.json"),
-              let arr = (try? JSONSerialization.jsonObject(with: d)) as? [[String: Any]] else {
-            calendars = []; calendarAccess = false; return
+        // Runs on the 5s timer; only reassign the @Published properties when the
+        // parsed list actually changed, so we don't re-render the whole window
+        // (and its pickers) every tick.
+        let newList: [CalInfo]
+        if let d = FileManager.default.contents(atPath: SUPPORT + "/calendars.json"),
+           let arr = (try? JSONSerialization.jsonObject(with: d)) as? [[String: Any]] {
+            newList = arr.compactMap { o -> CalInfo? in
+                guard let t = o["title"] as? String, let a = o["account"] as? String,
+                      let id = o["identifier"] as? String else { return nil }
+                return CalInfo(title: t, account: a, identifier: id, writable: o["writable"] as? Bool ?? false)
+            }.sorted { ($0.account, $0.title) < ($1.account, $1.title) }
+        } else {
+            newList = []
         }
-        calendars = arr.compactMap { o -> CalInfo? in
-            guard let t = o["title"] as? String, let a = o["account"] as? String,
-                  let id = o["identifier"] as? String else { return nil }
-            return CalInfo(title: t, account: a, identifier: id, writable: o["writable"] as? Bool ?? false)
-        }.sorted { ($0.account, $0.title) < ($1.account, $1.title) }
-        calendarAccess = !calendars.isEmpty
+        if newList != calendars { calendars = newList }
+        let access = !newList.isEmpty
+        if access != calendarAccess { calendarAccess = access }
     }
 
     private func json(_ name: String) -> [String: Any]? {
@@ -203,8 +210,17 @@ final class Model: ObservableObject {
             return d
         }
         if let data = try? JSONSerialization.data(withJSONObject: o, options: [.prettyPrinted, .sortedKeys]) {
-            try? data.write(to: URL(fileURLWithPath: SUPPORT + "/config.json"))
+            try? data.write(to: URL(fileURLWithPath: SUPPORT + "/config.json"), options: .atomic)
         }
+    }
+
+    // A unique mirror id. The old timestamp-second scheme collided when two
+    // mirrors were added within the same second, making them share a marker tag.
+    func freshMirrorId() -> String {
+        func gen() -> String { "m\(UUID().uuidString.prefix(12))" }
+        var id = gen()
+        while mirrors.contains(where: { $0.id == id }) { id = gen() }
+        return id
     }
 
     // Reverse-direction guard: does (source -> dest) reverse some other mirror
@@ -325,7 +341,7 @@ struct ManageView: View {
                         Text("Mirror pairs").font(.headline)
                         Spacer()
                         Button {
-                            let new = MirrorCfg(id: "m\(Int(Date().timeIntervalSince1970))",
+                            let new = MirrorCfg(id: model.freshMirrorId(),
                                 name: "New mirror", sourceTitle: "", sourceAccount: "",
                                 destTitle: "", destAccount: "", enabled: true, showHeartbeat: true,
                                 windowPastDays: 30, windowFutureDays: 365, legacyScheme: nil)
