@@ -72,9 +72,17 @@ final class Store: ObservableObject {
     // MARK: Config edits
 
     func addMirror() {
-        config.mirrors.append(Mirror(id: "m\(Int(Date().timeIntervalSince1970))",
+        config.mirrors.append(Mirror(id: freshMirrorId(),
             name: "New mirror", source: CalRef(title: ""), dest: CalRef(title: "")))
         save()
+    }
+    /// Unique mirror id. The old timestamp-second scheme collided when two mirrors
+    /// were added within the same second, making them share a marker tag.
+    private func freshMirrorId() -> String {
+        func gen() -> String { "m\(UUID().uuidString.prefix(12))" }
+        var id = gen()
+        while config.mirrors.contains(where: { $0.id == id }) { id = gen() }
+        return id
     }
     func delete(id: String) { config.mirrors.removeAll { $0.id == id }; save() }
     func delete(_ id: String) { delete(id: id) }

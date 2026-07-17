@@ -48,6 +48,35 @@ do {
     check(false, "config decode threw: \(error)")
 }
 
+print("Projection + tags:")
+// Absent projection block → historical defaults, and round-trips.
+do {
+    let cfg = try JSONDecoder().decode(Config.self, from: json)
+    let p = cfg.mirrors[0].projection
+    check(p.title == .copy && p.location && !p.notes && !p.alarms && p.availability == .source,
+          "absent projection → historical defaults")
+    let again = try JSONDecoder().decode(Config.self, from: JSONEncoder().encode(cfg))
+    check(cfg == again, "projection round-trips through encode/decode")
+}
+// A projection block decodes its fields; a bad value never nukes the config.
+do {
+    let j = """
+    { "mirrors": [ { "id": "w", "source": {"title":"S"}, "dest": {"title":"D"},
+      "projection": { "title": "redact", "titleText": "Out", "location": false,
+        "notes": true, "availability": "busy", "custom": true, "alarms": "oops" } } ] }
+    """.data(using: .utf8)!
+    let cfg = try JSONDecoder().decode(Config.self, from: j)
+    let p = cfg.mirrors[0].projection
+    check(p.title == .redact && p.titleText == "Out" && !p.location && p.notes
+          && p.availability == .busy && p.custom, "projection fields decode")
+    check(p.alarms == false, "malformed field falls back to default (no throw)")
+}
+// scanTags: detection, case-insensitivity, stripping, whitespace.
+check(scanTags("Dentist").clean == "Dentist" && !scanTags("Dentist").skip, "no tag → untouched")
+check(scanTags("Lunch #private").forcePrivate && scanTags("Lunch #private").clean == "Lunch", "#private detected + stripped")
+check(scanTags("Sync #PUBLIC").forcePublic && scanTags("Sync #PUBLIC").clean == "Sync", "tag is case-insensitive")
+check(scanTags("Secret #nomirror x").skip && scanTags("Secret #nomirror x").clean == "Secret x", "#nomirror skip + strip")
+
 print("ReverseDetector:")
 func P(_ id: String, _ s: String, _ d: String) -> ReverseDetector.Pair { .init(id: id, source: s, dest: d) }
 // A->B and B->A: both flagged
