@@ -138,9 +138,19 @@ public final class MirrorEngine: @unchecked Sendable {
     }
 
     private func keyFor(_ ev: EKEvent, now: Date) -> String {
-        let ext = ev.calendarItemExternalIdentifier ?? ev.eventIdentifier ?? UUID().uuidString
         let start = Int((ev.startDate ?? now).timeIntervalSince1970)
-        return Data("\(ext)#\(start)".utf8).base64EncodedString()
+        // Prefer the stable external identifier. Subscribed/feed calendars often
+        // expose no external id (and an unstable eventIdentifier); the old fallback
+        // to a random UUID re-keyed those events on every fetch. Fall back to a
+        // deterministic content hash instead.
+        let base: String
+        if let ext = ev.calendarItemExternalIdentifier, !ext.isEmpty {
+            base = ext
+        } else {
+            let end = Int((ev.endDate ?? ev.startDate ?? now).timeIntervalSince1970)
+            base = "c:\(ev.title ?? "")#\(end)#\(ev.isAllDay ? 1 : 0)#\(ev.location ?? "")"
+        }
+        return Data("\(base)#\(start)".utf8).base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
@@ -148,12 +158,66 @@ public final class MirrorEngine: @unchecked Sendable {
 
     /// Content signature used as the *fuzzy* dedup axis: two events that match on
     /// title + start + end + all-day are treated as the same event even if their
-    /// marker keys diverge. Must be computed identically for source and copy.
+    /// marker keys diverge. The title MUST be the *projected* title (what the copy
+    /// actually contains) so a redacted copy still fuzzy-matches its source.
+    private func fingerprintOf(title: String, start: Date?, end: Date?, allDay: Bool, now: Date) -> String {
+        let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let s = Int((start ?? now).timeIntervalSince1970)
+        let e = Int((end ?? now).timeIntervalSince1970)
+        return "\(t)|\(s)|\(e)|\(allDay)"
+    }
     private func fingerprint(_ ev: EKEvent, now: Date) -> String {
-        let t = (ev.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let s = Int((ev.startDate ?? now).timeIntervalSince1970)
-        let e = Int((ev.endDate ?? now).timeIntervalSince1970)
-        return "\(t)|\(s)|\(e)|\(ev.isAllDay)"
+        fingerprintOf(title: ev.title ?? "", start: ev.startDate, end: ev.endDate, allDay: ev.isAllDay, now: now)
+    }
+
+    // MARK: Projection
+
+    private struct Snap { var title: String; var location: String?; var notes: String?
+                          var availability: EKEventAvailability; var alarmSig: String; var copyAlarms: Bool }
+
+    /// The single source of truth for what a copy should contain, given the
+    /// mirror's projection and any per-event override tag on the source title.
+    private func snapshot(_ src: EKEvent, mirror m: Mirror) -> Snap {
+        let tags = scanTags(src.title ?? "")
+        let p = m.projection
+        let redact: Bool, loc: Bool, notes: Bool, alarms: Bool, busy: Bool
+        if tags.forcePrivate {          // #private wins: nothing but a block
+            redact = true; loc = false; notes = false; alarms = false; busy = true
+        } else if tags.forcePublic {    // #public: replicate content, availability from source
+            redact = false; loc = true; notes = true; alarms = p.alarms; busy = false
+        } else {
+            redact = (p.title == .redact); loc = p.location; notes = p.notes
+            alarms = p.alarms; busy = (p.availability == .busy)
+        }
+        let title = redact ? (p.titleText.isEmpty ? "Busy" : p.titleText)
+                           : (tags.clean.isEmpty ? "(no title)" : tags.clean)
+        // Subscribed feeds report .notSupported, which the destination coerces to
+        // .busy on write, so comparing against it would flag a diff every run.
+        let resolved: EKEventAvailability = busy ? .busy : src.availability
+        let avail: EKEventAvailability = (resolved == .notSupported) ? .busy : resolved
+        return Snap(title: title, location: loc ? src.location : nil, notes: notes ? src.notes : nil,
+                    availability: avail, alarmSig: alarms ? alarmSig(src.alarms) : "", copyAlarms: alarms)
+    }
+
+    /// Order-independent fingerprint of an alarm set, so differ() can tell whether
+    /// the copy's alarms already match without re-saving every run.
+    private func alarmSig(_ alarms: [EKAlarm]?) -> String {
+        guard let a = alarms, !a.isEmpty else { return "" }
+        return a.map { $0.absoluteDate.map { "@\(Int($0.timeIntervalSince1970))" } ?? "r\(Int($0.relativeOffset))" }
+            .sorted().joined(separator: ",")
+    }
+    private func cloneAlarm(_ a: EKAlarm) -> EKAlarm {
+        if let d = a.absoluteDate { return EKAlarm(absoluteDate: d) }
+        return EKAlarm(relativeOffset: a.relativeOffset)
+    }
+
+    /// True if `ev` is itself a cal-mirror artifact — a copy some mirror wrote, or
+    /// a heartbeat banner — so it's skipped as a source (no copy-of-a-copy).
+    private func isMirrorArtifact(_ ev: EKEvent, mirrors: [Mirror]) -> Bool {
+        guard let sc = ev.url?.scheme else { return false }
+        if sc.hasPrefix(Markers.scheme) { return true }              // x-calmirror marker + status
+        if Markers.owner(of: ev.url, mirrors: mirrors) != nil { return true }
+        return mirrors.contains { ($0.legacyScheme.map { $0 + "-status" }) == sc }
     }
 
     private func syncMirror(_ m: Mirror, allMirrors: [Mirror], now: Date,
@@ -205,10 +269,20 @@ public final class MirrorEngine: @unchecked Sendable {
         let srcEvents = store.events(matching:
             store.predicateForEvents(withStart: winStart, end: winEnd, calendars: [source]))
         var srcList: [EKEvent] = []
+        var snaps: [Snap] = []                 // parallel to srcList; built once per event
         var desiredList: [Reconciler.Desired] = []
         for ev in srcEvents {
+            if isMirrorArtifact(ev, mirrors: allMirrors) { continue }   // don't re-mirror a copy/heartbeat
+            if scanTags(ev.title ?? "").skip { continue }               // honor #nomirror
+            let snap = snapshot(ev, mirror: m)
             srcList.append(ev)
-            desiredList.append(.init(key: keyFor(ev, now: now), fingerprint: fingerprint(ev, now: now)))
+            snaps.append(snap)
+            // Fingerprint uses the PROJECTED title so a redacted copy still
+            // fuzzy-matches its source (the copy carries the projected title).
+            desiredList.append(.init(
+                key: keyFor(ev, now: now),
+                fingerprint: fingerprintOf(title: snap.title, start: ev.startDate,
+                                           end: ev.endDate, allDay: ev.isAllDay, now: now)))
         }
 
         let dstEvents = store.events(matching: store.predicateForEvents(
@@ -241,16 +315,23 @@ public final class MirrorEngine: @unchecked Sendable {
             existingList.append(.init(ref: ref, key: ownedRaw[old].key, fingerprint: ownedRaw[old].fp))
         }
 
-        func differ(_ copy: EKEvent, _ src: EKEvent) -> Bool {
-            copy.title != (src.title ?? "") || copy.startDate != src.startDate ||
+        func differ(_ copy: EKEvent, _ src: EKEvent, _ s: Snap, key: String) -> Bool {
+            copy.title != s.title || copy.startDate != src.startDate ||
             copy.endDate != src.endDate || copy.isAllDay != src.isAllDay ||
-            (copy.location ?? "") != (src.location ?? "") ||
-            copy.url != Markers.copyURL(mirrorId: m.id, key: keyFor(src, now: now))
+            (copy.location ?? "") != (s.location ?? "") ||
+            (copy.notes ?? "") != (s.notes ?? "") ||
+            copy.availability != s.availability ||
+            alarmSig(copy.alarms) != s.alarmSig ||
+            copy.url != Markers.copyURL(mirrorId: m.id, key: key)
         }
-        func apply(_ copy: EKEvent, _ src: EKEvent, key: String) {
-            copy.title = src.title ?? "(no title)"
+        func apply(_ copy: EKEvent, _ src: EKEvent, _ s: Snap, key: String) {
+            copy.title = s.title
             copy.startDate = src.startDate; copy.endDate = src.endDate
-            copy.isAllDay = src.isAllDay; copy.location = src.location; copy.timeZone = src.timeZone
+            copy.isAllDay = src.isAllDay; copy.timeZone = src.timeZone
+            copy.location = s.location; copy.notes = s.notes
+            copy.availability = s.availability
+            copy.alarms?.forEach { copy.removeAlarm($0) }
+            if s.copyAlarms, let alarms = src.alarms { for a in alarms { copy.addAlarm(cloneAlarm(a)) } }
             copy.url = Markers.copyURL(mirrorId: m.id, key: key); copy.calendar = dest
         }
         var pending = 0
@@ -261,16 +342,16 @@ public final class MirrorEngine: @unchecked Sendable {
         // Pure planner decides create/match/delete and collapses duplicates.
         let plan = Reconciler.plan(desired: desiredList, existing: existingList)
         for (di, ref) in plan.match {
-            let copy = owned[ref], src = srcList[di], key = desiredList[di].key
-            if differ(copy, src) {           // includes url != new key → adopted copies re-stamp here
-                apply(copy, src, key: key)
+            let copy = owned[ref], src = srcList[di], s = snaps[di], key = desiredList[di].key
+            if differ(copy, src, s, key: key) {   // includes url != new key → adopted copies re-stamp here
+                apply(copy, src, s, key: key)
                 try? store.save(copy, span: .thisEvent, commit: false); pending += 1
                 r.updated += 1
             } else { r.unchanged += 1 }
             maybeCommit()
         }
         for di in plan.create {
-            let c = EKEvent(eventStore: store); apply(c, srcList[di], key: desiredList[di].key)
+            let c = EKEvent(eventStore: store); apply(c, srcList[di], snaps[di], key: desiredList[di].key)
             try? store.save(c, span: .thisEvent, commit: false); pending += 1
             r.created += 1
             maybeCommit()
