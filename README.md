@@ -31,7 +31,8 @@ normal account, macOS then pushes it wherever that account syncs.
 
 - **Any → any.** Mirror any calendar into any other, configured as a list of pairs.
 - **Idempotent & one-way.** Re-runs never duplicate; the source is authoritative and is never written to.
-- **Per-field privacy.** Choose per mirror what crosses over — from a full copy down to a redacted “Busy” block — and override any single event with a tag in its title.
+- **Per-field privacy.** Choose per mirror what crosses over — from a full copy down to a redacted “Busy” block — and override any single event with a tag in its notes.
+- **Selective copy.** Copy only *some* source events by tagging them in the notes and giving the mirror an `include`/`reject` tag rule — e.g. pull just your `#ref` events into a shared availability calendar.
 - **Recurring-safe.** Recurring events are expanded into occurrences — no RRULE translation, and detached exceptions are already resolved by EventKit.
 - **Non-destructive.** Each pair tags only its own copies, so two mirrors can share a destination and hand-added events are left untouched.
 - **Menu-bar UI.** Health at a glance, Sync now, Pause, interval, and a pickers-driven window to add/edit pairs.
@@ -144,16 +145,57 @@ location, no notes/alarms). The menu bar exposes this as three presets plus
 to set participants), and the source event's **URL is unavailable** because that
 field carries cal-mirror's own per-copy marker.
 
-### Per-event tags
+### Notes tags
 
-Type any of these into a **source** event's title to override its mirror's
-projection for that one event (case-insensitive; the tag is stripped from the copy):
+Tags live in a **source** event's **notes** (not the title). A tag is `#`
+followed by every non-whitespace character up to the next space — any ASCII is
+allowed inside, so `#ref-cal` and `#skip_2` are each one tag. A tag is only
+recognized where the `#` starts the notes or follows whitespace, and an event may
+carry several: `#nomirror #ref-cal`. Matching is case-insensitive and by *whole
+token*, so `#ref` and `#ref-cal` are different tags.
+
+The three control tags override a mirror's projection for one event:
 
 | Tag | Effect |
 |-----|--------|
 | `#nomirror` | Skip this event entirely — never copied, and any prior copy is removed. |
 | `#private` | Copy as a redacted busy block, even on a full-copy mirror. |
 | `#public` | Copy in full, even on a Busy-only mirror. |
+
+Control tags are always stripped from the copy.
+
+### Selective copy (`tagFilter`)
+
+Give a mirror a `tagFilter` to copy only *some* source events, keyed off the
+notes tags above. A mirror runs in **one** mode — `include` **or** `reject`,
+never both:
+
+```jsonc
+"tagFilter": { "mode": "include", "tags": ["#ref"] }   // copy ONLY events whose notes carry #ref
+"tagFilter": { "mode": "reject",  "tags": ["#skip"] }  // copy everything EXCEPT events carrying #skip
+```
+
+No `tagFilter` (or an empty `tags` list) copies everything — the historical
+behavior. This is the referee-availability play: tag the events you're free to
+ref with `#ref` in their notes, point an `include`/`#ref` mirror with a Busy-only
+projection at a calendar you share, and only those blocks cross over.
+
+### Keeping tags in the copy (`copyNotesTags`)
+
+When a mirror **projects notes** (`"notes": true`), your other `#tags` are
+stripped from the copied notes by default so they don't leak. Set
+`"copyNotesTags": true` on the mirror to keep them. Two per-tag overrides beat the
+mirror setting either way — the `+`/`-` is part of the tag (so it matters for
+matching too):
+
+| Tag form | In the copied notes |
+|----------|---------------------|
+| `#-foo` | Always **removed**, whatever `copyNotesTags` says. |
+| `#+foo` | Always **kept** (verbatim, `+` included), whatever `copyNotesTags` says. |
+
+> **Tags moved to notes in v1.2.** Earlier versions read `#nomirror`/`#private`/
+> `#public` from the event **title**; those are no longer honored there. Move any
+> such tags into the event's notes.
 
 ## 🖥️ Menu bar
 

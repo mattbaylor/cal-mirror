@@ -19,6 +19,26 @@
         "alarms": false,
         "availability": "source"
       }
+    },
+    {
+      "id": "ref",
+      "name": "Referee availability",
+      "source": { "title": "Master",              "account": "you@personal.example.com" },
+      "dest":   { "title": "Referee Availability", "account": "you@personal.example.com" },
+      "enabled": true,
+      "showHeartbeat": true,
+      "windowPastDays": 7,
+      "windowFutureDays": 120,
+      "tagFilter": { "mode": "include", "tags": ["#ref"] },
+      "copyNotesTags": false,
+      "projection": {
+        "title": "redact",
+        "titleText": "Busy",
+        "location": false,
+        "notes": false,
+        "alarms": false,
+        "availability": "busy"
+      }
     }
   ]
 }

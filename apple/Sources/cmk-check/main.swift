@@ -71,11 +71,63 @@ do {
           && p.availability == .busy && p.custom, "projection fields decode")
     check(p.alarms == false, "malformed field falls back to default (no throw)")
 }
-// scanTags: detection, case-insensitivity, stripping, whitespace.
-check(scanTags("Dentist").clean == "Dentist" && !scanTags("Dentist").skip, "no tag → untouched")
-check(scanTags("Lunch #private").forcePrivate && scanTags("Lunch #private").clean == "Lunch", "#private detected + stripped")
-check(scanTags("Sync #PUBLIC").forcePublic && scanTags("Sync #PUBLIC").clean == "Sync", "tag is case-insensitive")
-check(scanTags("Secret #nomirror x").skip && scanTags("Secret #nomirror x").clean == "Secret x", "#nomirror skip + strip")
+// scanNoteTags: control tags now live in NOTES, parsed as whole tokens.
+check(scanNoteTags(nil).tokens.isEmpty && !scanNoteTags(nil).skip, "nil notes → no tags")
+check(!scanNoteTags("just a plain note").skip, "prose without # → no tags")
+check(scanNoteTags("Lunch #private").forcePrivate, "#private detected in notes")
+check(scanNoteTags("sync #PUBLIC").forcePublic, "notes tag is case-insensitive")
+check(scanNoteTags("hush #nomirror please").skip, "#nomirror detected in notes")
+check(scanNoteTags("a#b not-a-tag").tokens.isEmpty, "# mid-word (a#b) is not a tag")
+check(scanNoteTags("line one\n#ref-cal").tokens == ["#ref-cal"], "tag after newline; ends at whitespace")
+check(scanNoteTags("bare # then #ok").tokens == ["#ok"], "bare # ignored; real tag kept")
+check(scanNoteTags("#a #b #a").tokens == ["#a", "#b", "#a"], "multiple tags captured in order")
+
+// Whole-token matching: #ref and #ref-cal are DISTINCT; +/- are part of the token.
+let nt = scanNoteTags("#ref-cal #+agenda #-internal")
+check(nt.matchesAny(["#ref-cal"]) && !nt.matchesAny(["#ref"]), "#ref does not match #ref-cal (whole token)")
+check(nt.matchesAny(["ref-cal"]), "config tag without leading # is normalized")
+check(nt.matchesAny(["#+agenda"]) && !nt.matchesAny(["#agenda"]), "+/- is part of the tag identity")
+check(!nt.matchesAny([]) && !nt.matchesAny(["#nope"]), "no match → false")
+
+// TagFilter.admits: include copies only matches; reject skips matches; reject wins over include is n/a (one mode).
+let inc = TagFilter(mode: .include, tags: ["#ref"])
+check(inc.admits(scanNoteTags("x #ref")) && !inc.admits(scanNoteTags("x #other")), "include: only tagged events admitted")
+let rej = TagFilter(mode: .reject, tags: ["#skip"])
+check(!rej.admits(scanNoteTags("x #skip")) && rej.admits(scanNoteTags("x #keep")), "reject: tagged events skipped")
+check(TagFilter(mode: .include, tags: []).admits(scanNoteTags("anything")), "empty tag list → filter inactive (copy all)")
+
+// renderCopiedNotes: control tags always stripped; others obey copyNotesTags + #±.
+check(renderCopiedNotes("plain note", copyNotesTags: false) == "plain note", "no tags → notes untouched")
+check(renderCopiedNotes("meet #nomirror", copyNotesTags: true) == "meet", "control tag stripped even when copying tags")
+check(renderCopiedNotes("bring #gear", copyNotesTags: false) == "bring", "plain tag stripped by default")
+check(renderCopiedNotes("bring #gear", copyNotesTags: true) == "bring #gear", "plain tag kept when copyNotesTags on")
+check(renderCopiedNotes("a #-hide b", copyNotesTags: true) == "a b", "#- always hidden")
+check(renderCopiedNotes("a #+show b", copyNotesTags: false) == "a #+show b", "#+ always kept, verbatim")
+check(renderCopiedNotes("keep this\n#-drop", copyNotesTags: true) == "keep this", "untouched line preserved; tag-only line trimmed")
+check(renderCopiedNotes("#nomirror", copyNotesTags: false) == nil, "notes that are only a stripped tag → nil")
+
+// Config: tagFilter + copyNotesTags decode and round-trip; bad mode → no filter.
+do {
+    let j = """
+    { "mirrors": [ { "id": "r", "source": {"title":"S"}, "dest": {"title":"D"},
+      "tagFilter": { "mode": "include", "tags": ["#ref"] }, "copyNotesTags": true } ] }
+    """.data(using: .utf8)!
+    let cfg = try JSONDecoder().decode(Config.self, from: j)
+    let m = cfg.mirrors[0]
+    check(m.tagFilter?.mode == .include && m.tagFilter?.tags == ["#ref"], "tagFilter decodes")
+    check(m.copyNotesTags, "copyNotesTags decodes")
+    let again = try JSONDecoder().decode(Config.self, from: JSONEncoder().encode(cfg))
+    check(cfg == again, "tagFilter + copyNotesTags round-trip")
+}
+do {
+    let j = """
+    { "mirrors": [ { "id": "r", "source": {"title":"S"}, "dest": {"title":"D"},
+      "tagFilter": { "mode": "bogus", "tags": ["#ref"] } } ] }
+    """.data(using: .utf8)!
+    let cfg = try JSONDecoder().decode(Config.self, from: j)
+    check(cfg.mirrors[0].tagFilter == nil && !cfg.mirrors[0].copyNotesTags,
+          "unknown mode → nil filter (copy all); copyNotesTags defaults false")
+}
 
 print("ReverseDetector:")
 func P(_ id: String, _ s: String, _ d: String) -> ReverseDetector.Pair { .init(id: id, source: s, dest: d) }

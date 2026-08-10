@@ -176,26 +176,29 @@ public final class MirrorEngine: @unchecked Sendable {
                           var availability: EKEventAvailability; var alarmSig: String; var copyAlarms: Bool }
 
     /// The single source of truth for what a copy should contain, given the
-    /// mirror's projection and any per-event override tag on the source title.
-    private func snapshot(_ src: EKEvent, mirror m: Mirror) -> Snap {
-        let tags = scanTags(src.title ?? "")
+    /// mirror's projection and any per-event control tag in the source NOTES
+    /// (parsed once by the caller and passed in as `nt`).
+    private func snapshot(_ src: EKEvent, tags nt: NoteTags, mirror m: Mirror) -> Snap {
         let p = m.projection
         let redact: Bool, loc: Bool, notes: Bool, alarms: Bool, busy: Bool
-        if tags.forcePrivate {          // #private wins: nothing but a block
+        if nt.forcePrivate {            // #private wins: nothing but a block
             redact = true; loc = false; notes = false; alarms = false; busy = true
-        } else if tags.forcePublic {    // #public: replicate content, availability from source
+        } else if nt.forcePublic {      // #public: replicate content, availability from source
             redact = false; loc = true; notes = true; alarms = p.alarms; busy = false
         } else {
             redact = (p.title == .redact); loc = p.location; notes = p.notes
             alarms = p.alarms; busy = (p.availability == .busy)
         }
+        // Title is copied verbatim now — tags live in notes, not the title.
+        let raw = src.title ?? ""
         let title = redact ? (p.titleText.isEmpty ? "Busy" : p.titleText)
-                           : (tags.clean.isEmpty ? "(no title)" : tags.clean)
+                           : (raw.isEmpty ? "(no title)" : raw)
         // Subscribed feeds report .notSupported, which the destination coerces to
         // .busy on write, so comparing against it would flag a diff every run.
         let resolved: EKEventAvailability = busy ? .busy : src.availability
         let avail: EKEventAvailability = (resolved == .notSupported) ? .busy : resolved
-        return Snap(title: title, location: loc ? src.location : nil, notes: notes ? src.notes : nil,
+        let copiedNotes = notes ? renderCopiedNotes(src.notes, copyNotesTags: m.copyNotesTags) : nil
+        return Snap(title: title, location: loc ? src.location : nil, notes: copiedNotes,
                     availability: avail, alarmSig: alarms ? alarmSig(src.alarms) : "", copyAlarms: alarms)
     }
 
@@ -273,8 +276,10 @@ public final class MirrorEngine: @unchecked Sendable {
         var desiredList: [Reconciler.Desired] = []
         for ev in srcEvents {
             if isMirrorArtifact(ev, mirrors: allMirrors) { continue }   // don't re-mirror a copy/heartbeat
-            if scanTags(ev.title ?? "").skip { continue }               // honor #nomirror
-            let snap = snapshot(ev, mirror: m)
+            let nt = scanNoteTags(ev.notes)
+            if nt.skip { continue }                                     // honor #nomirror
+            if let f = m.tagFilter, !f.admits(nt) { continue }          // include/reject by notes tag
+            let snap = snapshot(ev, tags: nt, mirror: m)
             srcList.append(ev)
             snaps.append(snap)
             // Fingerprint uses the PROJECTED title so a redacted copy still
