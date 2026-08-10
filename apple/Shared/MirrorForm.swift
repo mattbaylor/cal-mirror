@@ -82,9 +82,47 @@ struct MirrorFields: View {
                 get: { mirror.projection.availability == .busy },
                 set: { mirror.projection.availability = $0 ? .busy : .source; onChange() }))
         }
-        DisclosureGroup("Per-event tags") {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Type into a source event's title:").font(.caption).foregroundStyle(.secondary)
+        DisclosureGroup("Per-event tags & selection") {
+            VStack(alignment: .leading, spacing: 8) {
+                // Selection filter — copy all, or only/except events carrying a
+                // notes tag. One mode per mirror (include OR reject, never both);
+                // nil tagFilter = copy everything.
+                Picker("Copy which events", selection: Binding(
+                    get: { mirror.tagFilter?.mode.rawValue ?? "off" },
+                    set: { v in
+                        switch v {
+                        case "include": mirror.tagFilter = TagFilter(mode: .include, tags: mirror.tagFilter?.tags ?? [])
+                        case "reject":  mirror.tagFilter = TagFilter(mode: .reject,  tags: mirror.tagFilter?.tags ?? [])
+                        default:        mirror.tagFilter = nil
+                        }
+                        onChange()
+                    })) {
+                    Text("All events").tag("off")
+                    Text("Only with tag…").tag("include")
+                    Text("Except with tag…").tag("reject")
+                }
+                if let f = mirror.tagFilter {
+                    TextField(f.mode == .include ? "Include tags" : "Reject tags", text: Binding(
+                        get: { mirror.tagFilter?.tags.joined(separator: " ") ?? "" },
+                        set: { s in
+                            let tags = s.split(whereSeparator: { $0 == " " || $0 == "," || $0 == "\n" || $0 == "\t" }).map(String.init)
+                            mirror.tagFilter = TagFilter(mode: mirror.tagFilter?.mode ?? .include, tags: tags)
+                            onChange()
+                        }))
+                    Text(f.mode == .include
+                         ? "Copy an event only if its notes contain one of these tags."
+                         : "Skip an event if its notes contain one of these tags.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("Space-separated, e.g.  #ref #cowork").font(.caption).foregroundStyle(.secondary)
+                }
+
+                Toggle("Keep #tags in copied notes", isOn: $mirror.copyNotesTags)
+                    .onChange(of: mirror.copyNotesTags) { _, _ in onChange() }
+                Text("Only applies when notes are copied. Off = strip #tags. #+tag is always kept, #-tag always dropped.")
+                    .font(.caption).foregroundStyle(.secondary)
+
+                Divider().padding(.vertical, 2)
+                Text("Control tags — type into a source event's notes:").font(.caption).foregroundStyle(.secondary)
                 Text("#nomirror — skip this event entirely").font(.caption)
                 Text("#private — copy as a busy block").font(.caption)
                 Text("#public — copy in full").font(.caption)

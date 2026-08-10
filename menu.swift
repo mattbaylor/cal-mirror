@@ -33,6 +33,11 @@ struct MirrorCfg: Identifiable, Equatable {
     var projAlarms: Bool = false
     var projBusy: Bool = false
     var projCustom: Bool = false   // UI: user explicitly chose "Custom" (persisted so it sticks)
+    // Notes-tag selection. tagMode "off" = copy everything (no filter); otherwise
+    // "include"/"reject" over the space-separated tags in tagsText.
+    var tagMode: String = "off"
+    var tagsText: String = ""
+    var copyNotesTags: Bool = false
     var legacyScheme: String?
 }
 
@@ -118,6 +123,9 @@ final class Model: ObservableObject {
                   let d = m["dest"] as? [String: Any], let dt = d["title"] as? String else { continue }
             let pj = m["projection"] as? [String: Any] ?? [:]
             let titleText = (pj["titleText"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Busy"
+            let tf = m["tagFilter"] as? [String: Any]
+            let tfMode = (tf?["mode"] as? String).map { $0 == "reject" ? "reject" : "include" } ?? "off"
+            let tfTags = (tf?["tags"] as? [String] ?? []).joined(separator: " ")
             list.append(MirrorCfg(
                 id: id, name: m["name"] as? String ?? id,
                 sourceTitle: st, sourceAccount: s["account"] as? String ?? "",
@@ -133,6 +141,9 @@ final class Model: ObservableObject {
                 projAlarms: pj["alarms"] as? Bool ?? false,
                 projBusy: (pj["availability"] as? String) == "busy",
                 projCustom: pj["custom"] as? Bool ?? false,
+                tagMode: tfMode,
+                tagsText: tfTags,
+                copyNotesTags: m["copyNotesTags"] as? Bool ?? false,
                 legacyScheme: m["legacyScheme"] as? String))
         }
         mirrors = list
@@ -207,6 +218,13 @@ final class Model: ObservableObject {
                 ],
             ]
             if let ls = m.legacyScheme { d["legacyScheme"] = ls }
+            // Notes-tag selection. Only write a tagFilter when it's active (a mode
+            // and ≥1 tag); an absent block means "copy everything".
+            let tags = m.tagsText.split(whereSeparator: { $0 == " " || $0 == "," || $0 == "\n" || $0 == "\t" }).map(String.init)
+            if m.tagMode != "off", !tags.isEmpty {
+                d["tagFilter"] = ["mode": m.tagMode, "tags": tags]
+            }
+            if m.copyNotesTags { d["copyNotesTags"] = true }
             return d
         }
         if let data = try? JSONSerialization.data(withJSONObject: o, options: [.prettyPrinted, .sortedKeys]) {
@@ -459,9 +477,33 @@ struct MirrorRow: View {
             }
             .padding(.leading, 12)
         }
-        DisclosureGroup("Per-event tags") {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Type into a source event's title:").font(.caption).foregroundStyle(.secondary)
+        DisclosureGroup("Per-event tags & selection") {
+            VStack(alignment: .leading, spacing: 8) {
+                // Selection filter — copy all, or only/except events carrying a
+                // notes tag. One mode per mirror (include OR reject, never both).
+                Picker("Copy which events", selection: $m.tagMode) {
+                    Text("All events").tag("off")
+                    Text("Only with tag…").tag("include")
+                    Text("Except with tag…").tag("reject")
+                }
+                .onChange(of: m.tagMode) { _, _ in model.saveConfig() }
+                if m.tagMode != "off" {
+                    TextField(m.tagMode == "include" ? "Include tags" : "Reject tags", text: $m.tagsText)
+                        .onChange(of: m.tagsText) { _, _ in model.saveConfig() }
+                    Text(m.tagMode == "include"
+                         ? "Copy an event only if its notes contain one of these tags."
+                         : "Skip an event if its notes contain one of these tags.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("Space-separated, e.g.  #ref #cowork").font(.caption).foregroundStyle(.secondary)
+                }
+
+                Toggle("Keep #tags in copied notes", isOn: $m.copyNotesTags)
+                    .onChange(of: m.copyNotesTags) { _, _ in model.saveConfig() }
+                Text("Only applies when notes are copied. Off = strip #tags. #+tag is always kept, #-tag always dropped.")
+                    .font(.caption).foregroundStyle(.secondary)
+
+                Divider().padding(.vertical, 2)
+                Text("Control tags — type into a source event's notes:").font(.caption).foregroundStyle(.secondary)
                 Text("#nomirror — skip this event entirely").font(.caption)
                 Text("#private — copy as a busy block").font(.caption)
                 Text("#public — copy in full").font(.caption)
