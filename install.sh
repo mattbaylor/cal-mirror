@@ -19,9 +19,10 @@ if [ ! -f "$DATA/config.json" ]; then
   echo "    seeded config.json from config.example.json — edit it, or use the menu-bar UI."
 fi
 
-INT=$(/usr/bin/plutil -extract intervalSeconds raw "$DATA/config.json" 2>/dev/null || echo 900)
 render() { # <label> <appExecPath> <template>
-  sed -e "s#__LABEL__#$1#g" -e "s#__APP__#$2#g" -e "s#__DATA__#$DATA#g" -e "s#__INTERVAL__#$INT#g" "$3"
+  # The engine's sync interval is now internal (read from config.json each
+  # cycle), so the plist no longer carries StartInterval — nothing to substitute.
+  sed -e "s#__LABEL__#$1#g" -e "s#__APP__#$2#g" -e "s#__DATA__#$DATA#g" "$3"
 }
 
 echo "==> Installing LaunchAgents"
