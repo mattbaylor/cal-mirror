@@ -214,6 +214,18 @@ matching too):
 
 Icon = worst mirror: ✓ ok · ⚠︎ stale (last run > 2× interval) · ✗ error · ⏸ paused.
 
+**If the icon is clipped off the menu bar** (a narrow display plus many extras),
+the management window is still reachable — the icon is not the only way in:
+
+```bash
+open -a CalMirrorMenu
+```
+
+That reopens the running app straight to **Manage Mirrors**. Only if the app is
+*not* already running does the flag form matter (`open -a CalMirrorMenu --args
+--manage`); LaunchServices drops `--args` for an app that is already up, and the
+LaunchAgent keeps this one up.
+
 ## 🛠️ Commands
 
 | Command | Does |
@@ -222,6 +234,7 @@ Icon = worst mirror: ✓ ok · ⚠︎ stale (last run > 2× interval) · ✗ err
 | `./run.sh` | Sync now (kickstarts the engine) |
 | `./run.sh --list` | List every Mac calendar (title + account) to the log |
 | `./run.sh --purge` | Remove **all** mirror-tagged events from configured destinations |
+| `open -a CalMirrorMenu` | Open **Manage Mirrors** without the menu-bar icon |
 | `./uninstall.sh` | Unload the LaunchAgents (keeps apps + events) |
 | `tail -f ~/.local/cal-mirror/mirror.log` | Watch the engine log |
 

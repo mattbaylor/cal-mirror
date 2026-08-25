@@ -536,12 +536,52 @@ extension MirrorCfg {
     }
 }
 
+// The menu-bar icon is the only entrance to this app, and macOS clips extras
+// when the bar runs out of room — a clipped icon locks you out of the Manage
+// window completely. This delegate is the way back in:
+//
+//   open -a CalMirrorMenu            # app already running — the normal case,
+//                                    # since launchd KeepAlive owns it
+//   open -a CalMirrorMenu --args --manage   # cold launch only
+//
+// Both paths exist because LaunchServices forwards --args only to a cold
+// launch; for a running instance it sends a reopen event instead and drops the
+// arguments on the floor.
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    // Set by the scene below, which is what owns openWindow.
+    static var showManage: (() -> Void)?
+
+    func applicationDidFinishLaunching(_: Notification) {
+        guard CommandLine.arguments.contains("--manage") else { return }
+        // Let the scene finish building before asking it for a window.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { Self.showManage?() }
+    }
+
+    func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
+        Self.showManage?()
+        return true
+    }
+}
+
 @main
 struct CalMirrorMenuApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = Model()
+    @Environment(\.openWindow) private var openWindow
+
     var body: some Scene {
+        // Hand the delegate a way in: it has no scene of its own, and this
+        // capture does not depend on the icon ever being drawn.
+        let _ = (AppDelegate.showManage = showManage)
         MenuBarExtra { MenuContent(model: model) } label: { Image(systemName: model.overallIcon) }
             .menuBarExtraStyle(.menu)
         Window("Manage Mirrors", id: "manage") { ManageView(model: model) }
+    }
+
+    // Same three steps the menu's "Manage mirrors…" button takes.
+    private func showManage() {
+        NSApp.setActivationPolicy(.regular)
+        openWindow(id: "manage")
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
