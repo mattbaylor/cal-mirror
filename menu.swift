@@ -277,12 +277,14 @@ final class Model: ObservableObject {
     func toggleHeartbeat(_ id: String) {
         if let i = mirrors.firstIndex(where: { $0.id == id }) { mirrors[i].showHeartbeat.toggle(); saveConfig() }
     }
+    // The engine re-reads config.json each cycle, so saving is enough to change
+    // the interval — but it would not take effect until the current sleep (up to
+    // an hour) ends. Restart the daemon so the new interval applies now.
     func setInterval(_ secs: Int) {
         intervalSeconds = secs; saveConfig()
-        let plist = "\(NSHomeDirectory())/Library/LaunchAgents/\(ENGINE_LABEL).plist"
-        run("/usr/libexec/PlistBuddy", ["-c", "Set :StartInterval \(secs)", plist])
         run("/bin/launchctl", ["bootout", domain])
-        run("/bin/launchctl", ["bootstrap", "gui/\(getuid())", plist])
+        run("/bin/launchctl", ["bootstrap", "gui/\(getuid())",
+                               "\(NSHomeDirectory())/Library/LaunchAgents/\(ENGINE_LABEL).plist"])
     }
     func openLog() { NSWorkspace.shared.open(URL(fileURLWithPath: SUPPORT + "/mirror.log")) }
     func openCalendarApp() { run("/usr/bin/open", ["-a", "Calendar"]) }
