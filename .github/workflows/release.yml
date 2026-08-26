@@ -76,6 +76,8 @@ jobs:
         env:
           DIST_CERT_P12: ${{ secrets.APPLE_DIST_CERT_P12 }}
           DIST_CERT_PASSWORD: ${{ secrets.APPLE_DIST_CERT_PASSWORD }}
+          INSTALLER_CERT_P12: ${{ secrets.APPLE_INSTALLER_CERT_P12 }}
+          INSTALLER_CERT_PASSWORD: ${{ secrets.APPLE_INSTALLER_CERT_PASSWORD }}
           IOS_PROFILE: ${{ secrets.APPLE_IOS_PROFILE }}
           MAC_PROFILE: ${{ secrets.APPLE_MAC_PROFILE }}
         run: |
@@ -94,6 +96,19 @@ jobs:
           rm -f "$RUNNER_TEMP/dist.p12"
           security find-identity -v -p codesigning "$KEYCHAIN" | grep "Apple Distribution" || {
             echo "::error::Apple Distribution identity not present after import"; exit 1; }
+
+          # The Mac App Store .pkg is signed by a SEPARATE installer certificate
+          # ("3rd Party Mac Developer Installer"). Without it the macOS export
+          # fails with: No signing certificate "Mac Installer Distribution" found.
+          # Installer certs are not codesigning identities, so they do not show
+          # up under -p codesigning — check for the certificate itself.
+          echo "$INSTALLER_CERT_P12" | base64 --decode > "$RUNNER_TEMP/installer.p12"
+          security import "$RUNNER_TEMP/installer.p12" -k "$KEYCHAIN" -P "$INSTALLER_CERT_PASSWORD" \
+            -T /usr/bin/productbuild -T /usr/bin/productsign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign:,productbuild: -s -k "$KPASS" "$KEYCHAIN" >/dev/null
+          rm -f "$RUNNER_TEMP/installer.p12"
+          security find-certificate -c "3rd Party Mac Developer Installer" "$KEYCHAIN" >/dev/null 2>&1 || {
+            echo "::error::Mac Installer Distribution certificate not present after import"; exit 1; }
 
           # Xcode 16+ reads profiles from UserData; write both known locations.
           for d in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
