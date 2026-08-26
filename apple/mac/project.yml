@@ -15,8 +15,9 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    # Set your team in Xcode (Signing & Capabilities) or here:
-    # DEVELOPMENT_TEAM: XXXXXXXXXX
+    # Signing team. Set here so `xcodegen generate` does not blank it out every
+    # time — a regenerated project would otherwise archive with no team.
+    DEVELOPMENT_TEAM: VAAN252QS8
 
 targets:
   CalMirrorMac:
@@ -34,7 +35,7 @@ targets:
         PRODUCT_NAME: cal-mirror
         PRODUCT_BUNDLE_IDENTIFIER: io.github.mattbaylor.cal-mirror
         MARKETING_VERSION: "1.3.0"
-        CURRENT_PROJECT_VERSION: "5"
+        CURRENT_PROJECT_VERSION: "7"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: CalMirrorMac/Info.plist
         CODE_SIGN_ENTITLEMENTS: CalMirrorMac/CalMirrorMac.entitlements

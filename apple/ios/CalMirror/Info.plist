@@ -14,6 +14,11 @@
   <string>$(PRODUCT_NAME)</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
+  <!-- Required by App Store Connect for asset-catalog icons (ITMS-90713).
+       GENERATE_INFOPLIST_FILE is NO, so Xcode does not inject this for iOS the
+       way it does for the Mac target — it must be spelled out here. -->
+  <key>CFBundleIconName</key>
+  <string>AppIcon</string>
   <key>CFBundleShortVersionString</key>
   <string>$(MARKETING_VERSION)</string>
   <key>CFBundleVersion</key>
