@@ -32,6 +32,22 @@ struct ContentView: View {
                 .onDelete { offsets in
                     offsets.map { model.config.mirrors[$0].id }.forEach(model.delete(id:))
                 }
+                // iOS has no launchd; background refresh is the only unattended
+                // path, and until now there was no way to set its interval here.
+                Section("Background sync") {
+                    Picker("Run no sooner than", selection: Binding(
+                        get: { model.config.intervalSeconds },
+                        set: { secs in
+                            model.setInterval(secs)
+                            BackgroundSync.schedule(after: TimeInterval(secs))
+                        })) {
+                        ForEach(BackgroundSync.intervalChoices, id: \.1) { name, secs in
+                            Text(name).tag(secs)
+                        }
+                    }
+                    Text("iOS decides when background refreshes actually run — this is the earliest one may start, not a guarantee. It needs Background App Refresh enabled for cal-mirror in Settings, and fires more reliably on a phone you use regularly. Pull to refresh any time for an immediate sync.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             .navigationTitle("cal-mirror")
             .toolbar {
