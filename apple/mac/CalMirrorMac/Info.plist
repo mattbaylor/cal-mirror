@@ -12,6 +12,15 @@
   <string>$(PRODUCT_NAME)</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
+  <!-- Declared explicitly rather than left to Xcode. Some Xcode versions inject
+       these from ASSETCATALOG_COMPILER_APPICON_NAME and some do not (26.6 did,
+       26.3 does not), so relying on injection makes the build depend on which
+       Xcode ran it. Without CFBundleIconName, App Store Connect rejects the
+       build as Invalid Binary (ITMS-90713). -->
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
+  <key>CFBundleIconName</key>
+  <string>AppIcon</string>
   <key>CFBundleShortVersionString</key>
   <string>$(MARKETING_VERSION)</string>
   <key>CFBundleVersion</key>
