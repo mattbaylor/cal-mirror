@@ -14,9 +14,28 @@
 # Forcing CODE_SIGN_IDENTITY="Apple Distribution" does not help either: it
 # collides with automatic signing ("conflicting provisioning settings").
 #
-# So: archive with signing OFF, then let -exportArchive apply the distribution
-# signature. App Store distribution profiles need no registered devices, so
-# this path works on any machine holding the Apple Distribution certificate.
+# So: archive with AD-HOC signing (CODE_SIGN_IDENTITY="-"), then let
+# -exportArchive apply the real distribution signature. App Store distribution
+# profiles need no registered devices, so this works on any machine holding the
+# Apple Distribution certificate.
+#
+# The two platforms need DIFFERENT archive signing, which is the subtle part:
+#
+#   macOS  ad-hoc (CODE_SIGN_IDENTITY="-"). Entitlements are embedded at SIGNING
+#          time, so an unsigned archive carries none and the export re-signs with
+#          only the profile's baseline. The package then fails validation with
+#            90296: App sandbox not enabled ... "com.apple.security.app-sandbox"
+#          because CalMirrorMac.entitlements never reached the binary. Ad-hoc
+#          signing embeds them and the export preserves them.
+#
+#   iOS    unsigned (CODE_SIGNING_ALLOWED=NO). An iOS device archive cannot be
+#          ad-hoc signed — it always demands a provisioning profile ("CalMirror
+#          requires a provisioning profile"), and a development profile is what
+#          we cannot mint. The iOS target has no entitlements file, so there is
+#          nothing to lose, and the OS sandboxes iOS apps regardless.
+#
+# That asymmetry is load-bearing: if the iOS target ever gains an entitlements
+# file, the unsigned path would silently drop it, so this script warns instead.
 #
 # TOOLCHAIN
 # ---------
@@ -88,22 +107,44 @@ write_export_options() {
   <key>signingStyle</key><string>automatic</string>
   <key>destination</key><string>export</string>
   <key>uploadSymbols</key><true/>
+  <!-- Do not let the export silently renumber the build. Left at its default
+       (true), -exportArchive asks App Store Connect whether the build number is
+       taken and quietly increments it, so the artifact stops matching
+       project.yml. Version bumps belong in the spec, in a commit. -->
+  <key>manageAppVersionAndBuildNumber</key><false/>
 </dict>
 </plist>
 PLIST
 }
 
-# build_target <scheme> <project> <archive-name> <export-dir> [destination]
+# build_target <scheme> <project> <archive-name> <export-dir> <ios|mac>
 build_target() {
-  local scheme="$1" project="$2" name="$3" outdir="$4" dest="${5:-}"
+  local scheme="$1" project="$2" name="$3" outdir="$4" platform="$5"
   local archive="$DIST/$name.xcarchive" opts="$DIST/ExportOptions-$name.plist"
+  local dest=() sign=()
+  # Both platforms get an explicit destination: bash 3.2 (which macOS ships)
+  # treats "${empty[@]}" as unbound under `set -u`, and naming the Mac
+  # destination also avoids xcodebuild's "multiple matching destinations" warning.
 
-  echo "==> Archiving $scheme (unsigned; distribution signing happens on export)"
+  # See the header: macOS must be ad-hoc signed to carry its entitlements, and
+  # iOS must be unsigned because it cannot be ad-hoc signed at all.
+  if [ "$platform" = ios ]; then
+    dest=(-destination 'generic/platform=iOS')
+    sign=(CODE_SIGNING_ALLOWED=NO)
+    if grep -q "CODE_SIGN_ENTITLEMENTS" "$DIR/apple/ios/project.yml"; then
+      echo "    WARNING: the iOS target now sets CODE_SIGN_ENTITLEMENTS, but this"
+      echo "    archive is unsigned, which drops entitlements. Rework the iOS path"
+      echo "    before shipping — validation will not catch every missing one."
+    fi
+  else
+    dest=(-destination 'generic/platform=macOS')
+    sign=(CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- PROVISIONING_PROFILE_SPECIFIER=)
+  fi
+
+  echo "==> Archiving $scheme (distribution signing happens on export)"
   rm -rf "${archive:?}" "${DIST:?}/${outdir:?}"
-  # shellcheck disable=SC2086
   "$XCB" -scheme "$scheme" -project "$project" -configuration Release \
-    ${dest:+-destination "$dest"} -archivePath "$archive" \
-    CODE_SIGNING_ALLOWED=NO archive >/dev/null
+    "${dest[@]}" -archivePath "$archive" "${sign[@]}" archive >/dev/null
 
   echo "==> Exporting $scheme with the Apple Distribution certificate"
   write_export_options "$opts"
@@ -140,13 +181,13 @@ echo "==> cal-mirror $VERSION (build $BUILD)"
 
 if [ "$WANT_IOS" = 1 ]; then
   build_target CalMirror "$DIR/apple/ios/CalMirror.xcodeproj" \
-    "CalMirror-$VERSION" ios-export 'generic/platform=iOS'
+    "CalMirror-$VERSION" ios-export ios
   ship "$DIST/ios-export/CalMirror.ipa" ios
 fi
 
 if [ "$WANT_MAC" = 1 ]; then
   build_target CalMirrorMac "$DIR/apple/mac/CalMirrorMac.xcodeproj" \
-    "CalMirrorMac-$VERSION" mac-export
+    "CalMirrorMac-$VERSION" mac-export mac
   ship "$DIST/mac-export/cal-mirror.pkg" macos
 fi
 
