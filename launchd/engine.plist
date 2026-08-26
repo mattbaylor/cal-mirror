@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Template. install.sh substitutes __LABEL__ __APP__ __DATA__ __INTERVAL__. -->
+<!-- Template. install.sh substitutes __LABEL__ __APP__ __DATA__. -->
+<!-- The engine is a long-lived daemon: KeepAlive keeps ONE process (warm
+     EventKit store + SnapshotGuard baseline) alive; the sync interval is
+     internal (from config.json), not launchd's. ThrottleInterval guards
+     against a tight restart loop if it ever crashes. -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -11,8 +15,10 @@
   </array>
   <key>RunAtLoad</key>
   <true/>
-  <key>StartInterval</key>
-  <integer>__INTERVAL__</integer>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
   <key>ProcessType</key>
   <string>Background</string>
   <key>LowPriorityIO</key>

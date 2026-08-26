@@ -7,7 +7,9 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$DIR/cal-mirror.app"
 
 echo "==> Compiling engine"
-swiftc -O -o /tmp/cal-mirror.bin "$DIR/main.swift"
+# Compile the thin CLI entry point together with the CalMirrorKit sources into
+# one module, so the launchd engine runs the SAME code as the App Store apps.
+swiftc -O -o /tmp/cal-mirror.bin "$DIR/main.swift" "$DIR"/apple/Sources/CalMirrorKit/*.swift
 
 echo "==> Assembling app bundle"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS"
