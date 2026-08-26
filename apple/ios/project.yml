@@ -16,8 +16,9 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     TARGETED_DEVICE_FAMILY: "1,2"   # iPhone + iPad
-    # Set your team in Xcode (Signing & Capabilities) or here:
-    # DEVELOPMENT_TEAM: XXXXXXXXXX
+    # Signing team. Set here so `xcodegen generate` does not blank it out every
+    # time — a regenerated project would otherwise archive with no team.
+    DEVELOPMENT_TEAM: VAAN252QS8
 
 targets:
   CalMirror:
