@@ -83,7 +83,17 @@ fi
 mkdir -p "$DIST"
 
 # write_export_options <path>
-write_export_options() {   # $1=path $2=profile name
+write_export_options() {   # $1=path $2=profile name $3=ios|mac
+  # macOS App Store exports sign TWO things with TWO different certificates: the
+  # .app with Apple Distribution, and the .pkg with "3rd Party Mac Developer
+  # Installer". Without installerSigningCertificate, Xcode tries to match the
+  # installer cert against the app's provisioning profile and fails with:
+  #   Provisioning profile "..." doesn't include signing certificate
+  #   "3rd Party Mac Developer Installer: ...".
+  local installer=""
+  if [ "$3" = mac ]; then
+    installer='  <key>installerSigningCertificate</key><string>3rd Party Mac Developer Installer</string>'
+  fi
   cat > "$1" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -102,6 +112,7 @@ write_export_options() {   # $1=path $2=profile name
        taken and quietly increments it, so the artifact stops matching
        project.yml. Version bumps belong in the spec, in a commit. -->
   <key>manageAppVersionAndBuildNumber</key><false/>
+$installer
 </dict>
 </plist>
 PLIST
@@ -152,7 +163,7 @@ build_target() {
   fi
 
   echo "==> Exporting $scheme with the Apple Distribution certificate"
-  write_export_options "$opts" "$profile"
+  write_export_options "$opts" "$profile" "$platform"
   "$XCB" -exportArchive -archivePath "$archive" -exportOptionsPlist "$opts" \
     -exportPath "$DIST/$outdir" -allowProvisioningUpdates >/dev/null
 }
