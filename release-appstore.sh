@@ -2,40 +2,25 @@
 # Build (and optionally validate/upload) the App Store artifacts for both
 # App Store targets: CalMirror (iOS/iPadOS) and CalMirrorMac (macOS).
 #
-# WHY THIS ARCHIVES UNSIGNED
-# --------------------------
-# Both targets use automatic signing, and XcodeGen writes a TARGET-level
-# CODE_SIGN_IDENTITY of "iPhone Developer" that shadows any project-level
-# override. Archiving under automatic signing therefore asks App Store Connect
-# for a DEVELOPMENT profile — which a team with no registered devices cannot
-# mint, so the archive fails with "no devices from which to generate a
-# provisioning profile".
+# SIGNING
+# -------
+# Archives are signed for DISTRIBUTION at archive time, using manually managed
+# App Store profiles. That matters: Xcode-managed profiles cannot be used with
+# manual signing ("is Xcode managed, but signing settings require a manually
+# managed profile"), and automatic signing insists on a DEVELOPMENT profile,
+# which a team with no registered devices cannot mint.
 #
-# Forcing CODE_SIGN_IDENTITY="Apple Distribution" does not help either: it
-# collides with automatic signing ("conflicting provisioning settings").
+# Earlier revisions of this script worked around that by archiving unsigned (or
+# ad-hoc) and letting -exportArchive apply the signature. Do not go back to it.
+# Those builds passed `altool --validate-app` and were then REJECTED by App
+# Review on both platforms. The binaries were missing what a real distribution
+# archive carries -- beta-reports-active, get-task-allow=false, an embedded
+# profile -- and on macOS the app-sandbox entitlement was dropped entirely,
+# because entitlements are embedded at SIGNING time.
 #
-# So: archive with AD-HOC signing (CODE_SIGN_IDENTITY="-"), then let
-# -exportArchive apply the real distribution signature. App Store distribution
-# profiles need no registered devices, so this works on any machine holding the
-# Apple Distribution certificate.
-#
-# The two platforms need DIFFERENT archive signing, which is the subtle part:
-#
-#   macOS  ad-hoc (CODE_SIGN_IDENTITY="-"). Entitlements are embedded at SIGNING
-#          time, so an unsigned archive carries none and the export re-signs with
-#          only the profile's baseline. The package then fails validation with
-#            90296: App sandbox not enabled ... "com.apple.security.app-sandbox"
-#          because CalMirrorMac.entitlements never reached the binary. Ad-hoc
-#          signing embeds them and the export preserves them.
-#
-#   iOS    unsigned (CODE_SIGNING_ALLOWED=NO). An iOS device archive cannot be
-#          ad-hoc signed — it always demands a provisioning profile ("CalMirror
-#          requires a provisioning profile"), and a development profile is what
-#          we cannot mint. The iOS target has no entitlements file, so there is
-#          nothing to lose, and the OS sandboxes iOS apps regardless.
-#
-# That asymmetry is load-bearing: if the iOS target ever gains an entitlements
-# file, the unsigned path would silently drop it, so this script warns instead.
+# The profiles are created once (App Store Connect > Certificates, Identifiers
+# & Profiles, or the API) and named below. If they are missing or expired,
+# regenerate them rather than reintroducing the unsigned path.
 #
 # TOOLCHAIN
 # ---------
@@ -60,6 +45,8 @@ set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST="$DIR/dist"
 XCB="${CM_XCODEBUILD:-$(xcrun -f xcodebuild)}"
+IOS_PROFILE="${CM_IOS_PROFILE:-cal-mirror iOS App Store (manual)}"
+MAC_PROFILE="${CM_MAC_PROFILE:-cal-mirror Mac App Store (manual)}"
 
 DO_VALIDATE=0; DO_UPLOAD=0; WANT_IOS=1; WANT_MAC=1
 for arg in "$@"; do
@@ -96,7 +83,7 @@ fi
 mkdir -p "$DIST"
 
 # write_export_options <path>
-write_export_options() {
+write_export_options() {   # $1=path $2=profile name
   cat > "$1" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -104,7 +91,10 @@ write_export_options() {
 <dict>
   <key>method</key><string>app-store-connect</string>
   <key>teamID</key><string>VAAN252QS8</string>
-  <key>signingStyle</key><string>automatic</string>
+  <key>signingStyle</key><string>manual</string>
+  <key>signingCertificate</key><string>Apple Distribution</string>
+  <key>provisioningProfiles</key>
+  <dict><key>io.github.mattbaylor.cal-mirror</key><string>$2</string></dict>
   <key>destination</key><string>export</string>
   <key>uploadSymbols</key><true/>
   <!-- Do not let the export silently renumber the build. Left at its default
@@ -128,18 +118,14 @@ build_target() {
 
   # See the header: macOS must be ad-hoc signed to carry its entitlements, and
   # iOS must be unsigned because it cannot be ad-hoc signed at all.
+  local profile
   if [ "$platform" = ios ]; then
-    dest=(-destination 'generic/platform=iOS')
-    sign=(CODE_SIGNING_ALLOWED=NO)
-    if grep -q "CODE_SIGN_ENTITLEMENTS" "$DIR/apple/ios/project.yml"; then
-      echo "    WARNING: the iOS target now sets CODE_SIGN_ENTITLEMENTS, but this"
-      echo "    archive is unsigned, which drops entitlements. Rework the iOS path"
-      echo "    before shipping — validation will not catch every missing one."
-    fi
+    dest=(-destination 'generic/platform=iOS'); profile="$IOS_PROFILE"
   else
-    dest=(-destination 'generic/platform=macOS')
-    sign=(CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- PROVISIONING_PROFILE_SPECIFIER=)
+    dest=(-destination 'generic/platform=macOS'); profile="$MAC_PROFILE"
   fi
+  sign=(CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution"
+        PROVISIONING_PROFILE_SPECIFIER="$profile")
 
   echo "==> Archiving $scheme (distribution signing happens on export)"
   rm -rf "${archive:?}" "${DIST:?}/${outdir:?}"
@@ -160,7 +146,7 @@ build_target() {
   fi
 
   echo "==> Exporting $scheme with the Apple Distribution certificate"
-  write_export_options "$opts"
+  write_export_options "$opts" "$profile"
   "$XCB" -exportArchive -archivePath "$archive" -exportOptionsPlist "$opts" \
     -exportPath "$DIST/$outdir" -allowProvisioningUpdates >/dev/null
 }
