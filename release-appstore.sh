@@ -146,6 +146,19 @@ build_target() {
   "$XCB" -scheme "$scheme" -project "$project" -configuration Release \
     "${dest[@]}" -archivePath "$archive" "${sign[@]}" archive >/dev/null
 
+  # App Store Connect ACCEPTS an upload missing CFBundleIconName and only then
+  # rejects the build as Invalid Binary (ITMS-90713); altool --validate-app does
+  # not catch it. Xcode injects the key for the Mac target but not for iOS,
+  # because GENERATE_INFOPLIST_FILE is NO. Fail here instead of a day later.
+  local app
+  app="$(find "$archive/Products/Applications" -maxdepth 1 -name '*.app' 2>/dev/null | head -1)"
+  if [ -n "$app" ] && ! plutil -extract CFBundleIconName raw "$app/Info.plist" >/dev/null 2>&1; then
+    echo "ERROR: CFBundleIconName is missing from $(basename "$app")." >&2
+    echo "       Add it to the target's Info.plist (value: the asset-catalog" >&2
+    echo "       icon set name, e.g. AppIcon) or the build will be rejected." >&2
+    exit 1
+  fi
+
   echo "==> Exporting $scheme with the Apple Distribution certificate"
   write_export_options "$opts"
   "$XCB" -exportArchive -archivePath "$archive" -exportOptionsPlist "$opts" \
