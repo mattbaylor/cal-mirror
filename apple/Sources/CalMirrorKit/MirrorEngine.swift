@@ -180,11 +180,12 @@ public final class MirrorEngine: @unchecked Sendable {
     /// (parsed once by the caller and passed in as `nt`).
     private func snapshot(_ src: EKEvent, tags nt: NoteTags, mirror m: Mirror) -> Snap {
         let p = m.projection
-        let redact: Bool, loc: Bool, notes: Bool, alarms: Bool, busy: Bool
+        let redact: Bool, loc: Bool, alarms: Bool, busy: Bool
+        let notes: NotesMode
         if nt.forcePrivate {            // #private wins: nothing but a block
-            redact = true; loc = false; notes = false; alarms = false; busy = true
+            redact = true; loc = false; notes = .none; alarms = false; busy = true
         } else if nt.forcePublic {      // #public: replicate content, availability from source
-            redact = false; loc = true; notes = true; alarms = p.alarms; busy = false
+            redact = false; loc = true; notes = .full; alarms = p.alarms; busy = false
         } else {
             redact = (p.title == .redact); loc = p.location; notes = p.notes
             alarms = p.alarms; busy = (p.availability == .busy)
@@ -197,7 +198,12 @@ public final class MirrorEngine: @unchecked Sendable {
         // .busy on write, so comparing against it would flag a diff every run.
         let resolved: EKEventAvailability = busy ? .busy : src.availability
         let avail: EKEventAvailability = (resolved == .notSupported) ? .busy : resolved
-        let copiedNotes = notes ? renderCopiedNotes(src.notes, copyNotesTags: m.copyNotesTags) : nil
+        let copiedNotes: String?
+        switch notes {
+        case .none: copiedNotes = nil
+        case .tags: copiedNotes = renderTagsOnly(src.notes)
+        case .full: copiedNotes = renderCopiedNotes(src.notes, copyNotesTags: m.copyNotesTags)
+        }
         return Snap(title: title, location: loc ? src.location : nil, notes: copiedNotes,
                     availability: avail, alarmSig: alarms ? alarmSig(src.alarms) : "", copyAlarms: alarms)
     }

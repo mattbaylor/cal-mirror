@@ -129,7 +129,7 @@ location, no notes/alarms). The menu bar exposes this as three presets plus
   "title":        "copy",     // "copy" | "redact"
   "titleText":    "Busy",     // shown when title = "redact"
   "location":     true,
-  "notes":        false,
+  "notes":        "none",     // "none" | "tags" | "full"  (legacy true/false still read)
   "alarms":       false,       // off avoids duplicate notifications on the dest
   "availability": "source"     // "source" | "busy" (force the block to read busy)
 }
@@ -137,9 +137,15 @@ location, no notes/alarms). The menu bar exposes this as three presets plus
 
 | Preset | Meaning |
 |--------|---------|
-| **Copy details** | Real title + location, no notes (the default). |
-| **Full copy** | Adds notes. As complete as EventKit allows. |
+| **Copy details** | Real title + location, **no notes** (the default). |
+| **Full copy** | Adds the whole note. As complete as EventKit allows. |
 | **Busy only** | Title → `titleText`, drops location/notes, forces busy. |
+| **Custom** | Anything else — including `notes: "tags"`, below. |
+
+> **"Copy details" does not copy notes.** If your `#tags` aren't reaching the
+> destination, this is almost always why: `copyNotesTags` only has an effect
+> once notes actually cross over. Pick **Full copy**, or **Custom → Notes →
+> Tags only**.
 
 *Two EventKit limits worth knowing:* **attendees can't be replicated** (no API
 to set participants), and the source event's **URL is unavailable** because that
@@ -180,9 +186,25 @@ behavior. This is the referee-availability play: tag the events you're free to
 ref with `#ref` in their notes, point an `include`/`#ref` mirror with a Busy-only
 projection at a calendar you share, and only those blocks cross over.
 
+### Carrying tags without the note (`"notes": "tags"`)
+
+Sometimes you want a selection tag to reach the destination but not the note it
+sits in — a personal calendar feeding a shared one, say. Set the mirror's
+projection to:
+
+```jsonc
+"projection": { "notes": "tags" }     // Custom → Notes → "Tags only"
+```
+
+The copy's notes become just the event's tags on one line, in source order, and
+the prose never crosses. Control tags (`#nomirror`/`#private`/`#public`) and
+`#-…` tags are dropped; `#+…` is kept verbatim. An event with no surviving tag
+gets no notes at all. `copyNotesTags` is not consulted in this mode — choosing
+it *is* the choice to carry tags.
+
 ### Keeping tags in the copy (`copyNotesTags`)
 
-When a mirror **projects notes** (`"notes": true`), your other `#tags` are
+When a mirror **projects the whole note** (`"notes": "full"`), your other `#tags` are
 stripped from the copied notes by default so they don't leak. Set
 `"copyNotesTags": true` on the mirror to keep them. Two per-tag overrides beat the
 mirror setting either way — the `+`/`-` is part of the tag (so it matters for

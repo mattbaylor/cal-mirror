@@ -29,7 +29,7 @@ struct MirrorCfg: Identifiable, Equatable {
     var projTitleRedact: Bool = false
     var projTitleText: String = "Busy"
     var projLocation: Bool = true
-    var projNotes: Bool = false
+    var projNotes: NotesCopy = .none
     var projAlarms: Bool = false
     var projBusy: Bool = false
     var projCustom: Bool = false   // UI: user explicitly chose "Custom" (persisted so it sticks)
@@ -41,19 +41,30 @@ struct MirrorCfg: Identifiable, Equatable {
     var legacyScheme: String?
 }
 
+// How much of the source notes crosses over. Mirrors CalMirrorKit's NotesMode:
+// none = no notes, tags = only the #tags, full = the whole note.
+enum NotesCopy: String, Hashable { case none, tags, full }
+
+// `projection.notes` was a Bool before tags-only mode existed; read both forms.
+func notesCopy(_ v: Any?) -> NotesCopy {
+    if let s = v as? String { return NotesCopy(rawValue: s) ?? .none }
+    if let b = v as? Bool { return b ? .full : .none }
+    return .none
+}
+
 // The presets the editor offers; Custom is "none of the above".
 enum Preset: Hashable { case details, full, busy, custom }
 func presetOf(_ m: MirrorCfg) -> Preset {
-    if !m.projTitleRedact && m.projLocation && !m.projNotes && !m.projAlarms && !m.projBusy { return .details }
-    if !m.projTitleRedact && m.projLocation && m.projNotes && !m.projAlarms && !m.projBusy { return .full }
-    if m.projTitleRedact && !m.projLocation && !m.projNotes && !m.projAlarms && m.projBusy { return .busy }
+    if !m.projTitleRedact && m.projLocation && m.projNotes == .none && !m.projAlarms && !m.projBusy { return .details }
+    if !m.projTitleRedact && m.projLocation && m.projNotes == .full && !m.projAlarms && !m.projBusy { return .full }
+    if m.projTitleRedact && !m.projLocation && m.projNotes == .none && !m.projAlarms && m.projBusy { return .busy }
     return .custom
 }
 func applyPreset(_ p: Preset, to m: inout MirrorCfg) {
     switch p {
-    case .details: m.projTitleRedact = false; m.projLocation = true;  m.projNotes = false; m.projAlarms = false; m.projBusy = false
-    case .full:    m.projTitleRedact = false; m.projLocation = true;  m.projNotes = true;  m.projAlarms = false; m.projBusy = false
-    case .busy:    m.projTitleRedact = true;  m.projLocation = false; m.projNotes = false; m.projAlarms = false; m.projBusy = true
+    case .details: m.projTitleRedact = false; m.projLocation = true;  m.projNotes = .none; m.projAlarms = false; m.projBusy = false
+    case .full:    m.projTitleRedact = false; m.projLocation = true;  m.projNotes = .full; m.projAlarms = false; m.projBusy = false
+    case .busy:    m.projTitleRedact = true;  m.projLocation = false; m.projNotes = .none; m.projAlarms = false; m.projBusy = true
     case .custom:  break   // reveal the controls, keep current values
     }
 }
@@ -137,7 +148,7 @@ final class Model: ObservableObject {
                 projTitleRedact: (pj["title"] as? String) == "redact",
                 projTitleText: titleText,
                 projLocation: pj["location"] as? Bool ?? true,
-                projNotes: pj["notes"] as? Bool ?? false,
+                projNotes: notesCopy(pj["notes"]),
                 projAlarms: pj["alarms"] as? Bool ?? false,
                 projBusy: (pj["availability"] as? String) == "busy",
                 projCustom: pj["custom"] as? Bool ?? false,
@@ -211,7 +222,7 @@ final class Model: ObservableObject {
                     "title": m.projTitleRedact ? "redact" : "copy",
                     "titleText": m.projTitleText.isEmpty ? "Busy" : m.projTitleText,
                     "location": m.projLocation,
-                    "notes": m.projNotes,
+                    "notes": m.projNotes.rawValue,
                     "alarms": m.projAlarms,
                     "availability": m.projBusy ? "busy" : "source",
                     "custom": m.projCustom,
@@ -473,7 +484,15 @@ struct MirrorRow: View {
             Group {
                 Toggle("Redact title", isOn: $m.projTitleRedact).onChange(of: m.projTitleRedact) { _, _ in model.saveConfig() }
                 Toggle("Copy location", isOn: $m.projLocation).onChange(of: m.projLocation) { _, _ in model.saveConfig() }
-                Toggle("Copy notes", isOn: $m.projNotes).onChange(of: m.projNotes) { _, _ in model.saveConfig() }
+                Picker("Notes", selection: $m.projNotes) {
+                    Text("Don't copy").tag(NotesCopy.none)
+                    Text("Tags only").tag(NotesCopy.tags)
+                    Text("Full notes").tag(NotesCopy.full)
+                }.onChange(of: m.projNotes) { _, _ in model.saveConfig() }
+                if m.projNotes == .tags {
+                    Text("Copies just the #tags onto the event, not the note text.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Toggle("Copy alarms", isOn: $m.projAlarms).onChange(of: m.projAlarms) { _, _ in model.saveConfig() }
                 Toggle("Always show as busy", isOn: $m.projBusy).onChange(of: m.projBusy) { _, _ in model.saveConfig() }
             }
@@ -499,10 +518,17 @@ struct MirrorRow: View {
                     Text("Space-separated, e.g.  #ref #cowork").font(.caption).foregroundStyle(.secondary)
                 }
 
-                Toggle("Keep #tags in copied notes", isOn: $m.copyNotesTags)
-                    .onChange(of: m.copyNotesTags) { _, _ in model.saveConfig() }
-                Text("Only applies when notes are copied. Off = strip #tags. #+tag is always kept, #-tag always dropped.")
-                    .font(.caption).foregroundStyle(.secondary)
+                // Only meaningful when the whole note crosses over: in .tags the
+                // tags are the payload, in .none there are no notes to strip.
+                if m.projNotes == .full {
+                    Toggle("Keep #tags in copied notes", isOn: $m.copyNotesTags)
+                        .onChange(of: m.copyNotesTags) { _, _ in model.saveConfig() }
+                    Text("Off = strip #tags from the copied note. #+tag is always kept, #-tag always dropped.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Set \"What to copy\" → Notes to carry #tags onto the copy.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
 
                 Divider().padding(.vertical, 2)
                 Text("Control tags — type into a source event's notes:").font(.caption).foregroundStyle(.secondary)
