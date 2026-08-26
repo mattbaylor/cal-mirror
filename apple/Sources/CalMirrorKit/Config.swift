@@ -11,6 +11,13 @@ public struct CalRef: Codable, Equatable, Hashable, Sendable {
     }
 }
 
+/// How much of the source event's NOTES crosses into the copy.
+/// - `none`: no notes at all — the historical default
+/// - `tags`: only the `#tags`, on one line; the note prose is dropped. Lets a
+///   mirror carry selection tags across without leaking what the note says.
+/// - `full`: the whole note, with tags stripped unless `copyNotesTags` is set
+public enum NotesMode: String, Codable, Sendable { case none, tags, full }
+
 /// Per-mirror field projection: how much of each source event crosses into the
 /// copy. An absent `projection` block decodes to `Projection()` — the historical
 /// behavior (real title + location, no notes/alarms, source availability).
@@ -21,13 +28,13 @@ public struct Projection: Codable, Equatable, Sendable {
     public var title: TitleMode
     public var titleText: String        // shown when title == .redact
     public var location: Bool
-    public var notes: Bool
+    public var notes: NotesMode
     public var alarms: Bool
     public var availability: Availability
     public var custom: Bool             // UI: user explicitly chose "Custom" (persisted so it sticks)
 
     public init(title: TitleMode = .copy, titleText: String = "Busy",
-                location: Bool = true, notes: Bool = false, alarms: Bool = false,
+                location: Bool = true, notes: NotesMode = .none, alarms: Bool = false,
                 availability: Availability = .source, custom: Bool = false) {
         self.title = title; self.titleText = titleText
         self.location = location; self.notes = notes; self.alarms = alarms
@@ -41,7 +48,11 @@ public struct Projection: Codable, Equatable, Sendable {
         title = (try? c.decode(TitleMode.self, forKey: .title)) ?? .copy
         titleText = ((try? c.decode(String.self, forKey: .titleText)).flatMap { $0.isEmpty ? nil : $0 }) ?? "Busy"
         location = (try? c.decode(Bool.self, forKey: .location)) ?? true
-        notes = (try? c.decode(Bool.self, forKey: .notes)) ?? false
+        // `notes` was a Bool before tags-only mode existed. Accept both: a
+        // string is the current form, a legacy `true` means the whole note.
+        if let mode = try? c.decode(NotesMode.self, forKey: .notes) { notes = mode }
+        else if let legacy = try? c.decode(Bool.self, forKey: .notes) { notes = legacy ? .full : .none }
+        else { notes = .none }
         alarms = (try? c.decode(Bool.self, forKey: .alarms)) ?? false
         availability = (try? c.decode(Availability.self, forKey: .availability)) ?? .source
         custom = (try? c.decode(Bool.self, forKey: .custom)) ?? false
@@ -141,6 +152,20 @@ public func renderCopiedNotes(_ notes: String?, copyNotesTags: Bool) -> String? 
     var out = lines.joined(separator: "\n")
     while let last = out.last, last == "\n" || last == " " || last == "\t" { out.removeLast() }
     return out.isEmpty ? nil : out
+}
+
+/// Build a TAGS-ONLY note for a copy: the event's tags, in source order, on one
+/// line, and nothing else — the prose never crosses over. Control tags
+/// (`#nomirror`/`#private`/`#public`) and `#-…` tags are dropped; `#+…` is kept
+/// verbatim. `copyNotesTags` has no say here: choosing this mode IS the choice
+/// to carry tags. Returns nil when no tag survives, so the copy gets no notes.
+public func renderTagsOnly(_ notes: String?) -> String? {
+    let kept = scanNoteTags(notes).tokens.filter { token in
+        let low = token.lowercased()
+        if low == TAG_SKIP || low == TAG_PRIVATE || low == TAG_PUBLIC { return false }
+        return token[token.index(token.startIndex, offsetBy: 1)] != "-"   // scanNoteTags ⇒ count ≥ 2
+    }
+    return kept.isEmpty ? nil : kept.joined(separator: " ")
 }
 
 /// Per-mirror event selection by notes tag. A mirror runs in ONE mode — include

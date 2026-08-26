@@ -8,10 +8,22 @@ import CalMirrorKit
 enum BackgroundSync {
     static let refreshID = "io.github.mattbaylor.cal-mirror.refresh"
 
+    /// Offered in the UI. Nothing below 15 min is worth showing: iOS throttles
+    /// app refresh well above that, so a tighter choice would only mislead.
+    static let intervalChoices: [(String, Int)] =
+        [("15 minutes", 900), ("30 minutes", 1800), ("1 hour", 3600), ("2 hours", 7200)]
+
     static func schedule(after seconds: TimeInterval) {
         let req = BGAppRefreshTaskRequest(identifier: refreshID)
         req.earliestBeginDate = Date(timeIntervalSinceNow: max(60, seconds))
         try? BGTaskScheduler.shared.submit(req)
+    }
+
+    /// The user's configured interval, re-read each time. The background task
+    /// reschedules itself, so a hardcoded period here would quietly override the
+    /// setting after the first run and never honor it again.
+    static var configuredInterval: TimeInterval {
+        TimeInterval(ConfigStore.load(from: Store.configURL).intervalSeconds)
     }
 
     @discardableResult
@@ -37,7 +49,7 @@ struct CalMirrorApp: App {
         // System-driven background refresh; reschedules itself after each run.
         .backgroundTask(.appRefresh(BackgroundSync.refreshID)) {
             await BackgroundSync.run()
-            BackgroundSync.schedule(after: 30 * 60)
+            BackgroundSync.schedule(after: BackgroundSync.configuredInterval)
         }
     }
 }

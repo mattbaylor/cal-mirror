@@ -53,7 +53,7 @@ print("Projection + tags:")
 do {
     let cfg = try JSONDecoder().decode(Config.self, from: json)
     let p = cfg.mirrors[0].projection
-    check(p.title == .copy && p.location && !p.notes && !p.alarms && p.availability == .source,
+    check(p.title == .copy && p.location && p.notes == .none && !p.alarms && p.availability == .source,
           "absent projection → historical defaults")
     let again = try JSONDecoder().decode(Config.self, from: JSONEncoder().encode(cfg))
     check(cfg == again, "projection round-trips through encode/decode")
@@ -67,10 +67,40 @@ do {
     """.data(using: .utf8)!
     let cfg = try JSONDecoder().decode(Config.self, from: j)
     let p = cfg.mirrors[0].projection
-    check(p.title == .redact && p.titleText == "Out" && !p.location && p.notes
+    check(p.title == .redact && p.titleText == "Out" && !p.location && p.notes == .full
           && p.availability == .busy && p.custom, "projection fields decode")
     check(p.alarms == false, "malformed field falls back to default (no throw)")
 }
+// NotesMode: the wire format is a string now, but pre-tags-only configs wrote a
+// Bool — both must decode, or an upgrade would silently change what gets copied.
+func notesConfig(_ literal: String) -> Data {
+    """
+    { "mirrors": [ { "id": "w", "source": {"title":"S"}, "dest": {"title":"D"},
+      "projection": { "notes": \(literal) } } ] }
+    """.data(using: .utf8)!
+}
+do {
+    let d = JSONDecoder()
+    check(try d.decode(Config.self, from: notesConfig("true")).mirrors[0].projection.notes == .full,
+          "legacy notes:true → .full")
+    check(try d.decode(Config.self, from: notesConfig("false")).mirrors[0].projection.notes == .none,
+          "legacy notes:false → .none")
+    check(try d.decode(Config.self, from: notesConfig("\"tags\"")).mirrors[0].projection.notes == .tags,
+          "notes:\"tags\" decodes")
+    check(try d.decode(Config.self, from: notesConfig("\"full\"")).mirrors[0].projection.notes == .full,
+          "notes:\"full\" decodes")
+    check(try d.decode(Config.self, from: notesConfig("\"nonsense\"")).mirrors[0].projection.notes == .none,
+          "unknown notes mode → .none, no throw")
+} catch {
+    check(false, "notes mode decode threw: \(error)")
+}
+// renderTagsOnly: tags are the payload; prose and control tags never cross.
+check(renderTagsOnly("dentist #ref-conflict 3pm") == "#ref-conflict", "prose dropped, tag kept")
+check(renderTagsOnly("no tags here") == nil, "no tags → nil (copy gets no notes)")
+check(renderTagsOnly("#a details #b") == "#a #b", "several tags joined in source order")
+check(renderTagsOnly("x #nomirror #private #public #keep") == "#keep", "control tags never copied")
+check(renderTagsOnly("#-secret #+shown") == "#+shown", "#- dropped, #+ kept verbatim")
+check(renderTagsOnly(nil) == nil, "nil notes → nil")
 // scanNoteTags: control tags now live in NOTES, parsed as whole tokens.
 check(scanNoteTags(nil).tokens.isEmpty && !scanNoteTags(nil).skip, "nil notes → no tags")
 check(!scanNoteTags("just a plain note").skip, "prose without # → no tags")

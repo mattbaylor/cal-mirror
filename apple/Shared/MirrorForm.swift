@@ -6,16 +6,16 @@ enum Preset: Hashable { case details, full, busy, custom }
 
 func presetOf(_ p: Projection) -> Preset {
     let redact = p.title == .redact, busy = p.availability == .busy
-    if !redact && p.location && !p.notes && !p.alarms && !busy { return .details }
-    if !redact && p.location && p.notes && !p.alarms && !busy { return .full }
-    if redact && !p.location && !p.notes && !p.alarms && busy { return .busy }
+    if !redact && p.location && p.notes == .none && !p.alarms && !busy { return .details }
+    if !redact && p.location && p.notes == .full && !p.alarms && !busy { return .full }
+    if redact && !p.location && p.notes == .none && !p.alarms && busy { return .busy }
     return .custom
 }
 func applyPreset(_ preset: Preset, to p: inout Projection) {
     switch preset {
-    case .details: p.title = .copy;   p.location = true;  p.notes = false; p.alarms = false; p.availability = .source
-    case .full:    p.title = .copy;   p.location = true;  p.notes = true;  p.alarms = false; p.availability = .source
-    case .busy:    p.title = .redact; p.location = false; p.notes = false; p.alarms = false; p.availability = .busy
+    case .details: p.title = .copy;   p.location = true;  p.notes = .none; p.alarms = false; p.availability = .source
+    case .full:    p.title = .copy;   p.location = true;  p.notes = .full; p.alarms = false; p.availability = .source
+    case .busy:    p.title = .redact; p.location = false; p.notes = .none; p.alarms = false; p.availability = .busy
     case .custom:  break   // reveal the controls, keep current values
     }
 }
@@ -74,8 +74,16 @@ struct MirrorFields: View {
                 set: { mirror.projection.title = $0 ? .redact : .copy; onChange() }))
             Toggle("Copy location", isOn: $mirror.projection.location)
                 .onChange(of: mirror.projection.location) { _, _ in onChange() }
-            Toggle("Copy notes", isOn: $mirror.projection.notes)
-                .onChange(of: mirror.projection.notes) { _, _ in onChange() }
+            Picker("Notes", selection: $mirror.projection.notes) {
+                Text("Don't copy").tag(NotesMode.none)
+                Text("Tags only").tag(NotesMode.tags)
+                Text("Full notes").tag(NotesMode.full)
+            }
+            .onChange(of: mirror.projection.notes) { _, _ in onChange() }
+            if mirror.projection.notes == .tags {
+                Text("Copies just the #tags onto the event, not the note text.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Toggle("Copy alarms", isOn: $mirror.projection.alarms)
                 .onChange(of: mirror.projection.alarms) { _, _ in onChange() }
             Toggle("Always show as busy", isOn: Binding(
@@ -116,10 +124,17 @@ struct MirrorFields: View {
                     Text("Space-separated, e.g.  #ref #cowork").font(.caption).foregroundStyle(.secondary)
                 }
 
-                Toggle("Keep #tags in copied notes", isOn: $mirror.copyNotesTags)
-                    .onChange(of: mirror.copyNotesTags) { _, _ in onChange() }
-                Text("Only applies when notes are copied. Off = strip #tags. #+tag is always kept, #-tag always dropped.")
-                    .font(.caption).foregroundStyle(.secondary)
+                // Only meaningful when the whole note crosses over: in .tags the
+                // tags are the payload, in .none there are no notes to strip.
+                if mirror.projection.notes == .full {
+                    Toggle("Keep #tags in copied notes", isOn: $mirror.copyNotesTags)
+                        .onChange(of: mirror.copyNotesTags) { _, _ in onChange() }
+                    Text("Off = strip #tags from the copied note. #+tag is always kept, #-tag always dropped.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Set \"What to copy\" → Notes to carry #tags onto the copy.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
 
                 Divider().padding(.vertical, 2)
                 Text("Control tags — type into a source event's notes:").font(.caption).foregroundStyle(.secondary)
