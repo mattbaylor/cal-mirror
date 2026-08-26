@@ -134,12 +134,18 @@ build_target() {
 
   # App Store Connect ACCEPTS an upload missing CFBundleIconName and only then
   # rejects the build as Invalid Binary (ITMS-90713); altool --validate-app does
-  # not catch it. Xcode injects the key for the Mac target but not for iOS,
-  # because GENERATE_INFOPLIST_FILE is NO. Fail here instead of a day later.
-  local app
+  # not catch it. Both targets set GENERATE_INFOPLIST_FILE: NO, so whether Xcode
+  # injects the key from ASSETCATALOG_COMPILER_APPICON_NAME varies by Xcode
+  # version (26.6 did for macOS, 26.3 does not) — which is why both Info.plists
+  # now declare it outright. Fail here instead of a day later.
+  local app plist
   app="$(find "$archive/Products/Applications" -maxdepth 1 -name '*.app' 2>/dev/null | head -1)"
-  if [ -n "$app" ] && ! plutil -extract CFBundleIconName raw "$app/Info.plist" >/dev/null 2>&1; then
-    echo "ERROR: CFBundleIconName is missing from $(basename "$app")." >&2
+  # iOS keeps Info.plist at the bundle root; macOS keeps it under Contents/.
+  # Checking only the iOS location made this guard fire on every Mac build.
+  plist="$app/Info.plist"
+  [ -f "$plist" ] || plist="$app/Contents/Info.plist"
+  if [ -n "$app" ] && ! plutil -extract CFBundleIconName raw "$plist" >/dev/null 2>&1; then
+    echo "ERROR: CFBundleIconName is missing from $(basename "$app") ($plist)." >&2
     echo "       Add it to the target's Info.plist (value: the asset-catalog" >&2
     echo "       icon set name, e.g. AppIcon) or the build will be rejected." >&2
     exit 1
