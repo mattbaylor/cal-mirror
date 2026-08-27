@@ -4,14 +4,14 @@
 
 # cal-mirror
 
-**One-way mirror between any two calendars on your Mac — with a menu-bar UI.**
+**One-way mirror between any two of your calendars — on Mac, iPhone and iPad.**
 
 Point a *source* calendar at a *destination* calendar and cal-mirror keeps the
 destination in sync: idempotent, one-directional, and scheduled. No servers, no
-credentials — it works entirely through the calendars already on your Mac, and
-lets macOS sync the destination up to iCloud / CalDAV / Exchange for you.
+credentials — it works entirely through the calendars already on your device, and
+lets the OS sync the destination up to iCloud / CalDAV / Exchange for you.
 
-![platform](https://img.shields.io/badge/platform-macOS%2014%2B-black?logo=apple)
+![platform](https://img.shields.io/badge/platform-macOS%2014%2B%20%C2%B7%20iOS%2017%2B-black?logo=apple)
 ![language](https://img.shields.io/badge/Swift-6-orange?logo=swift)
 ![framework](https://img.shields.io/badge/EventKit%20%2B%20SwiftUI-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -26,6 +26,17 @@ Some calendars you can see but not reshare — a subscribed work calendar, a
 read-only team feed, an account you don't control. cal-mirror makes an **editable,
 re-shareable copy** on a calendar you *do* control. Because the copy lives in a
 normal account, macOS then pushes it wherever that account syncs.
+
+## 📦 Two products, one engine
+
+| | Built from | Runs as |
+|---|---|---|
+| **Standalone macOS** (this README) | `./install.sh` — free, MIT | A launchd daemon + `CalMirrorMenu.app` in the menu bar |
+| **App Store apps** ([`apple/`](apple/README.md)) | Xcode / `release-appstore.sh` — $0.99 universal | Sandboxed apps on iPhone, iPad and Mac; no LaunchAgent |
+
+Both run the **same** sync engine, [`CalMirrorKit`](apple/README.md#shared-package--calmirrorkit) —
+`main.swift` is a thin daemon wrapper around it. Everything below about configuration,
+projection and tags applies to both, since they read the same `config.json` shape.
 
 ## 🎯 Features
 
@@ -257,6 +268,7 @@ LaunchAgent keeps this one up.
 | `./run.sh --list` | List every Mac calendar (title + account) to the log |
 | `./run.sh --purge` | Remove **all** mirror-tagged events from configured destinations |
 | `open -a CalMirrorMenu` | Open **Manage Mirrors** without the menu-bar icon |
+| `./release-appstore.sh` | Build + validate the App Store artifacts (see Releases) |
 | `./uninstall.sh` | Unload the LaunchAgents (keeps apps + events) |
 | `tail -f ~/.local/cal-mirror/mirror.log` | Watch the engine log |
 
@@ -269,6 +281,12 @@ LaunchAgent keeps this one up.
 
 ## 📦 Releases (maintainers)
 
+Two products, two paths. Both live at the same version — bump
+`Info.plist` + `Info-ui.plist` (standalone) and both `apple/*/project.yml`
+(`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`) together.
+
+### Standalone — Developer ID + notarize
+
 Signed **and notarized** builds pass Gatekeeper with no warning. One-time, store
 a notary credential (an [app-specific password](https://support.apple.com/en-us/102654)):
 
@@ -280,24 +298,67 @@ xcrun notarytool store-credentials cal-mirror-notary \
 Then build → notarize → staple → package, and publish:
 
 ```sh
-CM_SIGN_ID="Developer ID Application: Your Name (TEAMID)" ./release.sh v1.0.0
-gh release create v1.0.0 dist/*-v1.0.0.zip -t v1.0.0 -n "Signed & notarized build."
+CM_SIGN_ID="Developer ID Application: Your Name (TEAMID)" ./release.sh v1.3.0
+gh release create v1.3.0 dist/*-v1.3.0.zip -t v1.3.0 -n "Signed & notarized build."
 ```
 
 `release.sh` signs with hardened runtime + secure timestamp, submits each app to
-Apple, staples the ticket, and drops zips in `./dist`.
+Apple, staples the ticket, and drops zips in `./dist`. Note it uses its version
+argument only for the zip filenames and the tag — it never touches the plists.
+
+### App Store — build in CI, not locally
+
+> [!IMPORTANT]
+> **App Store builds must come from CI.** Every binary records its build machine
+> in `BuildMachineOSBuild`, and Apple rejects anything built on a beta OS:
+> `ITMS-90301: Apple is not currently accepting applications built with this
+> version of the OS.` If the maintainer's Mac is running a macOS beta, nothing it
+> archives can ship.
+
+Run the **Release to App Store Connect** workflow
+([`.github/workflows/release.yml`](.github/workflows/release.yml)) from the
+Actions tab. It picks the newest non-beta Xcode, **fails outright on a beta
+runner OS**, then archives, validates, and — only if you tick `upload` —
+delivers to App Store Connect. Leaving `upload` unticked builds and validates
+without spending a build number.
+
+It drives [`release-appstore.sh`](release-appstore.sh), which you can also run
+locally for a build-and-validate check. The script's header documents the
+signing rules the hard way: archives are signed for **distribution at archive
+time** using manually managed profiles, never archived unsigned and re-signed on
+export (that silently drops the macOS sandbox entitlement), and the `.pkg` needs
+a **second** certificate, `3rd Party Mac Developer Installer`.
+
+CI needs nine repository secrets — the distribution and installer certificates
+(`.p12` + password each), both provisioning profiles, and an App Store Connect
+API key (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`).
+
+Note that `altool --validate-app` returns *VERIFY SUCCEEDED* on binaries Apple
+later rejects, so a clean validate is necessary, not sufficient.
 
 ## 🧑‍💻 Development
 
-Pure Swift, no package manager — two single-file targets built with `swiftc`:
+The standalone apps are two `swiftc` targets; the shared engine is a Swift package.
 
-| File | Target |
-|------|--------|
-| `main.swift` | `cal-mirror.app` — EventKit sync engine (CLI) |
+| Path | What |
+|------|------|
+| `main.swift` | `cal-mirror.app` — thin launchd daemon around the engine |
 | `menu.swift` | `CalMirrorMenu.app` — SwiftUI `MenuBarExtra` + management window |
+| `apple/Sources/CalMirrorKit/` | The engine both products share — config, projection, tags, reconciler |
+| `apple/Sources/cmk-check/` | Pure-logic self-check; gates CI, needs no Xcode |
+| `apple/Shared/` | SwiftUI shared by the iOS and macOS App Store apps |
+| `apple/{ios,mac}/` | The two App Store shells — see [`apple/README.md`](apple/README.md) |
 
-`./build.sh` / `./build-ui.sh` compile, bundle, and sign each. LaunchAgent
-templates live in `launchd/`; `install.sh` fills in paths at install time.
+`./build.sh` / `./build-ui.sh` compile, bundle, and sign the standalone pair —
+`build.sh` compiles `main.swift` **together with** `CalMirrorKit`, so there is one
+engine implementation, not two. LaunchAgent templates live in `launchd/`;
+`install.sh` fills in paths at install time.
+
+Run the self-check before pushing — CI runs exactly this:
+
+```sh
+cd apple && swift run cmk-check
+```
 
 ## 📄 License
 
