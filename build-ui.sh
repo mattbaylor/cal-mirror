@@ -5,7 +5,18 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$DIR/CalMirrorMenu.app"
 
 echo "==> Compiling menu app"
-swiftc -O -parse-as-library -o /tmp/CalMirrorMenu.bin "$DIR/menu.swift" "$DIR/apple/Shared/MenuBarIcon.swift"
+# Compiled together with MenuBarIcon.swift and the PURE CalMirrorKit sources —
+# everything except MirrorEngine.swift, the one file that imports EventKit. That
+# gives the UI the same Config/Mirror/EventFilters model and the same summary
+# strings the engine uses, so there is one config schema rather than a hand-rolled
+# second copy that silently drops any key it doesn't know about — while keeping
+# this app free of EventKit, which it deliberately never touches (it reads
+# calendars.json instead).
+KIT=("$DIR/apple/Shared/MenuBarIcon.swift")
+for f in "$DIR"/apple/Sources/CalMirrorKit/*.swift; do
+  [ "$(basename "$f")" = "MirrorEngine.swift" ] || KIT+=("$f")
+done
+swiftc -O -parse-as-library -o /tmp/CalMirrorMenu.bin "$DIR/menu.swift" "${KIT[@]}"
 
 echo "==> Assembling app bundle"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS"

@@ -209,6 +209,9 @@ public struct Mirror: Codable, Identifiable, Equatable, Sendable {
     public var projection: Projection
     /// Notes-tag selection: which source events this mirror copies. nil = copy all.
     public var tagFilter: TagFilter?
+    /// Property-based selection — declined, canceled, all-day, time of day, etc.
+    /// All-default (the absent case) selects nothing away.
+    public var filters: EventFilters
     /// When notes are projected, echo the source's non-control `#tags` into the
     /// copy? Default false = strip them. Per-tag `#+`/`#-` overrides this.
     public var copyNotesTags: Bool
@@ -219,13 +222,15 @@ public struct Mirror: Codable, Identifiable, Equatable, Sendable {
                 enabled: Bool = true, showHeartbeat: Bool = true,
                 windowPastDays: Double = 30, windowFutureDays: Double = 365,
                 projection: Projection = Projection(),
-                tagFilter: TagFilter? = nil, copyNotesTags: Bool = false,
+                tagFilter: TagFilter? = nil, filters: EventFilters = EventFilters(),
+                copyNotesTags: Bool = false,
                 legacyScheme: String? = nil) {
         self.id = id; self.name = name; self.source = source; self.dest = dest
         self.enabled = enabled; self.showHeartbeat = showHeartbeat
         self.windowPastDays = windowPastDays; self.windowFutureDays = windowFutureDays
         self.projection = projection
-        self.tagFilter = tagFilter; self.copyNotesTags = copyNotesTags
+        self.tagFilter = tagFilter; self.filters = filters
+        self.copyNotesTags = copyNotesTags
         self.legacyScheme = legacyScheme
     }
 
@@ -243,8 +248,39 @@ public struct Mirror: Codable, Identifiable, Equatable, Sendable {
         projection = (try? c.decode(Projection.self, forKey: .projection)) ?? Projection()
         // Absent OR malformed (e.g. unknown mode) → nil, i.e. no filter (copy all).
         tagFilter = try? c.decode(TagFilter.self, forKey: .tagFilter)
+        // Absent → all-default, which selects nothing away (historical behavior).
+        filters = (try? c.decode(EventFilters.self, forKey: .filters)) ?? EventFilters()
         copyNotesTags = (try? c.decode(Bool.self, forKey: .copyNotesTags)) ?? false
         legacyScheme = try c.decodeIfPresent(String.self, forKey: .legacyScheme)
+    }
+
+    // Declared explicitly: supplying BOTH init(from:) and encode(to:) stops the
+    // compiler synthesizing these.
+    enum CodingKeys: String, CodingKey {
+        case id, name, source, dest, enabled, showHeartbeat
+        case windowPastDays, windowFutureDays, projection
+        case tagFilter, filters, copyNotesTags, legacyScheme
+    }
+
+    // config.json is meant to be hand-editable, so a block that isn't doing
+    // anything doesn't get written: an inactive `filters` or `tagFilter`, and a
+    // false `copyNotesTags`, are all absent rather than spelled out as defaults.
+    // Decoding treats absent and all-default identically, so this is lossless.
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(source, forKey: .source)
+        try c.encode(dest, forKey: .dest)
+        try c.encode(enabled, forKey: .enabled)
+        try c.encode(showHeartbeat, forKey: .showHeartbeat)
+        try c.encode(windowPastDays, forKey: .windowPastDays)
+        try c.encode(windowFutureDays, forKey: .windowFutureDays)
+        try c.encode(projection, forKey: .projection)
+        if let tagFilter, tagFilter.isActive { try c.encode(tagFilter, forKey: .tagFilter) }
+        if filters.isActive { try c.encode(filters, forKey: .filters) }
+        if copyNotesTags { try c.encode(copyNotesTags, forKey: .copyNotesTags) }
+        try c.encodeIfPresent(legacyScheme, forKey: .legacyScheme)
     }
 }
 

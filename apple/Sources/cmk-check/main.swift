@@ -242,6 +242,167 @@ do {
     check(a == b, "planner is deterministic")
 }
 
+print("EventFilters:")
+// Absent block → copies everything (the historical contract).
+do {
+    let cfg = try JSONDecoder().decode(Config.self, from: json)
+    let f = cfg.mirrors[0].filters
+    check(!f.isActive && f.activeRuleCount == 0, "absent filters block → no rules, copies everything")
+    let again = try JSONDecoder().decode(Config.self, from: JSONEncoder().encode(cfg))
+    check(cfg == again, "filters round-trip through encode/decode")
+}
+
+let t0 = Date(timeIntervalSince1970: 1_756_000_000)
+func ev(_ title: String = "Standup", startHour: Int = 10, minutes: Int = 60,
+        allDay: Bool = false, free: Bool = false, canceled: Bool = false,
+        reply: FilterableEvent.Reply = .none, dayOffset: Int = 0) -> FilterableEvent {
+    let day = Calendar.current.startOfDay(for: t0.addingTimeInterval(Double(dayOffset) * 86400))
+    let s = day.addingTimeInterval(Double(startHour) * 3600)
+    return FilterableEvent(title: title, start: s, end: s.addingTimeInterval(Double(minutes) * 60),
+                           isAllDay: allDay, isFree: free, isCanceled: canceled, reply: reply)
+}
+
+// Invitation state.
+check(EventFilters(declined: true).admits(ev(reply: .declined)) == false, "declined → skipped")
+check(EventFilters(declined: true).admits(ev(reply: .accepted)), "accepted survives the declined rule")
+check(EventFilters(unanswered: true).admits(ev(reply: .pending)) == false, "pending invite → skipped")
+check(EventFilters(unanswered: true).admits(ev(reply: .none)),
+      "self-made event (no attendees) survives the unanswered rule")
+check(EventFilters(canceled: true).admits(ev(canceled: true)) == false, "canceled → skipped")
+check(EventFilters().admits(ev(canceled: true, reply: .declined)),
+      "all-default filters admit even a declined, canceled event")
+
+// Shape.
+check(EventFilters(allDay: true).admits(ev(allDay: true)) == false, "all-day → skipped")
+check(EventFilters(free: true).admits(ev(free: true)) == false, "free event → skipped")
+check(EventFilters(shorterThanMinutes: 15).admits(ev(minutes: 10)) == false, "shorter-than → skipped")
+check(EventFilters(shorterThanMinutes: 15).admits(ev(minutes: 30)), "long enough survives")
+check(EventFilters(longerThanMinutes: 240).admits(ev(minutes: 600)) == false, "longer-than → skipped")
+
+// Title substring, case-insensitive.
+let reject = EventFilters(title: .init(mode: .reject, patterns: ["lunch", "Focus time"]))
+check(reject.admits(ev("Team Lunch")) == false, "reject matches case-insensitively")
+check(reject.admits(ev("Standup")), "reject leaves non-matching titles alone")
+let only = EventFilters(title: .init(mode: .include, patterns: ["game"]))
+check(only.admits(ev("Varsity Game")), "include keeps a match")
+check(only.admits(ev("Standup")) == false, "include drops a non-match")
+check(EventFilters(title: .init(mode: .reject, patterns: [])).admits(ev("anything")),
+      "empty pattern list constrains nothing")
+
+// Time of day — overlap, not containment.
+let work = EventFilters(hours: .init(mode: .keep, startMinute: 8 * 60, endMinute: 18 * 60))
+check(work.admits(ev(startHour: 10)), "10am event inside an 8-6 keep-window")
+check(work.admits(ev(startHour: 7, minutes: 120)), "7-9am event kept — it OVERLAPS the window")
+check(work.admits(ev(startHour: 20)) == false, "8pm event outside the window → skipped")
+check(work.admits(ev(startHour: 3, allDay: true)),
+      "all-day events are exempt from an hours rule (use the all-day switch)")
+let evenings = EventFilters(hours: .init(mode: .drop, startMinute: 8 * 60, endMinute: 18 * 60))
+check(evenings.admits(ev(startHour: 20)), "drop-mode keeps what falls outside the window")
+check(evenings.admits(ev(startHour: 10)) == false, "drop-mode skips what falls inside")
+// A window that wraps midnight (overnight on-call).
+let overnight = EventFilters(hours: .init(mode: .keep, startMinute: 22 * 60, endMinute: 6 * 60))
+check(overnight.admits(ev(startHour: 23)), "wrapped window keeps 11pm")
+check(overnight.admits(ev(startHour: 2)), "wrapped window keeps 2am")
+check(overnight.admits(ev(startHour: 12)) == false, "wrapped window skips midday")
+
+// Day-of-week restriction.
+do {
+    let sunday = Calendar.current.component(.weekday, from: Calendar.current.startOfDay(for: t0))
+    let onlyThatDay = EventFilters(hours: .init(mode: .keep, startMinute: 0, endMinute: 24 * 60,
+                                                days: [sunday]))
+    check(onlyThatDay.admits(ev(startHour: 10)), "event on an allowed weekday is kept")
+    check(onlyThatDay.admits(ev(startHour: 10, dayOffset: 1)) == false,
+          "event on a disallowed weekday is skipped")
+}
+
+// Rule counting drives the UI summary.
+check(EventFilters(declined: true, canceled: true, allDay: true).activeRuleCount == 3,
+      "activeRuleCount counts each enabled rule")
+check(EventFilters(hours: .init(mode: .keep, startMinute: 0, endMinute: 24 * 60)).activeRuleCount == 0,
+      "an all-day every-day window counts as no rule")
+
+// Lenient decoding: a malformed rule degrades to no rule, never a half-set one.
+do {
+    let bad = """
+    { "mirrors": [ { "id": "x", "source": { "title": "S" }, "dest": { "title": "D" },
+      "filters": { "declined": true, "title": { "mode": "nonsense", "patterns": ["a"] },
+                   "shorterThanMinutes": -5 } } ] }
+    """.data(using: .utf8)!
+    let cfg = try JSONDecoder().decode(Config.self, from: bad)
+    let f = cfg.mirrors[0].filters
+    check(f.declined, "good keys survive alongside a malformed one")
+    check(f.title == nil, "unknown title mode → no title rule (not a half-set one)")
+    check(f.shorterThanMinutes == 0, "negative duration clamps to off")
+}
+
+print("Summaries:")
+check(MirrorSummary.clock(480) == "8am", "480 → 8am")
+check(MirrorSummary.clock(1050) == "5:30pm", "1050 → 5:30pm")
+check(MirrorSummary.clock(0) == "12am", "midnight → 12am")
+check(MirrorSummary.clock(12 * 60) == "12pm", "noon → 12pm")
+check(MirrorSummary.dayList([2, 3, 4, 5, 6]) == "Mon–Fri", "contiguous weekdays collapse to a range")
+check(MirrorSummary.dayList([1, 7]) == "Sun, Sat", "non-contiguous days are listed")
+check(MirrorSummary.dayList([1, 2, 3, 4, 5, 6, 7]) == "every day", "all seven → every day")
+
+check(MirrorSummary.projection(Projection()) == "Title and location", "default projection summary")
+check(MirrorSummary.projection(Projection(title: .redact, location: false, availability: .busy)) == "Busy only",
+      "busy preset summary")
+check(MirrorSummary.projection(Projection(notes: .tags, custom: true)).contains("tags only"),
+      "custom projection lists its parts")
+
+check(MirrorSummary.selection(EventFilters(), tagFilter: nil) == "Every event",
+      "no rules → Every event")
+check(MirrorSummary.selection(EventFilters(declined: true, allDay: true), tagFilter: nil)
+        == "Skips declined, all-day", "skip list reads as prose")
+do {
+    let f = EventFilters(declined: true, allDay: true,
+                         hours: .init(mode: .keep, startMinute: 8 * 60, endMinute: 18 * 60))
+    check(MirrorSummary.selection(f, tagFilter: TagFilter(mode: .include, tags: ["#ref"]))
+            == "Skips declined, all-day · 8am–6pm · only #ref", "full selection summary")
+}
+
+// The list row's second line: silent for an ordinary mirror, loud for an odd one.
+do {
+    let plain = Mirror(id: "a", name: "A", source: CalRef(title: "S"), dest: CalRef(title: "D"))
+    check(MirrorSummary.delta(plain) == nil, "a plain copy-everything mirror has no delta line")
+    var odd = plain
+    odd.projection = Projection(notes: .tags, custom: true)
+    odd.filters = EventFilters(declined: true)
+    check(MirrorSummary.delta(odd) == "tags only · 1 rule",
+          "delta is terse: diverging projection bits, then a rule count")
+    var busy = plain
+    busy.projection = Projection(title: .redact, location: false, availability: .busy)
+    check(MirrorSummary.delta(busy) == "Busy only", "a preset mirror names its preset")
+}
+
+print("Config write-back:")
+// config.json is hand-editable, so an inactive block must not be spelled out as
+// defaults — and absent must decode identically to all-default.
+do {
+    var m = Mirror(id: "x", name: "X", source: CalRef(title: "S"), dest: CalRef(title: "D"))
+    let enc = JSONEncoder()
+    let bare = String(data: try enc.encode(m), encoding: .utf8)!
+    check(!bare.contains("filters"), "an inactive filters block is not written")
+    check(!bare.contains("tagFilter"), "an absent tagFilter is not written")
+    check(!bare.contains("copyNotesTags"), "a false copyNotesTags is not written")
+
+    m.filters = EventFilters(declined: true)
+    m.tagFilter = TagFilter(mode: .include, tags: ["#ref"])
+    m.copyNotesTags = true
+    let full = String(data: try enc.encode(m), encoding: .utf8)!
+    check(full.contains("filters") && full.contains("tagFilter") && full.contains("copyNotesTags"),
+          "active blocks ARE written")
+    let back = try JSONDecoder().decode(Mirror.self, from: try enc.encode(m))
+    check(back == m, "an active mirror round-trips unchanged")
+
+    // An empty tag list means the filter constrains nothing, so it's dropped —
+    // and comes back as nil, which decodes to the same behavior.
+    var empty = m
+    empty.tagFilter = TagFilter(mode: .include, tags: [])
+    let e2 = try JSONDecoder().decode(Mirror.self, from: try enc.encode(empty))
+    check(e2.tagFilter == nil, "an empty tagFilter drops to nil (same behavior, less noise)")
+}
+
 print("SnapshotGuard:")
 func isSkip(_ d: SnapshotGuard.Decision) -> Bool { if case .skip = d { return true }; return false }
 check(SnapshotGuard.decide(stabilized: true,  count: 441, lastKnown: 441) == .proceed, "stable, matching count → proceed")

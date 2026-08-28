@@ -15,64 +15,14 @@ struct CalInfo: Hashable, Identifiable {
     var label: String { "\(title) — \(account)" }
 }
 
-struct MirrorCfg: Identifiable, Equatable {
-    var id: String
-    var name: String
-    var sourceTitle: String, sourceAccount: String
-    var destTitle: String, destAccount: String
-    var enabled: Bool
-    var showHeartbeat: Bool
-    var windowPastDays: Double
-    var windowFutureDays: Double
-    // Field projection — mirrors main.swift's Projection. Defaults reproduce the
-    // historical behavior (real title + location, no notes/alarms, source busy).
-    var projTitleRedact: Bool = false
-    var projTitleText: String = "Busy"
-    var projLocation: Bool = true
-    var projNotes: NotesCopy = .none
-    var projAlarms: Bool = false
-    var projBusy: Bool = false
-    var projCustom: Bool = false   // UI: user explicitly chose "Custom" (persisted so it sticks)
-    // Notes-tag selection. tagMode "off" = copy everything (no filter); otherwise
-    // "include"/"reject" over the space-separated tags in tagsText.
-    var tagMode: String = "off"
-    var tagsText: String = ""
-    var copyNotesTags: Bool = false
-    var legacyScheme: String?
-}
-
-// How much of the source notes crosses over. Mirrors CalMirrorKit's NotesMode:
-// none = no notes, tags = only the #tags, full = the whole note.
-enum NotesCopy: String, Hashable { case none, tags, full }
-
-// `projection.notes` was a Bool before tags-only mode existed; read both forms.
-func notesCopy(_ v: Any?) -> NotesCopy {
-    if let s = v as? String { return NotesCopy(rawValue: s) ?? .none }
-    if let b = v as? Bool { return b ? .full : .none }
-    return .none
-}
-
-// The presets the editor offers; Custom is "none of the above".
-enum Preset: Hashable { case details, full, busy, custom }
-func presetOf(_ m: MirrorCfg) -> Preset {
-    if !m.projTitleRedact && m.projLocation && m.projNotes == .none && !m.projAlarms && !m.projBusy { return .details }
-    if !m.projTitleRedact && m.projLocation && m.projNotes == .full && !m.projAlarms && !m.projBusy { return .full }
-    if m.projTitleRedact && !m.projLocation && m.projNotes == .none && !m.projAlarms && m.projBusy { return .busy }
-    return .custom
-}
-func applyPreset(_ p: Preset, to m: inout MirrorCfg) {
-    switch p {
-    case .details: m.projTitleRedact = false; m.projLocation = true;  m.projNotes = .none; m.projAlarms = false; m.projBusy = false
-    case .full:    m.projTitleRedact = false; m.projLocation = true;  m.projNotes = .full; m.projAlarms = false; m.projBusy = false
-    case .busy:    m.projTitleRedact = true;  m.projLocation = false; m.projNotes = .none; m.projAlarms = false; m.projBusy = true
-    case .custom:  break   // reveal the controls, keep current values
-    }
-}
-
 struct MirrorStatus { var ok = false; var error: String?; var created = 0, updated = 0, unchanged = 0, deleted = 0, total = 0 }
 
 final class Model: ObservableObject {
-    @Published var mirrors: [MirrorCfg] = []
+    // The kit's own types — same Config, same Mirror, same EventFilters the
+    // engine reads. This app used to keep a parallel struct plus a hand-rolled
+    // JSON writer, which meant every new config key had to be added twice and
+    // any key this side didn't know about was dropped on the next save.
+    @Published var mirrors: [Mirror] = []
     @Published var paused = false
     @Published var intervalSeconds = 900
     @Published var statuses: [String: MirrorStatus] = [:]
@@ -81,6 +31,7 @@ final class Model: ObservableObject {
     @Published var calendarAccess = false
 
     private var timer: Timer?
+    private var configURL: URL { URL(fileURLWithPath: SUPPORT + "/config.json") }
 
     init() {
         loadCalendars()
@@ -124,40 +75,13 @@ final class Model: ObservableObject {
     // reload can never clobber an in-progress edit (e.g. typing a name) or steal
     // focus from the field being edited.
     func loadConfig() {
-        guard let o = json("config.json") else { return }
-        paused = o["paused"] as? Bool ?? false
-        intervalSeconds = o["intervalSeconds"] as? Int ?? 900
-        var list: [MirrorCfg] = []
-        for m in (o["mirrors"] as? [[String: Any]] ?? []) {
-            guard let id = m["id"] as? String,
-                  let s = m["source"] as? [String: Any], let st = s["title"] as? String,
-                  let d = m["dest"] as? [String: Any], let dt = d["title"] as? String else { continue }
-            let pj = m["projection"] as? [String: Any] ?? [:]
-            let titleText = (pj["titleText"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Busy"
-            let tf = m["tagFilter"] as? [String: Any]
-            let tfMode = (tf?["mode"] as? String).map { $0 == "reject" ? "reject" : "include" } ?? "off"
-            let tfTags = (tf?["tags"] as? [String] ?? []).joined(separator: " ")
-            list.append(MirrorCfg(
-                id: id, name: m["name"] as? String ?? id,
-                sourceTitle: st, sourceAccount: s["account"] as? String ?? "",
-                destTitle: dt, destAccount: d["account"] as? String ?? "",
-                enabled: m["enabled"] as? Bool ?? true,
-                showHeartbeat: m["showHeartbeat"] as? Bool ?? true,
-                windowPastDays: m["windowPastDays"] as? Double ?? 30,
-                windowFutureDays: m["windowFutureDays"] as? Double ?? 365,
-                projTitleRedact: (pj["title"] as? String) == "redact",
-                projTitleText: titleText,
-                projLocation: pj["location"] as? Bool ?? true,
-                projNotes: notesCopy(pj["notes"]),
-                projAlarms: pj["alarms"] as? Bool ?? false,
-                projBusy: (pj["availability"] as? String) == "busy",
-                projCustom: pj["custom"] as? Bool ?? false,
-                tagMode: tfMode,
-                tagsText: tfTags,
-                copyNotesTags: m["copyNotesTags"] as? Bool ?? false,
-                legacyScheme: m["legacyScheme"] as? String))
-        }
-        mirrors = list
+        // A missing file leaves the current state alone rather than blanking the
+        // list: ConfigStore.load returns .empty for anything it can't read.
+        guard FileManager.default.fileExists(atPath: configURL.path) else { return }
+        let cfg = ConfigStore.load(from: configURL)
+        paused = cfg.paused
+        intervalSeconds = cfg.intervalSeconds
+        mirrors = cfg.mirrors
     }
 
     func loadStatus() {
@@ -215,39 +139,8 @@ final class Model: ObservableObject {
 
     // ---- Config persistence ----
     func saveConfig() {
-        var o = json("config.json") ?? [:]
-        o["paused"] = paused
-        o["intervalSeconds"] = intervalSeconds
-        o["mirrors"] = mirrors.map { m -> [String: Any] in
-            var d: [String: Any] = [
-                "id": m.id, "name": m.name,
-                "source": ["title": m.sourceTitle, "account": m.sourceAccount],
-                "dest": ["title": m.destTitle, "account": m.destAccount],
-                "enabled": m.enabled, "showHeartbeat": m.showHeartbeat,
-                "windowPastDays": m.windowPastDays, "windowFutureDays": m.windowFutureDays,
-                "projection": [
-                    "title": m.projTitleRedact ? "redact" : "copy",
-                    "titleText": m.projTitleText.isEmpty ? "Busy" : m.projTitleText,
-                    "location": m.projLocation,
-                    "notes": m.projNotes.rawValue,
-                    "alarms": m.projAlarms,
-                    "availability": m.projBusy ? "busy" : "source",
-                    "custom": m.projCustom,
-                ],
-            ]
-            if let ls = m.legacyScheme { d["legacyScheme"] = ls }
-            // Notes-tag selection. Only write a tagFilter when it's active (a mode
-            // and ≥1 tag); an absent block means "copy everything".
-            let tags = m.tagsText.split(whereSeparator: { $0 == " " || $0 == "," || $0 == "\n" || $0 == "\t" }).map(String.init)
-            if m.tagMode != "off", !tags.isEmpty {
-                d["tagFilter"] = ["mode": m.tagMode, "tags": tags]
-            }
-            if m.copyNotesTags { d["copyNotesTags"] = true }
-            return d
-        }
-        if let data = try? JSONSerialization.data(withJSONObject: o, options: [.prettyPrinted, .sortedKeys]) {
-            try? data.write(to: URL(fileURLWithPath: SUPPORT + "/config.json"), options: .atomic)
-        }
+        let cfg = Config(paused: paused, intervalSeconds: intervalSeconds, mirrors: mirrors)
+        try? ConfigStore.save(cfg, to: configURL)
     }
 
     // A unique mirror id. The old timestamp-second scheme collided when two
@@ -261,18 +154,31 @@ final class Model: ObservableObject {
 
     // Reverse-direction guard: does (source -> dest) reverse some other mirror
     // that goes dest -> source? Returns that mirror if so (config would loop).
-    func calId(_ title: String, _ account: String) -> String? {
-        calendars.first { $0.title == title && $0.account == account }?.identifier
-            ?? calendars.first { $0.title == title }?.identifier
-    }
-    func reverseConflict(sourceTitle: String, sourceAccount: String,
-                         destTitle: String, destAccount: String, excluding id: String) -> MirrorCfg? {
-        guard let s = calId(sourceTitle, sourceAccount), let d = calId(destTitle, destAccount) else { return nil }
-        return mirrors.first { m in
-            m.id != id
-                && calId(m.sourceTitle, m.sourceAccount) == d
-                && calId(m.destTitle, m.destAccount) == s
+    func calId(_ ref: CalRef) -> String? {
+        if let a = ref.account, let c = calendars.first(where: { $0.title == ref.title && $0.account == a }) {
+            return c.identifier
         }
+        return calendars.first { $0.title == ref.title }?.identifier
+    }
+    func reverseConflict(source: CalRef, dest: CalRef, excluding id: String) -> Mirror? {
+        guard let s = calId(source), let d = calId(dest) else { return nil }
+        return mirrors.first { m in
+            m.id != id && calId(m.source) == d && calId(m.dest) == s
+        }
+    }
+
+    /// Mirrors bucketed by destination, in first-appearance order so the list
+    /// doesn't reshuffle while you edit. Values index into `mirrors`, so each row
+    /// still binds to the real element.
+    var destinationGroups: [(name: String, indices: [Int])] {
+        var order: [String] = []
+        var buckets: [String: [Int]] = [:]
+        for (i, m) in mirrors.enumerated() {
+            let name = m.dest.title.isEmpty ? "No destination" : m.dest.title
+            if buckets[name] == nil { order.append(name) }
+            buckets[name, default: []].append(i)
+        }
+        return order.map { (name: $0, indices: buckets[$0] ?? []) }
     }
 
     // ---- Shell actions ----
@@ -324,7 +230,7 @@ struct MenuContent: View {
             Menu("\(symbol(model.iconFor(m.id)))  \(m.name)") {
                 if let s = s, let e = s.error, !e.isEmpty { Text("⚠︎ \(e)") }
                 else if let s = s { Text("\(s.total) events  (+\(s.created) ~\(s.updated) −\(s.deleted))") }
-                Text("\(m.sourceTitle)  →  \(m.destTitle)").font(.caption)
+                Text("\(m.source.title)  →  \(m.dest.title)").font(.caption)
                 Divider()
                 Toggle("Enabled", isOn: Binding(get: { m.enabled }, set: { _ in model.toggleEnabled(m.id) }))
                 Toggle("Heartbeat banner", isOn: Binding(get: { m.showHeartbeat }, set: { _ in model.toggleHeartbeat(m.id) }))
@@ -364,208 +270,558 @@ struct MenuContent: View {
 }
 
 // ---- Management window ----------------------------------------------------
+// Master–detail, not one long form. The old layout rendered every control of
+// every mirror at once: ten mirrors was a ~2,000pt scroll in which the two that
+// were actually configured differently looked exactly like the eight that
+// weren't. One mirror at a time, grouped by destination, with each section
+// collapsed to a line that says what it's set to.
 struct ManageView: View {
     @ObservedObject var model: Model
-    // Which mirror's name field holds keyboard focus. Set on "Add mirror" so the
-    // new row is focused and ready to rename.
+    @State private var selection: String?
     @FocusState private var focusedName: String?
-    @State private var scrollTarget: String?
 
     var body: some View {
-        ScrollViewReader { proxy in
-            Form {
-                Section {
-                    HStack {
-                        Text("Mirror pairs").font(.headline)
-                        Spacer()
-                        Button {
-                            let new = MirrorCfg(id: model.freshMirrorId(),
-                                name: "New mirror", sourceTitle: "", sourceAccount: "",
-                                destTitle: "", destAccount: "", enabled: true, showHeartbeat: true,
-                                windowPastDays: 30, windowFutureDays: 365, legacyScheme: nil)
-                            model.mirrors.append(new); model.saveConfig()
-                            scrollTarget = new.id   // scroll to + focus it (below)
-                        } label: { Label("Add mirror", systemImage: "plus") }
-                    }
-                    if !model.calendarAccess {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("No calendars detected yet — run a sync so the engine can list them for the pickers.")
-                                .foregroundStyle(.orange)
-                            Button("Sync now") { model.syncNow() }
+        NavigationSplitView {
+            List(selection: $selection) {
+                ForEach(model.destinationGroups, id: \.name) { group in
+                    Section("\(group.name)  ·  \(group.indices.count)") {
+                        ForEach(group.indices, id: \.self) { i in
+                            SidebarRow(model: model, mirror: model.mirrors[i])
+                                .tag(model.mirrors[i].id)
                         }
                     }
-                    if model.mirrors.isEmpty {
-                        Text("No mirrors yet. Click “Add mirror”.").foregroundStyle(.secondary)
-                    }
-                }
-                ForEach($model.mirrors) { $m in
-                    Section(header: Text($m.wrappedValue.name.isEmpty ? "Mirror" : $m.wrappedValue.name)) {
-                        MirrorRow(model: model, m: $m, focusedName: $focusedName)
-                    }
-                    .id(m.id)
                 }
             }
-            .formStyle(.grouped)
-            .frame(minWidth: 640, minHeight: 480)
-            .onChange(of: scrollTarget) { _, target in
-                guard let target else { return }
-                DispatchQueue.main.async {
-                    withAnimation { proxy.scrollTo(target, anchor: .top) }
-                    focusedName = target
-                    scrollTarget = nil
+            .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
+            .safeAreaInset(edge: .bottom) {
+                HStack {
+                    Button {
+                        let new = Mirror(id: model.freshMirrorId(), name: "New mirror",
+                                         source: CalRef(title: ""), dest: CalRef(title: ""))
+                        model.mirrors.append(new)
+                        model.saveConfig()
+                        selection = new.id
+                        focusedName = new.id
+                    } label: { Label("Add mirror", systemImage: "plus") }
+                    Spacer()
                 }
+                .padding(8)
+                .background(.bar)
+            }
+        } detail: {
+            if let idx = selectedIndex {
+                MirrorDetail(model: model, m: $model.mirrors[idx], focusedName: $focusedName,
+                             onRemove: { removeSelected() })
+                    .id(model.mirrors[idx].id)
+            } else {
+                ContentUnavailableView("No mirror selected",
+                                       systemImage: "arrow.left.arrow.right",
+                                       description: Text("Pick a mirror on the left, or add one."))
+            }
+        }
+        .frame(minWidth: 820, minHeight: 520)
+        .onAppear {
+            if selection == nil { selection = model.mirrors.first?.id }
+        }
+        .overlay(alignment: .top) {
+            if !model.calendarAccess {
+                VStack(spacing: 6) {
+                    Text("No calendars detected yet — run a sync so the engine can list them for the pickers.")
+                        .foregroundStyle(.orange)
+                    Button("Sync now") { model.syncNow() }
+                }
+                .padding(10)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                .padding(.top, 8)
             }
         }
         // Drop back to a menu-bar-only (no Dock, no app menu) app when the
         // management window closes. It only becomes a regular app while open.
         .onDisappear { NSApp.setActivationPolicy(.accessory) }
     }
+
+    private var selectedIndex: Int? {
+        guard let selection else { return nil }
+        return model.mirrors.firstIndex { $0.id == selection }
+    }
+
+    private func removeSelected() {
+        guard let id = selection else { return }
+        let idx = model.mirrors.firstIndex { $0.id == id }
+        model.mirrors.removeAll { $0.id == id }
+        model.saveConfig()
+        // Select the neighbour that took its place, so the detail pane isn't
+        // left empty after every removal.
+        if let idx { selection = model.mirrors.indices.contains(idx) ? model.mirrors[idx].id
+                                 : model.mirrors.last?.id }
+        else { selection = model.mirrors.first?.id }
+    }
 }
 
-struct MirrorRow: View {
+/// One row in the sidebar: health, name, source, and a delta line naming only
+/// what diverges from a plain copy-everything mirror. The destination is the
+/// section header, so the row needn't repeat it.
+struct SidebarRow: View {
     @ObservedObject var model: Model
-    @Binding var m: MirrorCfg
-    @FocusState.Binding var focusedName: String?
-    @State private var conflict: String?
+    let mirror: Mirror
 
-    private func binding(_ isSource: Bool) -> Binding<String> {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: model.iconFor(mirror.id))
+                .foregroundStyle(tint)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(mirror.name.isEmpty ? "Untitled" : mirror.name)
+                    .lineLimit(1)
+                Text(mirror.source.title.isEmpty ? "— no source —" : mirror.source.title)
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                if let delta = MirrorSummary.delta(mirror) {
+                    Text(delta).font(.caption).foregroundStyle(.tint).lineLimit(1)
+                }
+            }
+            Spacer()
+            if let s = model.statuses[mirror.id], s.error == nil {
+                Text("\(s.total)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var tint: Color {
+        switch model.iconFor(mirror.id) {
+        case "checkmark.circle.fill": return .green
+        case "exclamationmark.triangle.fill": return .orange
+        case "xmark.octagon.fill": return .red
+        default: return .secondary
+        }
+    }
+}
+
+// ---- Detail pane ----------------------------------------------------------
+
+/// One mirror's settings. The pair is always visible; everything else collapses
+/// to a header line that says what it's set to, so the pane stays short enough
+/// to read even with the filters expanded.
+struct MirrorDetail: View {
+    @ObservedObject var model: Model
+    @Binding var m: Mirror
+    @FocusState.Binding var focusedName: String?
+    let onRemove: () -> Void
+
+    @State private var conflict: String?
+    @State private var showProjection = false
+    @State private var showSelection = false
+    @State private var showAdvanced = false
+
+    var body: some View {
+        Form {
+            Section("Pair") {
+                TextField("Name", text: $m.name)
+                    .focused($focusedName, equals: m.id)
+                    .onChange(of: m.name) { _, _ in model.saveConfig() }
+                Picker("Source", selection: pick(isSource: true)) {
+                    Text("— choose —").tag("")
+                    ForEach(model.calendars) { c in Text(c.label).tag(c.identifier) }
+                }
+                Picker("Destination", selection: pick(isSource: false)) {
+                    Text("— choose —").tag("")
+                    ForEach(model.calendars.filter { $0.writable }) { c in Text(c.label).tag(c.identifier) }
+                }
+                if let conflict {
+                    Label(conflict, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(.red)
+                }
+                Toggle("Enabled", isOn: $m.enabled).onChange(of: m.enabled) { _, _ in model.saveConfig() }
+            }
+
+            Section {
+                DisclosureGroup(isExpanded: $showProjection) {
+                    ProjectionEditor(m: $m, onChange: { model.saveConfig() })
+                } label: {
+                    SummaryLabel(title: "What crosses over", trailing: nil,
+                                 detail: MirrorSummary.projection(m.projection))
+                }
+            }
+
+            Section {
+                DisclosureGroup(isExpanded: $showSelection) {
+                    SelectionEditor(m: $m, onChange: { model.saveConfig() })
+                } label: {
+                    SummaryLabel(title: "Which events", trailing: ruleCountLabel,
+                                 detail: MirrorSummary.selection(m.filters, tagFilter: m.tagFilter))
+                }
+            }
+
+            Section {
+                DisclosureGroup(isExpanded: $showAdvanced) {
+                    Toggle("Heartbeat banner", isOn: $m.showHeartbeat)
+                        .onChange(of: m.showHeartbeat) { _, _ in model.saveConfig() }
+                    Stepper("History window: \(Int(m.windowPastDays)) days",
+                            value: $m.windowPastDays, in: 1...3650, step: 5)
+                        .onChange(of: m.windowPastDays) { _, _ in model.saveConfig() }
+                    Stepper("Future window: \(Int(m.windowFutureDays)) days",
+                            value: $m.windowFutureDays, in: 1...3650, step: 30)
+                        .onChange(of: m.windowFutureDays) { _, _ in model.saveConfig() }
+                    if let ls = m.legacyScheme {
+                        Text("Migrating legacy tags (\(ls))").font(.caption).foregroundStyle(.secondary)
+                    }
+                } label: {
+                    SummaryLabel(title: "Advanced", trailing: nil, detail: MirrorSummary.advanced(m))
+                }
+            }
+
+            Section {
+                Button(role: .destructive, action: onRemove) {
+                    Label("Remove mirror", systemImage: "trash")
+                }
+            }
+        }
+        .formStyle(.grouped)
+        // Deliberately NO .navigationTitle here: in a NavigationSplitView the
+        // detail pane's title becomes the WINDOW's title, which would rename
+        // "Manage Mirrors" to whichever mirror happens to be selected.
+    }
+
+    private var ruleCountLabel: String? {
+        var n = m.filters.activeRuleCount
+        if m.tagFilter?.isActive == true { n += 1 }
+        guard n > 0 else { return nil }
+        return n == 1 ? "1 rule" : "\(n) rules"
+    }
+
+    private func pick(isSource: Bool) -> Binding<String> {
         Binding(
-            get: { isSource ? m.sourceIdentifierGuess(model.calendars) : m.destIdentifierGuess(model.calendars) },
+            get: { model.calId(isSource ? m.source : m.dest) ?? "" },
             set: { newId in
                 guard let c = model.calendars.first(where: { $0.identifier == newId }) else { return }
-                let sT = isSource ? c.title : m.sourceTitle
-                let sA = isSource ? c.account : m.sourceAccount
-                let dT = isSource ? m.destTitle : c.title
-                let dA = isSource ? m.destAccount : c.account
-                if let clash = model.reverseConflict(sourceTitle: sT, sourceAccount: sA,
-                                                     destTitle: dT, destAccount: dA, excluding: m.id) {
+                let ref = CalRef(title: c.title, account: c.account)
+                let newSource = isSource ? ref : m.source
+                let newDest = isSource ? m.dest : ref
+                if let clash = model.reverseConflict(source: newSource, dest: newDest, excluding: m.id) {
                     conflict = "Can’t reverse “\(clash.name)” — the copy would loop back."
                     return   // reject the change
                 }
                 conflict = nil
-                if isSource { m.sourceTitle = c.title; m.sourceAccount = c.account }
-                else { m.destTitle = c.title; m.destAccount = c.account }
+                if isSource { m.source = ref } else { m.dest = ref }
                 model.saveConfig()
             })
     }
+}
+
+/// A disclosure header that names a section and says what it's currently set to,
+/// so the collapsed state still carries the answer.
+struct SummaryLabel: View {
+    let title: String
+    let trailing: String?
+    let detail: String?
 
     var body: some View {
-        TextField("Name", text: $m.name)
-            .focused($focusedName, equals: m.id)
-            .onChange(of: m.name) { _, _ in model.saveConfig() }
-        Picker("Source", selection: binding(true)) {
-            Text("— choose —").tag("")
-            ForEach(model.calendars) { c in Text(c.label).tag(c.identifier) }
+        VStack(alignment: .leading, spacing: 1) {
+            HStack {
+                Text(title)
+                if let trailing {
+                    Spacer()
+                    Text(trailing).foregroundStyle(.secondary)
+                }
+            }
+            if let detail, !detail.isEmpty {
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+            }
         }
-        Picker("Destination", selection: binding(false)) {
-            Text("— choose —").tag("")
-            ForEach(model.calendars.filter { $0.writable }) { c in Text(c.label).tag(c.identifier) }
-        }
-        if let conflict {
-            Label(conflict, systemImage: "exclamationmark.triangle.fill")
-                .font(.caption).foregroundStyle(.red)
-        }
-        Toggle("Enabled", isOn: $m.enabled).onChange(of: m.enabled) { _, _ in model.saveConfig() }
-        Toggle("Heartbeat banner", isOn: $m.showHeartbeat).onChange(of: m.showHeartbeat) { _, _ in model.saveConfig() }
+    }
+}
 
+/// How much of each source event reaches the copy.
+struct ProjectionEditor: View {
+    @Binding var m: Mirror
+    let onChange: () -> Void
+
+    var body: some View {
         // "Custom" can't be derived from the fields (it's the absence of a preset
-        // match), so the explicit choice is persisted in m.projCustom — it sticks
-        // across reopens even when the field combo happens to equal a preset.
+        // match), so the explicit choice is persisted in projection.custom.
         Picker("What to copy", selection: Binding(
-            get: { m.projCustom ? .custom : presetOf(m) },
+            get: { m.projection.custom ? .custom : MirrorSummary.preset(of: m.projection) },
             set: { p in
-                if p == .custom { m.projCustom = true }
-                else { m.projCustom = false; applyPreset(p, to: &m) }
-                model.saveConfig()
+                if p == .custom { m.projection.custom = true }
+                else { m.projection.custom = false; applyPreset(p, to: &m.projection) }
+                onChange()
             })) {
-            Text("Copy details").tag(Preset.details)
-            Text("Full copy").tag(Preset.full)
-            Text("Busy only").tag(Preset.busy)
-            Text("Custom").tag(Preset.custom)
+            Text("Copy details").tag(MirrorSummary.Preset.details)
+            Text("Full copy").tag(MirrorSummary.Preset.full)
+            Text("Busy only").tag(MirrorSummary.Preset.busy)
+            Text("Custom").tag(MirrorSummary.Preset.custom)
         }
-        if m.projTitleRedact {
-            TextField("Shown as", text: $m.projTitleText)
-                .onChange(of: m.projTitleText) { _, _ in model.saveConfig() }
+        if m.projection.title == .redact {
+            TextField("Shown as", text: $m.projection.titleText)
+                .onChange(of: m.projection.titleText) { _, _ in onChange() }
         }
-        if m.projCustom || presetOf(m) == .custom {
-            Group {
-                Toggle("Redact title", isOn: $m.projTitleRedact).onChange(of: m.projTitleRedact) { _, _ in model.saveConfig() }
-                Toggle("Copy location", isOn: $m.projLocation).onChange(of: m.projLocation) { _, _ in model.saveConfig() }
-                Picker("Notes", selection: $m.projNotes) {
-                    Text("Don't copy").tag(NotesCopy.none)
-                    Text("Tags only").tag(NotesCopy.tags)
-                    Text("Full notes").tag(NotesCopy.full)
-                }.onChange(of: m.projNotes) { _, _ in model.saveConfig() }
-                if m.projNotes == .tags {
-                    Text("Copies just the #tags onto the event, not the note text.")
+        if m.projection.custom || MirrorSummary.preset(of: m.projection) == .custom {
+            Toggle("Redact title", isOn: Binding(
+                get: { m.projection.title == .redact },
+                set: { m.projection.title = $0 ? .redact : .copy; onChange() }))
+            Toggle("Copy location", isOn: $m.projection.location)
+                .onChange(of: m.projection.location) { _, _ in onChange() }
+            Picker("Notes", selection: $m.projection.notes) {
+                Text("Don't copy").tag(NotesMode.none)
+                Text("Tags only").tag(NotesMode.tags)
+                Text("Full notes").tag(NotesMode.full)
+            }
+            .onChange(of: m.projection.notes) { _, _ in onChange() }
+            if m.projection.notes == .tags {
+                Text("Copies just the #tags onto the event, not the note text.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Toggle("Copy alarms", isOn: $m.projection.alarms)
+                .onChange(of: m.projection.alarms) { _, _ in onChange() }
+            Toggle("Always show as busy", isOn: Binding(
+                get: { m.projection.availability == .busy },
+                set: { m.projection.availability = $0 ? .busy : .source; onChange() }))
+        }
+    }
+}
+
+func applyPreset(_ preset: MirrorSummary.Preset, to p: inout Projection) {
+    switch preset {
+    case .details: p.title = .copy;   p.location = true;  p.notes = .none; p.alarms = false; p.availability = .source
+    case .full:    p.title = .copy;   p.location = true;  p.notes = .full; p.alarms = false; p.availability = .source
+    case .busy:    p.title = .redact; p.location = false; p.notes = .none; p.alarms = false; p.availability = .busy
+    case .custom:  break   // reveal the controls, keep current values
+    }
+}
+
+/// Which events are copied: property filters first (they work on any calendar),
+/// then the notes-tag rule (which only works on events you author), then the
+/// control-tag legend. All three answer the same question.
+struct SelectionEditor: View {
+    @Binding var m: Mirror
+    let onChange: () -> Void
+
+    var body: some View {
+        GroupBox("Skip events that are") {
+            VStack(alignment: .leading, spacing: 4) {
+                skipToggle("Declined by me", \.declined)
+                skipToggle("Unanswered", \.unanswered)
+                skipToggle("Canceled", \.canceled)
+                skipToggle("All-day", \.allDay)
+                skipToggle("Marked free", \.free)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(4)
+        }
+
+        GroupBox("Duration") {
+            VStack(alignment: .leading, spacing: 4) {
+                minutesRow("Shorter than", \.shorterThanMinutes)
+                minutesRow("Longer than", \.longerThanMinutes)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(4)
+        }
+
+        GroupBox("Time of day") {
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Limit by time", isOn: Binding(
+                    get: { m.filters.hours != nil },
+                    set: { on in
+                        m.filters.hours = on
+                            ? .init(mode: .keep, startMinute: 8 * 60, endMinute: 18 * 60, days: [2, 3, 4, 5, 6])
+                            : nil
+                        onChange()
+                    }))
+                if m.filters.hours != nil {
+                    Picker("Rule", selection: Binding(
+                        get: { m.filters.hours?.mode ?? .keep },
+                        set: { m.filters.hours?.mode = $0; onChange() })) {
+                        Text("Only during").tag(EventFilters.HoursRule.Mode.keep)
+                        Text("Except during").tag(EventFilters.HoursRule.Mode.drop)
+                    }
+                    DatePicker("From", selection: time(\.startMinute), displayedComponents: .hourAndMinute)
+                    DatePicker("To", selection: time(\.endMinute), displayedComponents: .hourAndMinute)
+                    DayChips(days: Binding(
+                        get: { m.filters.hours?.days ?? [] },
+                        set: { m.filters.hours?.days = $0; onChange() }))
+                    Text("An event counts as inside the window if any part of it overlaps. All-day events are never matched here — use the all-day switch above.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Toggle("Copy alarms", isOn: $m.projAlarms).onChange(of: m.projAlarms) { _, _ in model.saveConfig() }
-                Toggle("Always show as busy", isOn: $m.projBusy).onChange(of: m.projBusy) { _, _ in model.saveConfig() }
             }
-            .padding(.leading, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(4)
         }
-        DisclosureGroup("Per-event tags & selection") {
-            VStack(alignment: .leading, spacing: 8) {
-                // Selection filter — copy all, or only/except events carrying a
-                // notes tag. One mode per mirror (include OR reject, never both).
-                Picker("Copy which events", selection: $m.tagMode) {
+
+        GroupBox("Title") {
+            VStack(alignment: .leading, spacing: 4) {
+                Picker("Rule", selection: titleMode) {
+                    Text("Any title").tag("off")
+                    Text("Only if it contains…").tag("include")
+                    Text("Except if it contains…").tag("reject")
+                }
+                if m.filters.title != nil {
+                    TextField("Lunch, Focus time", text: titlePatterns)
+                    Text("Comma-separated, case-insensitive. Matches anywhere in the title.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(4)
+        }
+
+        GroupBox("By notes tag") {
+            VStack(alignment: .leading, spacing: 4) {
+                Picker("Copy which events", selection: tagMode) {
                     Text("All events").tag("off")
                     Text("Only with tag…").tag("include")
                     Text("Except with tag…").tag("reject")
                 }
-                .onChange(of: m.tagMode) { _, _ in model.saveConfig() }
-                if m.tagMode != "off" {
-                    TextField(m.tagMode == "include" ? "Include tags" : "Reject tags", text: $m.tagsText)
-                        .onChange(of: m.tagsText) { _, _ in model.saveConfig() }
-                    Text(m.tagMode == "include"
+                if let f = m.tagFilter {
+                    TextField(f.mode == .include ? "Include tags" : "Reject tags", text: tagText)
+                    Text(f.mode == .include
                          ? "Copy an event only if its notes contain one of these tags."
                          : "Skip an event if its notes contain one of these tags.")
                         .font(.caption).foregroundStyle(.secondary)
                     Text("Space-separated, e.g.  #ref #cowork").font(.caption).foregroundStyle(.secondary)
                 }
-
                 // Only meaningful when the whole note crosses over: in .tags the
                 // tags are the payload, in .none there are no notes to strip.
-                if m.projNotes == .full {
+                if m.projection.notes == .full {
                     Toggle("Keep #tags in copied notes", isOn: $m.copyNotesTags)
-                        .onChange(of: m.copyNotesTags) { _, _ in model.saveConfig() }
+                        .onChange(of: m.copyNotesTags) { _, _ in onChange() }
                     Text("Off = strip #tags from the copied note. #+tag is always kept, #-tag always dropped.")
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
-                    Text("Set \"What to copy\" → Notes to carry #tags onto the copy.")
+                    Text("Set “What crosses over” → Notes to carry #tags onto the copy.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(4)
+        }
 
-                Divider().padding(.vertical, 2)
-                Text("Control tags — type into a source event's notes:").font(.caption).foregroundStyle(.secondary)
+        GroupBox("Control tags — type into a source event's notes") {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("#nomirror — skip this event entirely").font(.caption)
                 Text("#private — copy as a busy block").font(.caption)
                 Text("#public — copy in full").font(.caption)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(4)
         }
+    }
 
-        Stepper("History window: \(Int(m.windowPastDays)) days", value: $m.windowPastDays, in: 1...3650, step: 5)
-            .onChange(of: m.windowPastDays) { _, _ in model.saveConfig() }
-        Stepper("Future window: \(Int(m.windowFutureDays)) days", value: $m.windowFutureDays, in: 1...3650, step: 30)
-            .onChange(of: m.windowFutureDays) { _, _ in model.saveConfig() }
-        if m.legacyScheme != nil {
-            Text("Migrating legacy tags (\(m.legacyScheme!))").font(.caption).foregroundStyle(.secondary)
+    // MARK: Bindings
+
+    private func skipToggle(_ label: String, _ key: WritableKeyPath<EventFilters, Bool>) -> some View {
+        Toggle(label, isOn: Binding(
+            get: { m.filters[keyPath: key] },
+            set: { m.filters[keyPath: key] = $0; onChange() }))
+    }
+
+    /// A minutes bound plus its on/off switch: 0 means the rule is off, so the
+    /// stepper only appears once you've turned it on.
+    private func minutesRow(_ label: String, _ key: WritableKeyPath<EventFilters, Int>) -> some View {
+        let value = m.filters[keyPath: key]
+        return Group {
+            Toggle(label, isOn: Binding(
+                get: { value > 0 },
+                set: { m.filters[keyPath: key] = $0 ? 15 : 0; onChange() }))
+            if value > 0 {
+                Stepper("\(value) minutes", value: Binding(
+                    get: { m.filters[keyPath: key] },
+                    set: { m.filters[keyPath: key] = max(1, $0); onChange() }),
+                    in: 1...(24 * 60), step: 5)
+            }
         }
-        Button(role: .destructive) {
-            model.mirrors.removeAll { $0.id == m.id }; model.saveConfig()
-        } label: { Label("Remove mirror", systemImage: "trash") }
+    }
+
+    /// DatePicker speaks Date, the config stores minutes-from-midnight. Anchor on
+    /// a fixed reference day so only the time component is ever read back.
+    private func time(_ key: WritableKeyPath<EventFilters.HoursRule, Int>) -> Binding<Date> {
+        Binding(
+            get: {
+                let mins = m.filters.hours?[keyPath: key] ?? 0
+                return Calendar.current.startOfDay(for: Date()).addingTimeInterval(Double(mins) * 60)
+            },
+            set: { d in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+                m.filters.hours?[keyPath: key] = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+                onChange()
+            })
+    }
+
+    private var titleMode: Binding<String> {
+        Binding(
+            get: { m.filters.title?.mode.rawValue ?? "off" },
+            set: { v in
+                let existing = m.filters.title?.patterns ?? []
+                switch v {
+                case "include": m.filters.title = .init(mode: .include, patterns: existing)
+                case "reject":  m.filters.title = .init(mode: .reject, patterns: existing)
+                default:        m.filters.title = nil
+                }
+                onChange()
+            })
+    }
+
+    private var titlePatterns: Binding<String> {
+        Binding(
+            get: { m.filters.title?.patterns.joined(separator: ", ") ?? "" },
+            set: { s in
+                let parts = s.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+                    .filter { !$0.isEmpty }
+                m.filters.title = .init(mode: m.filters.title?.mode ?? .reject, patterns: parts)
+                onChange()
+            })
+    }
+
+    private var tagMode: Binding<String> {
+        Binding(
+            get: { m.tagFilter?.mode.rawValue ?? "off" },
+            set: { v in
+                let existing = m.tagFilter?.tags ?? []
+                switch v {
+                case "include": m.tagFilter = TagFilter(mode: .include, tags: existing)
+                case "reject":  m.tagFilter = TagFilter(mode: .reject, tags: existing)
+                default:        m.tagFilter = nil
+                }
+                onChange()
+            })
+    }
+
+    private var tagText: Binding<String> {
+        Binding(
+            get: { m.tagFilter?.tags.joined(separator: " ") ?? "" },
+            set: { s in
+                let tags = s.split(whereSeparator: { $0 == " " || $0 == "," || $0 == "\n" || $0 == "\t" }).map(String.init)
+                m.tagFilter = TagFilter(mode: m.tagFilter?.mode ?? .include, tags: tags)
+                onChange()
+            })
     }
 }
 
-extension MirrorCfg {
-    func sourceIdentifierGuess(_ cals: [CalInfo]) -> String {
-        cals.first { $0.title == sourceTitle && $0.account == sourceAccount }?.identifier
-            ?? cals.first { $0.title == sourceTitle }?.identifier ?? ""
-    }
-    func destIdentifierGuess(_ cals: [CalInfo]) -> String {
-        cals.first { $0.title == destTitle && $0.account == destAccount }?.identifier
-            ?? cals.first { $0.title == destTitle }?.identifier ?? ""
+/// Weekday chips for the hours rule. Empty selection means every day, which is
+/// what an hours window with no day restriction already meant.
+struct DayChips: View {
+    @Binding var days: [Int]
+    private let labels = [(1, "S"), (2, "M"), (3, "T"), (4, "W"), (5, "T"), (6, "F"), (7, "S")]
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(labels, id: \.0) { num, label in
+                let on = days.isEmpty || days.contains(num)
+                Button {
+                    var set = days.isEmpty ? Array(1...7) : days
+                    if set.contains(num) { set.removeAll { $0 == num } } else { set.append(num) }
+                    days = set.sorted()
+                } label: {
+                    Text(label)
+                        .font(.caption)
+                        .frame(width: 22, height: 22)
+                        .background(on ? Color.accentColor : Color.secondary.opacity(0.15))
+                        .foregroundStyle(on ? Color.white : Color.primary)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .accessibilityLabel("Days the time window applies")
     }
 }
 

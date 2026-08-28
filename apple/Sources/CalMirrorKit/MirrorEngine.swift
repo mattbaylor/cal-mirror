@@ -220,6 +220,31 @@ public final class MirrorEngine: @unchecked Sendable {
         return EKAlarm(relativeOffset: a.relativeOffset)
     }
 
+    /// Adapt an `EKEvent` into the pure slice `EventFilters` reads, so every
+    /// selection rule stays testable without EventKit.
+    private func filterable(_ ev: EKEvent) -> FilterableEvent {
+        let now = Date()
+        // An event with no attendees is one the user made for themselves: neither
+        // accepted nor pending, so the `unanswered` rule must not eat it.
+        var reply = FilterableEvent.Reply.none
+        if let me = ev.attendees?.first(where: { $0.isCurrentUser }) {
+            switch me.participantStatus {
+            case .declined: reply = .declined
+            case .accepted: reply = .accepted
+            case .pending, .tentative: reply = .pending
+            default: reply = .none
+            }
+        }
+        return FilterableEvent(
+            title: ev.title ?? "",
+            start: ev.startDate ?? now,
+            end: ev.endDate ?? ev.startDate ?? now,
+            isAllDay: ev.isAllDay,
+            isFree: ev.availability == .free,
+            isCanceled: ev.status == .canceled,
+            reply: reply)
+    }
+
     /// True if `ev` is itself a cal-mirror artifact — a copy some mirror wrote, or
     /// a heartbeat banner — so it's skipped as a source (no copy-of-a-copy).
     private func isMirrorArtifact(_ ev: EKEvent, mirrors: [Mirror]) -> Bool {
@@ -284,6 +309,11 @@ public final class MirrorEngine: @unchecked Sendable {
             if isMirrorArtifact(ev, mirrors: allMirrors) { continue }   // don't re-mirror a copy/heartbeat
             let nt = scanNoteTags(ev.notes)
             if nt.skip { continue }                                     // honor #nomirror
+            // Property selection (declined/canceled/all-day/hours/…) runs before
+            // the tag filter and is FINAL: #public and #private govern how much
+            // of an event crosses over, not whether it does, so neither rescues
+            // an event a filter dropped.
+            if !m.filters.admits(filterable(ev)) { continue }
             if let f = m.tagFilter, !f.admits(nt) { continue }          // include/reject by notes tag
             let snap = snapshot(ev, tags: nt, mirror: m)
             srcList.append(ev)
