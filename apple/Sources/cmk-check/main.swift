@@ -275,6 +275,42 @@ do {
     check(absent.mirrors[0].projection.titlePrefix == "", "absent titlePrefix → empty (no change)")
 }
 
+print("SourceDigest:")
+do {
+    func d(_ k: String, _ f: String) -> Reconciler.Desired { .init(key: k, fingerprint: f) }
+    let a = [d("k1", "fpA"), d("k2", "fpB")]
+    check(SourceDigest.of(a) == SourceDigest.of(a), "same input → same digest")
+    check(SourceDigest.of(a) == SourceDigest.of(a.reversed()),
+          "order-independent — EventKit's ordering must not look like a change")
+    check(SourceDigest.of(a) != SourceDigest.of([d("k1", "fpA")]),
+          "a removed event changes the digest")
+    check(SourceDigest.of(a) != SourceDigest.of([d("k1", "fpA"), d("k2", "fpC")]),
+          "a moved event changes the digest (fingerprint carries time)")
+    check(SourceDigest.of(a) != SourceDigest.of([d("k1", "fpA"), d("k3", "fpB")]),
+          "a re-keyed event changes the digest")
+    check(SourceDigest.of([]) == SourceDigest.of([]), "empty is stable")
+    check(SourceDigest.of([]) != SourceDigest.of(a), "empty differs from non-empty")
+    // The separator matters: without it, ("ab","c") and ("a","bc") would collide.
+    check(SourceDigest.of([d("ab", "c")]) != SourceDigest.of([d("a", "bc")]),
+          "field boundaries are respected")
+}
+
+print("Config.realtime:")
+do {
+    // A fresh config gets realtime; a decoded one that predates the key does not.
+    // Upgrading must never silently change how an existing setup syncs.
+    check(Config().realtime, "a newly constructed config has realtime on")
+    let old = try JSONDecoder().decode(Config.self, from: json)
+    check(!old.realtime, "a config without the key decodes to realtime OFF")
+    check(old.effectiveIntervalSeconds == old.intervalSeconds,
+          "scheduled mode uses the configured interval")
+    var rt = old; rt.realtime = true
+    check(rt.effectiveIntervalSeconds == Config.realtimeFloorSeconds,
+          "realtime pins the floor, whatever the configured interval says")
+    let back = try JSONDecoder().decode(Config.self, from: JSONEncoder().encode(rt))
+    check(back.realtime, "realtime round-trips")
+}
+
 print("SyncScheduler:")
 do {
     let t0 = Date(timeIntervalSince1970: 1_756_000_000)

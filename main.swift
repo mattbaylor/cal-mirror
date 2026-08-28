@@ -76,17 +76,23 @@ func publishCalendars() {
     }
 }
 
-func writeStatus(paused: Bool, intervalSeconds: Int, results: [MirrorResult]) {
+func writeStatus(paused: Bool, intervalSeconds: Int, results: [MirrorResult],
+                 trigger: String = "floor", realtime: Bool = false, observing: Bool = false) {
     let mirrors = results.map { r -> [String: Any] in
         var d: [String: Any] = ["id": r.id, "name": r.name, "ok": r.ok,
             "created": r.created, "updated": r.updated, "unchanged": r.unchanged,
             "deleted": r.deleted, "total": r.total]
         if let e = r.error { d["error"] = e }
+        if let n = r.note { d["note"] = n }
         return d
     }
     let o: [String: Any] = [
         "lastRun": ISO8601DateFormatter().string(from: Date()),
         "paused": paused, "intervalSeconds": intervalSeconds, "mirrors": mirrors,
+        // Why this cycle ran, and whether change detection is actually up. Without
+        // these the UI cannot tell a healthy realtime setup from one that has
+        // silently fallen back to the schedule.
+        "trigger": trigger, "realtime": realtime, "observing": observing,
     ]
     if let data = try? JSONSerialization.data(withJSONObject: o, options: [.prettyPrinted, .sortedKeys]) {
         try? data.write(to: STATUS_URL, options: .atomic)
@@ -122,34 +128,104 @@ if doPurge {
 }
 
 // ---- One sync cycle ------------------------------------------------------
-func runCycle() {
-    let cfg = ConfigStore.load(from: CONFIG_URL)
+func runCycle(_ cfg: Config, trigger: SyncScheduler.Reason, observing: Bool) {
     publishCalendars()
     engine.refreshSources()
     if cfg.paused {
         log("paused (global) — skipping all mirrors.")
-        writeStatus(paused: true, intervalSeconds: cfg.intervalSeconds, results: cfg.mirrors.map {
-            MirrorResult(id: $0.id, name: $0.name, ok: true, error: "paused") })
+        writeStatus(paused: true, intervalSeconds: cfg.effectiveIntervalSeconds,
+                    results: cfg.mirrors.map {
+                        MirrorResult(id: $0.id, name: $0.name, ok: true, note: "paused") },
+                    trigger: trigger.rawValue, realtime: cfg.realtime, observing: observing)
         return
     }
-    let results = engine.syncAll(cfg, now: Date(), log: log)
-    writeStatus(paused: false, intervalSeconds: cfg.intervalSeconds, results: results)
-    log("all mirrors done (\(results.filter { $0.ok }.count)/\(results.count) ok)")
+    let results = engine.syncAll(cfg, now: Date(), trigger: trigger, log: log)
+    writeStatus(paused: false, intervalSeconds: cfg.effectiveIntervalSeconds, results: results,
+                trigger: trigger.rawValue, realtime: cfg.realtime, observing: observing)
+    let skipped = results.filter { $0.note == "unchanged" }.count
+    let tail = skipped > 0 ? " · \(skipped) unchanged" : ""
+    log("all mirrors done (\(results.filter { $0.ok }.count)/\(results.count) ok) [\(trigger.rawValue)]\(tail)")
 }
 
 if onceOnly {
-    runCycle()
+    runCycle(ConfigStore.load(from: CONFIG_URL), trigger: .first, observing: false)
     exit(0)
 }
 
 // ---- Daemon loop ---------------------------------------------------------
-// Sync, then sleep the configured interval — forever. Re-reading config each
-// cycle lets interval/pause changes from the UI take effect on the next cycle
-// (a `launchctl kickstart -k` restarts us for an immediate sync).
+// Cycles are driven by SyncScheduler, which weighs three things: calendar
+// changes (debounced), a minimum gap between change-driven runs, and the
+// scheduled floor. Config is re-read every pass, so interval/pause/realtime
+// changes from the UI take effect without a restart.
+//
+// The floor never goes away. EKEventStoreChanged is best-effort, subscribed ICS
+// feeds refresh silently, and sleep drops notifications outright — without a
+// backstop a missed notification means a mirror stale forever with nothing to
+// notice. In realtime mode the floor is pinned to 5 minutes and the configured
+// interval steps aside.
 log("cal-mirror daemon started (pid \(ProcessInfo.processInfo.processIdentifier))")
+
+// The scheduler is touched from two threads: this loop, and whatever thread
+// EventKit posts its change notification on.
+let schedulerLock = NSLock()
+nonisolated(unsafe) var scheduler = SyncScheduler()
+let wake = DispatchSemaphore(value: 0)
+
+nonisolated(unsafe) var observerToken: NSObjectProtocol?
+
+func startObserving() {
+    guard observerToken == nil else { return }
+    observerToken = engine.observeChanges {
+        let now = Date()
+        schedulerLock.lock()
+        let accepted = scheduler.noteChange(at: now)
+        schedulerLock.unlock()
+        // Only interrupt the wait for a change we actually intend to act on;
+        // our own write echoing back should not even wake us.
+        if accepted { wake.signal() }
+    }
+    log("realtime: observing calendar changes")
+}
+
+func stopObserving() {
+    guard let token = observerToken else { return }
+    engine.stopObserving(token)
+    observerToken = nil
+    log("realtime: stopped observing")
+}
+
 while true {
-    runCycle()
     let cfg = ConfigStore.load(from: CONFIG_URL)
-    let secs = max(60, cfg.intervalSeconds)   // floor so a bad value can't hot-loop
-    Thread.sleep(forTimeInterval: TimeInterval(secs))
+
+    // Follow the config: realtime can be toggled from the UI at any time.
+    if cfg.realtime && !cfg.paused { startObserving() } else { stopObserving() }
+    let observing = observerToken != nil
+
+    schedulerLock.lock()
+    let decision = scheduler.decide(now: Date(), intervalSeconds: cfg.effectiveIntervalSeconds)
+    schedulerLock.unlock()
+
+    switch decision {
+    case .sync(let reason):
+        runCycle(cfg, trigger: reason, observing: observing)
+        let done = Date()
+        schedulerLock.lock()
+        // Order matters: open the self-write window BEFORE clearing the pending
+        // burst, so an echo landing in between is suppressed rather than
+        // scheduling the cycle that just finished all over again.
+        scheduler.noteWrite(at: done)
+        scheduler.noteSyncFinished(at: done)
+        schedulerLock.unlock()
+
+    case .wait(let seconds):
+        // A change signals the semaphore, so realtime cuts the wait short
+        // rather than waiting out the whole floor.
+        _ = wake.wait(timeout: .now() + seconds)
+        // Collapse a burst into a single wake-up. Signals accumulate, so without
+        // this a 200-event pull would spin the loop 200 times — each pass doing
+        // nothing but re-deciding. Draining is safe because the decision comes
+        // entirely from the scheduler's state, never from the semaphore count:
+        // anything still pending is reflected in the next `decide`.
+        while wake.wait(timeout: .now()) == .success {}
+    }
 }

@@ -101,3 +101,33 @@ public enum Reconciler {
         return plan
     }
 }
+
+/// A cheap, order-independent fingerprint of everything a mirror *wants* in its
+/// destination this cycle.
+///
+/// Change-driven sync needs to answer "did this mirror's source actually move?"
+/// without paying for the expensive half of a cycle — the destination snapshot
+/// settle-wait, which runs per mirror and dominates the cost. Reading the source
+/// and digesting it is cheap; comparing two digests is free.
+///
+/// FNV-1a rather than Swift's `Hasher`, which is seeded per process and so gives
+/// a different value for the same input on every launch. Nothing here persists
+/// across launches today, but a digest that silently means something different
+/// after a restart is a trap worth not setting.
+public enum SourceDigest {
+    public static func of(_ desired: [Reconciler.Desired]) -> UInt64 {
+        // Sorted, so the same set of events digests the same however EventKit
+        // happened to order them.
+        let parts = desired.map { "\($0.key)|\($0.fingerprint)" }.sorted()
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for part in parts {
+            for byte in part.utf8 {
+                hash ^= UInt64(byte)
+                hash = hash &* 0x0000_0100_0000_01b3
+            }
+            hash ^= 0x0a
+            hash = hash &* 0x0000_0100_0000_01b3
+        }
+        return hash
+    }
+}
