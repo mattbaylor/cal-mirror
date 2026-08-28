@@ -253,6 +253,35 @@ public struct Mirror: Codable, Identifiable, Equatable, Sendable {
         copyNotesTags = (try? c.decode(Bool.self, forKey: .copyNotesTags)) ?? false
         legacyScheme = try c.decodeIfPresent(String.self, forKey: .legacyScheme)
     }
+
+    // Declared explicitly: supplying BOTH init(from:) and encode(to:) stops the
+    // compiler synthesizing these.
+    enum CodingKeys: String, CodingKey {
+        case id, name, source, dest, enabled, showHeartbeat
+        case windowPastDays, windowFutureDays, projection
+        case tagFilter, filters, copyNotesTags, legacyScheme
+    }
+
+    // config.json is meant to be hand-editable, so a block that isn't doing
+    // anything doesn't get written: an inactive `filters` or `tagFilter`, and a
+    // false `copyNotesTags`, are all absent rather than spelled out as defaults.
+    // Decoding treats absent and all-default identically, so this is lossless.
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(source, forKey: .source)
+        try c.encode(dest, forKey: .dest)
+        try c.encode(enabled, forKey: .enabled)
+        try c.encode(showHeartbeat, forKey: .showHeartbeat)
+        try c.encode(windowPastDays, forKey: .windowPastDays)
+        try c.encode(windowFutureDays, forKey: .windowFutureDays)
+        try c.encode(projection, forKey: .projection)
+        if let tagFilter, tagFilter.isActive { try c.encode(tagFilter, forKey: .tagFilter) }
+        if filters.isActive { try c.encode(filters, forKey: .filters) }
+        if copyNotesTags { try c.encode(copyNotesTags, forKey: .copyNotesTags) }
+        try c.encodeIfPresent(legacyScheme, forKey: .legacyScheme)
+    }
 }
 
 /// Top-level configuration: global settings plus the list of mirror pairs.

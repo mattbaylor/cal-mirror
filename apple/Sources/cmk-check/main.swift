@@ -375,6 +375,34 @@ do {
     check(MirrorSummary.delta(busy) == "Busy only", "a preset mirror names its preset")
 }
 
+print("Config write-back:")
+// config.json is hand-editable, so an inactive block must not be spelled out as
+// defaults — and absent must decode identically to all-default.
+do {
+    var m = Mirror(id: "x", name: "X", source: CalRef(title: "S"), dest: CalRef(title: "D"))
+    let enc = JSONEncoder()
+    let bare = String(data: try enc.encode(m), encoding: .utf8)!
+    check(!bare.contains("filters"), "an inactive filters block is not written")
+    check(!bare.contains("tagFilter"), "an absent tagFilter is not written")
+    check(!bare.contains("copyNotesTags"), "a false copyNotesTags is not written")
+
+    m.filters = EventFilters(declined: true)
+    m.tagFilter = TagFilter(mode: .include, tags: ["#ref"])
+    m.copyNotesTags = true
+    let full = String(data: try enc.encode(m), encoding: .utf8)!
+    check(full.contains("filters") && full.contains("tagFilter") && full.contains("copyNotesTags"),
+          "active blocks ARE written")
+    let back = try JSONDecoder().decode(Mirror.self, from: try enc.encode(m))
+    check(back == m, "an active mirror round-trips unchanged")
+
+    // An empty tag list means the filter constrains nothing, so it's dropped —
+    // and comes back as nil, which decodes to the same behavior.
+    var empty = m
+    empty.tagFilter = TagFilter(mode: .include, tags: [])
+    let e2 = try JSONDecoder().decode(Mirror.self, from: try enc.encode(empty))
+    check(e2.tagFilter == nil, "an empty tagFilter drops to nil (same behavior, less noise)")
+}
+
 print("SnapshotGuard:")
 func isSkip(_ d: SnapshotGuard.Decision) -> Bool { if case .skip = d { return true }; return false }
 check(SnapshotGuard.decide(stabilized: true,  count: 441, lastKnown: 441) == .proceed, "stable, matching count → proceed")
