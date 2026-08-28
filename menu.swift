@@ -190,15 +190,22 @@ final class Model: ObservableObject {
         }
         return "checkmark.circle.fill"
     }
-    var overallIcon: String {
-        if paused { return "pause.circle" }
-        if mirrors.isEmpty { return "circle.dashed" }
-        let icons = mirrors.filter { $0.enabled }.map { iconFor($0.id) }
-        if icons.contains("xmark.octagon.fill") { return "xmark.octagon.fill" }
-        if icons.contains("exclamationmark.triangle.fill") { return "exclamationmark.triangle.fill" }
-        if icons.contains("questionmark.circle") { return "questionmark.circle" }
-        return "checkmark.circle.fill"
+    // What the menu-bar icon shows. Rows inside the menu keep their SF Symbols
+    // (iconFor) — a face next to a line of text reads worse than a checkmark.
+    #if os(macOS)
+    var menuBarState: MenuBarState {
+        if paused { return .paused }
+        let enabled = mirrors.filter { $0.enabled }
+        if enabled.isEmpty { return .unconfigured }
+        let icons = enabled.map { iconFor($0.id) }
+        if icons.contains("xmark.octagon.fill") { return .failing }
+        // Stale and never-run both fold into degraded: either way the mirror is
+        // not known to be current.
+        if icons.contains("exclamationmark.triangle.fill") { return .degraded }
+        if icons.contains("questionmark.circle") { return .degraded }
+        return .ok
     }
+    #endif
     var headline: String {
         if paused { return "Paused" }
         guard let last = lastRun else { return "No sync yet" }
@@ -599,7 +606,7 @@ struct CalMirrorMenuApp: App {
         // Hand the delegate a way in: it has no scene of its own, and this
         // capture does not depend on the icon ever being drawn.
         let _ = (AppDelegate.showManage = showManage)
-        MenuBarExtra { MenuContent(model: model) } label: { Image(systemName: model.overallIcon) }
+        MenuBarExtra { MenuContent(model: model) } label: { Image(nsImage: menuBarImage(model.menuBarState)) }
             .menuBarExtraStyle(.menu)
         Window("Manage Mirrors", id: "manage") { ManageView(model: model) }
     }

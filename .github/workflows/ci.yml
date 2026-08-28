@@ -1,3 +1,11 @@
+# Compile everything that ships, on every PR.
+#
+# cmk-check covers the pure engine logic, but for a long time it was the ONLY
+# job here — nothing compiled menu.swift or either App Store target, so a syntax
+# error in the menu-bar app could reach a release build untouched by CI. The
+# build jobs below close that: they do not run the apps, they just prove all
+# three products still compile.
+
 name: CI
 
 on:
@@ -21,3 +29,45 @@ jobs:
       - name: Run CalMirrorKit pure-logic self-check
         working-directory: apple
         run: swift run cmk-check
+
+  build-standalone:
+    # The engine and the menu-bar UI: plain swiftc, ad-hoc signed. No project
+    # generation and no package resolution, so this is the fast signal.
+    name: build standalone apps
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Swift version
+        run: swiftc --version
+      - name: Build engine (cal-mirror.app)
+        run: ./build.sh
+      - name: Build menu-bar UI (CalMirrorMenu.app)
+        run: ./build-ui.sh
+
+  build-app-store:
+    # The sandboxed macOS app and the iOS app. Built on the same runner family
+    # as release.yml, so a green check here means the release build should also
+    # compile. Signing is off: this checks compilation, not distribution.
+    name: build App Store targets
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install xcodegen
+        run: brew install xcodegen
+      - name: Generate Xcode projects
+        run: |
+          set -euo pipefail
+          (cd apple/mac && xcodegen generate)
+          (cd apple/ios && xcodegen generate)
+      - name: Build CalMirrorMac (macOS)
+        working-directory: apple/mac
+        run: |
+          xcodebuild -project CalMirrorMac.xcodeproj -scheme CalMirrorMac \
+            -configuration Debug -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO -quiet build
+      - name: Build CalMirror (iOS)
+        working-directory: apple/ios
+        run: |
+          xcodebuild -project CalMirror.xcodeproj -scheme CalMirror \
+            -configuration Debug -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO -quiet build

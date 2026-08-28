@@ -5,7 +5,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$DIR/CalMirrorMenu.app"
 
 echo "==> Compiling menu app"
-swiftc -O -parse-as-library -o /tmp/CalMirrorMenu.bin "$DIR/menu.swift"
+swiftc -O -parse-as-library -o /tmp/CalMirrorMenu.bin "$DIR/menu.swift" "$DIR/apple/Shared/MenuBarIcon.swift"
 
 echo "==> Assembling app bundle"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS"

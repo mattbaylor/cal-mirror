@@ -34,7 +34,25 @@ render "$UI_LABEL" "$DIR/CalMirrorMenu.app/Contents/MacOS/CalMirrorMenu" "$DIR/l
 
 for L in "$ENGINE_LABEL" "$UI_LABEL"; do
   launchctl bootout "gui/$UID_NUM/$L" 2>/dev/null || true
-  launchctl bootstrap "gui/$UID_NUM" "$HOME/Library/LaunchAgents/$L.plist"
+  # bootout returns before launchd has finished tearing the old job down.
+  # Bootstrapping into that window fails with "Bootstrap failed: 5: Input/output
+  # error", and under `set -e` that aborts the install with the agent left
+  # unloaded — i.e. syncing silently stopped. Wait for the label to go, then
+  # retry rather than trusting one shot.
+  for _ in $(seq 1 20); do
+    launchctl print "gui/$UID_NUM/$L" >/dev/null 2>&1 || break
+    sleep 0.25
+  done
+  for attempt in 1 2 3; do
+    if launchctl bootstrap "gui/$UID_NUM" "$HOME/Library/LaunchAgents/$L.plist" 2>/dev/null; then
+      break
+    fi
+    if [ "$attempt" = 3 ]; then
+      echo "    ERROR: could not bootstrap $L — check: launchctl print gui/$UID_NUM/$L" >&2
+      exit 1
+    fi
+    sleep 1
+  done
   launchctl enable "gui/$UID_NUM/$L"
   echo "    loaded: $L"
 done
