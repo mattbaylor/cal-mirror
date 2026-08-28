@@ -275,6 +275,70 @@ do {
     check(absent.mirrors[0].projection.titlePrefix == "", "absent titlePrefix → empty (no change)")
 }
 
+print("HeartbeatPolicy:")
+do {
+    typealias HP = HeartbeatPolicy
+    let now = Date(timeIntervalSince1970: 1_756_000_000)
+    let yesterday = now.addingTimeInterval(-86400)
+
+    // Healthy is silent: nothing written, and any earlier warning is cleared.
+    check(HP.decide(enabled: true, health: .ok, existingTitle: nil,
+                    mirrorName: "M", lastSuccess: nil, now: now) == .none,
+          "healthy with no banner → write nothing")
+    check(HP.decide(enabled: true, health: .ok, existingTitle: "⚠︎ old",
+                    mirrorName: "M", lastSuccess: nil, now: now) == .remove,
+          "recovering clears the standing warning")
+
+    // A failure raises one.
+    if case let .write(t) = HP.decide(enabled: true, health: .failing("Source not found"),
+                                      existingTitle: nil, mirrorName: "Work Mirror",
+                                      lastSuccess: nil, now: now) {
+        check(t.contains("Work Mirror") && t.contains("Source not found"),
+              "the warning names the mirror and the reason")
+    } else { check(false, "a failure should write a banner") }
+
+    // THE loop-safety rule: an unchanged warning must not be re-saved. Every
+    // write posts an EventKit change notification, which is what event-driven
+    // sync will key off.
+    let standing = HP.title(mirrorName: "M", reason: "Source not found",
+                            lastSuccess: nil, now: now)
+    check(HP.decide(enabled: true, health: .failing("Source not found"),
+                    existingTitle: standing, mirrorName: "M",
+                    lastSuccess: nil, now: now) == .none,
+          "an unchanged warning is NOT rewritten (no self-triggering write)")
+    check(HP.decide(enabled: true, health: .failing("Destination is read-only"),
+                    existingTitle: standing, mirrorName: "M",
+                    lastSuccess: nil, now: now) != .none,
+          "a changed reason does rewrite")
+
+    // A deferral is not evidence of health either way.
+    check(HP.decide(enabled: true, health: .unknown, existingTitle: nil,
+                    mirrorName: "M", lastSuccess: nil, now: now) == .none,
+          "deferred raises nothing")
+    check(HP.decide(enabled: true, health: .unknown, existingTitle: "⚠︎ old",
+                    mirrorName: "M", lastSuccess: nil, now: now) == .none,
+          "deferred does NOT clear a standing warning")
+
+    // Turning it off clears up — this is also what retires the old always-on
+    // banners on the first upgrade cycle.
+    check(HP.decide(enabled: false, health: .failing("x"), existingTitle: "⚠︎ old",
+                    mirrorName: "M", lastSuccess: nil, now: now) == .remove,
+          "disabled clears any banner (and migrates the old ones away)")
+    check(HP.decide(enabled: false, health: .ok, existingTitle: nil,
+                    mirrorName: "M", lastSuccess: nil, now: now) == .none,
+          "disabled with nothing there does nothing")
+
+    // The last-clean-sync date is what tells you how alarmed to be — but only
+    // once it is old news.
+    let dated = HP.title(mirrorName: "M", reason: "Source not found",
+                         lastSuccess: yesterday, now: now)
+    check(dated.contains("last synced"), "an older success is dated in the warning")
+    let sameDay = HP.title(mirrorName: "M", reason: "Source not found",
+                           lastSuccess: now, now: now)
+    check(!sameDay.contains("last synced"), "a success earlier today adds no date")
+    check(HP.dayLabel(now) == HP.dayLabel(now), "dayLabel is stable")
+}
+
 print("EventFilters:")
 // Absent block → copies everything (the historical contract).
 do {

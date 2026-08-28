@@ -233,7 +233,7 @@ struct MenuContent: View {
                 Text("\(m.source.title)  →  \(m.dest.title)").font(.caption)
                 Divider()
                 Toggle("Enabled", isOn: Binding(get: { m.enabled }, set: { _ in model.toggleEnabled(m.id) }))
-                Toggle("Heartbeat banner", isOn: Binding(get: { m.showHeartbeat }, set: { _ in model.toggleHeartbeat(m.id) }))
+                Toggle("Warn in calendar", isOn: Binding(get: { m.showHeartbeat }, set: { _ in model.toggleHeartbeat(m.id) }))
             }
         }
         Divider()
@@ -453,8 +453,10 @@ struct MirrorDetail: View {
 
             Section {
                 DisclosureGroup(isExpanded: $showAdvanced) {
-                    Toggle("Heartbeat banner", isOn: $m.showHeartbeat)
+                    Toggle("Warn in calendar if this stops syncing", isOn: $m.showHeartbeat)
                         .onChange(of: m.showHeartbeat) { _, _ in model.saveConfig() }
+                    Text("Healthy is silent. If this mirror stops syncing, an all-day warning appears in the destination calendar — visible on your phone, without opening anything.")
+                        .font(.caption).foregroundStyle(.secondary)
                     Stepper("History window: \(Int(m.windowPastDays)) days",
                             value: $m.windowPastDays, in: 1...3650, step: 5)
                         .onChange(of: m.windowPastDays) { _, _ in model.saveConfig() }

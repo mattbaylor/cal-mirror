@@ -48,7 +48,7 @@ projection and tags applies to both, since they read the same `config.json` shap
 - **Recurring-safe.** Recurring events are expanded into occurrences — no RRULE translation, and detached exceptions are already resolved by EventKit.
 - **Non-destructive.** Each pair tags only its own copies, so two mirrors can share a destination and hand-added events are left untouched.
 - **Menu-bar UI.** Health at a glance, Sync now, Pause, interval, and a pickers-driven window to add/edit pairs.
-- **Heartbeat banner.** Optional all-day “last synced” marker right in the destination calendar — a glanceable liveness signal.
+- **Warns where you'll see it.** If a mirror stops syncing, an all-day warning appears in the destination calendar — visible on your phone, without opening anything. Healthy is silent.
 - **No credentials.** Reads and writes through EventKit; server sync is macOS's job.
 
 ## 🗺️ How it works
@@ -117,7 +117,7 @@ Code lives in the checkout; **runtime data lives in `~/.local/cal-mirror/`**
       "source": { "title": "Work",       "account": "you@work.example.com" },
       "dest":   { "title": "Work (Copy)", "account": "you@personal.example.com" },
       "enabled": true,
-      "showHeartbeat": true,       // all-day “last synced” banner
+      "showHeartbeat": true,       // warn in-calendar if this mirror breaks
       "windowPastDays": 30,
       "windowFutureDays": 365
     }
@@ -284,6 +284,32 @@ matching too):
 > **Tags moved to notes in v1.2.** Earlier versions read `#nomirror`/`#private`/
 > `#public` from the event **title**; those are no longer honored there. Move any
 > such tags into the event's notes.
+
+## 🚨 When a mirror breaks
+
+`showHeartbeat` puts a warning in the **destination** calendar when a mirror
+stops syncing:
+
+```
+⚠︎ cal-mirror — Work Mirror: Source not found · last synced Tue 26 Aug
+```
+
+An all-day event on today, cleared automatically the moment the mirror syncs
+cleanly again. **Healthy is silent** — nothing is written while things work.
+
+That inversion is deliberate. Destinations are calendars you deliberately
+*share*, so a daily "still working" marker is an artifact other people see, and
+it says nothing you'd act on. A warning is rare, actionable, and reaches you on
+your phone without opening anything.
+
+Two limits worth knowing. A **read-only or missing destination** can't be
+written to, so those two failures are reported in the menu bar and the log but
+not in the calendar — there is nowhere to put them. And a **dead engine** can't
+warn about itself; launchd restarts it, and the menu-bar icon covers that case
+when you're back at the Mac.
+
+> Before v1.4 this wrote an all-day "last synced" banner on every successful
+> cycle. Those are removed automatically on the first sync after upgrading.
 
 ## 🖥️ Menu bar
 

@@ -123,7 +123,7 @@ public enum MirrorSummary {
 
     /// The Advanced section's summary, e.g. "Window 30 / 365 · heartbeat on".
     public static func advanced(_ m: Mirror) -> String {
-        let hb = m.showHeartbeat ? "heartbeat on" : "heartbeat off"
+        let hb = m.showHeartbeat ? "warns in calendar" : "no calendar warning"
         return "Window \(Int(m.windowPastDays)) / \(Int(m.windowFutureDays)) · \(hb)"
     }
 
