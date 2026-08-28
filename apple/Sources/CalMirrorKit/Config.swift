@@ -209,6 +209,9 @@ public struct Mirror: Codable, Identifiable, Equatable, Sendable {
     public var projection: Projection
     /// Notes-tag selection: which source events this mirror copies. nil = copy all.
     public var tagFilter: TagFilter?
+    /// Property-based selection — declined, canceled, all-day, time of day, etc.
+    /// All-default (the absent case) selects nothing away.
+    public var filters: EventFilters
     /// When notes are projected, echo the source's non-control `#tags` into the
     /// copy? Default false = strip them. Per-tag `#+`/`#-` overrides this.
     public var copyNotesTags: Bool
@@ -219,13 +222,15 @@ public struct Mirror: Codable, Identifiable, Equatable, Sendable {
                 enabled: Bool = true, showHeartbeat: Bool = true,
                 windowPastDays: Double = 30, windowFutureDays: Double = 365,
                 projection: Projection = Projection(),
-                tagFilter: TagFilter? = nil, copyNotesTags: Bool = false,
+                tagFilter: TagFilter? = nil, filters: EventFilters = EventFilters(),
+                copyNotesTags: Bool = false,
                 legacyScheme: String? = nil) {
         self.id = id; self.name = name; self.source = source; self.dest = dest
         self.enabled = enabled; self.showHeartbeat = showHeartbeat
         self.windowPastDays = windowPastDays; self.windowFutureDays = windowFutureDays
         self.projection = projection
-        self.tagFilter = tagFilter; self.copyNotesTags = copyNotesTags
+        self.tagFilter = tagFilter; self.filters = filters
+        self.copyNotesTags = copyNotesTags
         self.legacyScheme = legacyScheme
     }
 
@@ -243,6 +248,8 @@ public struct Mirror: Codable, Identifiable, Equatable, Sendable {
         projection = (try? c.decode(Projection.self, forKey: .projection)) ?? Projection()
         // Absent OR malformed (e.g. unknown mode) → nil, i.e. no filter (copy all).
         tagFilter = try? c.decode(TagFilter.self, forKey: .tagFilter)
+        // Absent → all-default, which selects nothing away (historical behavior).
+        filters = (try? c.decode(EventFilters.self, forKey: .filters)) ?? EventFilters()
         copyNotesTags = (try? c.decode(Bool.self, forKey: .copyNotesTags)) ?? false
         legacyScheme = try c.decodeIfPresent(String.self, forKey: .legacyScheme)
     }
