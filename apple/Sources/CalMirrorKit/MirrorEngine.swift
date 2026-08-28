@@ -192,8 +192,11 @@ public final class MirrorEngine: @unchecked Sendable {
         }
         // Title is copied verbatim now — tags live in notes, not the title.
         let raw = src.title ?? ""
-        let title = redact ? (p.titleText.isEmpty ? "Busy" : p.titleText)
-                           : (raw.isEmpty ? "(no title)" : raw)
+        let base = redact ? (p.titleText.isEmpty ? "Busy" : p.titleText)
+                          : (raw.isEmpty ? "(no title)" : raw)
+        // The prefix rides on whatever title survived redaction, so a busy-only
+        // mirror can still label which mirror a block came from.
+        let title = p.prefixed(base)
         // Subscribed feeds report .notSupported, which the destination coerces to
         // .busy on write, so comparing against it would flag a diff every run.
         let resolved: EKEventAvailability = busy ? .busy : src.availability

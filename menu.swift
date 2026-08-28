@@ -555,6 +555,10 @@ struct ProjectionEditor: View {
                 .onChange(of: m.projection.titleText) { _, _ in onChange() }
         }
         if m.projection.custom || MirrorSummary.preset(of: m.projection) == .custom {
+            TextField("Title prefix", text: $m.projection.titlePrefix)
+                .onChange(of: m.projection.titlePrefix) { _, _ in onChange() }
+            Text("Prepended to the copy's title, e.g. “[Work]”. Applies even when the title is redacted.")
+                .font(.caption).foregroundStyle(.secondary)
             Toggle("Redact title", isOn: Binding(
                 get: { m.projection.title == .redact },
                 set: { m.projection.title = $0 ? .redact : .copy; onChange() }))

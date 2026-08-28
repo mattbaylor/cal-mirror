@@ -23,6 +23,8 @@ public enum MirrorSummary {
         }
         var parts: [String] = []
         parts.append(p.title == .redact ? "Shown as “\(p.titleText)”" : "Real title")
+        let prefix = p.titlePrefix.trimmingCharacters(in: .whitespaces)
+        if !prefix.isEmpty { parts.append("prefixed “\(prefix)”") }
         if !p.location { parts.append("no location") }
         switch p.notes {
         case .none: break
@@ -39,6 +41,9 @@ public enum MirrorSummary {
 
     public static func preset(of p: Projection) -> Preset {
         let redact = p.title == .redact, busy = p.availability == .busy
+        // A prefix is never part of a preset — otherwise setting one on "Copy
+        // details" would still read as "Copy details" and hide the control.
+        if !p.titlePrefix.trimmingCharacters(in: .whitespaces).isEmpty { return .custom }
         if !redact && p.location && p.notes == .none && !p.alarms && !busy { return .details }
         if !redact && p.location && p.notes == .full && !p.alarms && !busy { return .full }
         if redact && !p.location && p.notes == .none && !p.alarms && busy { return .busy }
@@ -99,6 +104,8 @@ public enum MirrorSummary {
         case .busy: parts.append("Busy only")
         case .custom:
             var bits: [String] = []
+            let prefix = m.projection.titlePrefix.trimmingCharacters(in: .whitespaces)
+            if !prefix.isEmpty { bits.append("“\(prefix)” prefix") }
             if m.projection.title == .redact { bits.append("redacted") }
             if !m.projection.location { bits.append("no location") }
             if m.projection.notes == .tags { bits.append("tags only") }

@@ -27,6 +27,10 @@ public struct Projection: Codable, Equatable, Sendable {
 
     public var title: TitleMode
     public var titleText: String        // shown when title == .redact
+    /// Prepended to the copy's title, with a single space. Applies to whatever
+    /// title the copy ends up with — real or redacted — so a redacting mirror
+    /// can still say which mirror a block came from ("[Work] Busy").
+    public var titlePrefix: String
     public var location: Bool
     public var notes: NotesMode
     public var alarms: Bool
@@ -34,11 +38,19 @@ public struct Projection: Codable, Equatable, Sendable {
     public var custom: Bool             // UI: user explicitly chose "Custom" (persisted so it sticks)
 
     public init(title: TitleMode = .copy, titleText: String = "Busy",
+                titlePrefix: String = "",
                 location: Bool = true, notes: NotesMode = .none, alarms: Bool = false,
                 availability: Availability = .source, custom: Bool = false) {
-        self.title = title; self.titleText = titleText
+        self.title = title; self.titleText = titleText; self.titlePrefix = titlePrefix
         self.location = location; self.notes = notes; self.alarms = alarms
         self.availability = availability; self.custom = custom
+    }
+
+    /// The copy's title, given the source title this projection resolved to.
+    /// Single place so the engine and the UI preview can never disagree.
+    public func prefixed(_ base: String) -> String {
+        let p = titlePrefix.trimmingCharacters(in: .whitespaces)
+        return p.isEmpty ? base : "\(p) \(base)"
     }
 
     // Fully lenient decoding: any bad/absent field falls back to its default,
@@ -47,6 +59,7 @@ public struct Projection: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         title = (try? c.decode(TitleMode.self, forKey: .title)) ?? .copy
         titleText = ((try? c.decode(String.self, forKey: .titleText)).flatMap { $0.isEmpty ? nil : $0 }) ?? "Busy"
+        titlePrefix = (try? c.decode(String.self, forKey: .titlePrefix)) ?? ""
         location = (try? c.decode(Bool.self, forKey: .location)) ?? true
         // `notes` was a Bool before tags-only mode existed. Accept both: a
         // string is the current form, a legacy `true` means the whole note.

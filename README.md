@@ -140,6 +140,7 @@ location, no notes/alarms). The menu bar exposes this as three presets plus
 "projection": {
   "title":        "copy",     // "copy" | "redact"
   "titleText":    "Busy",     // shown when title = "redact"
+  "titlePrefix":  "",         // prepended to the copy's title, e.g. "[Work]"
   "location":     true,
   "notes":        "none",     // "none" | "tags" | "full"  (legacy true/false still read)
   "alarms":       false,       // off avoids duplicate notifications on the dest
@@ -158,6 +159,13 @@ location, no notes/alarms). The menu bar exposes this as three presets plus
 > destination, this is almost always why: `copyNotesTags` only has an effect
 > once notes actually cross over. Pick **Full copy**, or **Custom → Notes →
 > Tags only**.
+
+`titlePrefix` is prepended to whatever title the copy ends up with — including
+a redacted one — so a busy-only mirror can still say where a block came from
+(`[Work] Busy`). Setting one puts the mirror into **Custom**, since a prefix
+isn't part of any preset. Changing it rewrites existing copies in place rather
+than duplicating them: the marker key is untouched, so the reconciler matches
+each copy exactly and updates its title.
 
 *Two EventKit limits worth knowing:* **attendees can't be replicated** (no API
 to set participants), and the source event's **URL is unavailable** because that
