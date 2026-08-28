@@ -242,6 +242,39 @@ do {
     check(a == b, "planner is deterministic")
 }
 
+print("Title prefix:")
+do {
+    let plain = Projection()
+    check(plain.prefixed("Standup") == "Standup", "no prefix leaves the title alone")
+    let pre = Projection(titlePrefix: "[Work]")
+    check(pre.prefixed("Standup") == "[Work] Standup", "prefix is prepended with one space")
+    check(Projection(titlePrefix: "  [Work]  ").prefixed("Standup") == "[Work] Standup",
+          "surrounding whitespace is trimmed, not doubled")
+    check(Projection(titlePrefix: "   ").prefixed("Standup") == "Standup",
+          "a whitespace-only prefix counts as none")
+    // The prefix rides on the REDACTED title too, so a busy-only mirror can
+    // still say which mirror a block came from.
+    let busy = Projection(title: .redact, titleText: "Busy", titlePrefix: "[Work]")
+    check(busy.prefixed(busy.titleText) == "[Work] Busy", "prefix applies to a redacted title")
+
+    // A prefix is never part of a preset.
+    check(MirrorSummary.preset(of: Projection()) == .details, "no prefix → still the details preset")
+    check(MirrorSummary.preset(of: pre) == .custom, "a prefix forces Custom")
+    check(MirrorSummary.projection(pre).contains("prefixed"), "the summary names the prefix")
+
+    // Absent in JSON → empty, and it round-trips.
+    let j = """
+    { "mirrors": [ { "id": "w", "source": {"title":"S"}, "dest": {"title":"D"},
+      "projection": { "titlePrefix": "[Work]" } } ] }
+    """.data(using: .utf8)!
+    let cfg = try JSONDecoder().decode(Config.self, from: j)
+    check(cfg.mirrors[0].projection.titlePrefix == "[Work]", "titlePrefix decodes")
+    let again = try JSONDecoder().decode(Config.self, from: JSONEncoder().encode(cfg))
+    check(cfg == again, "titlePrefix round-trips")
+    let absent = try JSONDecoder().decode(Config.self, from: json)
+    check(absent.mirrors[0].projection.titlePrefix == "", "absent titlePrefix → empty (no change)")
+}
+
 print("EventFilters:")
 // Absent block → copies everything (the historical contract).
 do {

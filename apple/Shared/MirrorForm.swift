@@ -106,6 +106,10 @@ struct ProjectionFields: View {
                 .onChange(of: mirror.projection.titleText) { _, _ in onChange() }
         }
         if mirror.projection.custom || presetOf(mirror.projection) == .custom {
+            TextField("Title prefix", text: $mirror.projection.titlePrefix)
+                .onChange(of: mirror.projection.titlePrefix) { _, _ in onChange() }
+            Text("Prepended to the copy's title, e.g. “[Work]”. Applies even when the title is redacted.")
+                .font(.caption).foregroundStyle(.secondary)
             Toggle("Redact title", isOn: Binding(
                 get: { mirror.projection.title == .redact },
                 set: { mirror.projection.title = $0 ? .redact : .copy; onChange() }))
