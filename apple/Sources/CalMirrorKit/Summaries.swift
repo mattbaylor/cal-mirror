@@ -31,6 +31,7 @@ public enum MirrorSummary {
         case .tags: parts.append("tags only")
         case .full: parts.append("full notes")
         }
+        if p.sourceLink { parts.append("source link") }
         if p.alarms { parts.append("alarms") }
         if p.availability == .busy { parts.append("always busy") }
         return parts.joined(separator: " · ")
@@ -44,6 +45,7 @@ public enum MirrorSummary {
         // A prefix is never part of a preset — otherwise setting one on "Copy
         // details" would still read as "Copy details" and hide the control.
         if !p.titlePrefix.trimmingCharacters(in: .whitespaces).isEmpty { return .custom }
+        if p.sourceLink { return .custom }
         if !redact && p.location && p.notes == .none && !p.alarms && !busy { return .details }
         if !redact && p.location && p.notes == .full && !p.alarms && !busy { return .full }
         if redact && !p.location && p.notes == .none && !p.alarms && busy { return .busy }
@@ -110,6 +112,7 @@ public enum MirrorSummary {
             if !m.projection.location { bits.append("no location") }
             if m.projection.notes == .tags { bits.append("tags only") }
             if m.projection.notes == .full { bits.append("full notes") }
+            if m.projection.sourceLink { bits.append("source link") }
             if m.projection.availability == .busy { bits.append("always busy") }
             parts.append(bits.isEmpty ? "Custom" : bits.joined(separator: ", "))
         }
