@@ -43,6 +43,7 @@ projection and tags applies to both, since they read the same `config.json` shap
 - **Any → any.** Mirror any calendar into any other, configured as a list of pairs.
 - **Idempotent & one-way.** Re-runs never duplicate; the source is authoritative and is never written to.
 - **Per-field privacy.** Choose per mirror what crosses over — from a full copy down to a redacted “Busy” block — and override any single event with a tag in its notes.
+- **Event filters.** Skip declined, canceled, all-day, free, too-short or too-long events, titles matching a word, or anything outside your working hours — no tagging required.
 - **Selective copy.** Copy only *some* source events by tagging them in the notes and giving the mirror an `include`/`reject` tag rule — e.g. pull just your `#ref` events into a shared availability calendar.
 - **Recurring-safe.** Recurring events are expanded into occurrences — no RRULE translation, and detached exceptions are already resolved by EventKit.
 - **Non-destructive.** Each pair tags only its own copies, so two mirrors can share a destination and hand-added events are left untouched.
@@ -180,6 +181,52 @@ The three control tags override a mirror's projection for one event:
 | `#public` | Copy in full, even on a Busy-only mirror. |
 
 Control tags are always stripped from the copy.
+
+### Selecting events by property (`filters`)
+
+Notes tags only work on events you *author*. For a calendar you don't control —
+a subscribed work feed, an assigned-games feed — select on the event's own
+properties instead. Every key names what it **skips**, so an absent `filters`
+block copies everything, exactly as before:
+
+```jsonc
+"filters": {
+  "declined":   true,     // meetings you answered No to
+  "unanswered": false,    // invitations you haven't replied to
+  "canceled":   true,     // events the organizer canceled
+  "allDay":     false,
+  "free":       false,    // events whose availability is "free"
+  "shorterThanMinutes": 0,   // 0 = off
+  "longerThanMinutes":  0,   // 0 = off
+  "title": { "mode": "reject", "patterns": ["Lunch", "Focus time"] },
+  "hours": { "mode": "keep", "start": "08:00", "end": "18:00", "days": [2,3,4,5,6] }
+}
+```
+
+`title.mode` is `include` or `reject`; patterns are case-insensitive substrings
+(not regex) matched anywhere in the title. `hours.mode` is `keep` or `drop`,
+`days` uses `Calendar` weekday numbers (1 = Sunday, empty = every day), and a
+window may wrap midnight — `"start": "22:00", "end": "06:00"` is a valid
+overnight window.
+
+Three behaviors worth knowing:
+
+- **Time of day is overlap-based.** A 7–9am event is *kept* by an `8:00–18:00`
+  keep-window, because part of it falls inside. Containment would surprise
+  anyone whose meeting starts before the window opens.
+- **All-day events are never matched by `hours`** — they have no time of day.
+  Use the `allDay` key to drop them; otherwise a work-hours mirror would
+  silently eat every birthday and holiday.
+- **An event with no attendees is neither accepted nor pending**, so
+  `unanswered` never drops a block you made for yourself.
+
+Filters run after `#nomirror` and before `tagFilter`, and a filter drop is
+**final**: `#public` and `#private` govern how *much* of an event crosses over,
+not *whether* it does, so neither rescues a filtered-out event.
+
+> Both `declined` and `canceled` default to **off**, so upgrading changes
+> nothing. New mirrors created in the UI turn them on — mirroring a meeting you
+> declined as a solid busy block is rarely what you want.
 
 ### Selective copy (`tagFilter`)
 
