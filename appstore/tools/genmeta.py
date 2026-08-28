@@ -14,15 +14,25 @@ Two hard accuracy rules are baked in here:
 import os, sys
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "metadata")
-LIMITS = {"promotional_text": 170, "description": 4000, "whats_new": 4000, "keywords": 100}
+LIMITS = {"name": 30, "subtitle": 30, "promotional_text": 170,
+          "description": 4000, "whats_new": 4000, "keywords": 100}
+
+# The listing name and subtitle. Apple indexes NAME + SUBTITLE + KEYWORDS for
+# search and treats them as one pool, so a word spent in one is wasted in the
+# others — see the "Listing fields" section of ../README.md.
+NAME = "Calendar Mirror"
+SUBTITLE = "One-way sync with busy blocks"
 
 PROMO = ("Copy one calendar into another, one direction only. Skip declined, cancelled "
          "and all-day events. No account, no server, nothing leaves your device.")
 
 # Keywords: comma separated, no spaces after commas (spaces cost characters).
 # Nothing here repeats the app name or subtitle, which Apple indexes already.
-KEYWORDS = ("sync,copy,busy,availability,icloud,caldav,ical,exchange,privacy,"
-            "duplicate,work,shared,feed,block")
+# Nothing here may repeat a word from NAME or SUBTITLE — the check below fails
+# the build if it does, because Apple gains nothing from the repetition and the
+# field is only 100 characters.
+KEYWORDS = ("copy,availability,icloud,caldav,ical,exchange,privacy,duplicate,"
+            "work,shared,feed,declined,hide,ics")
 
 COMMON_TAIL = """
 WHAT IT DOES NOT DO
@@ -356,16 +366,41 @@ def unwrap(t):
 
 
 FIELDS = {
-    "ios": dict(promotional_text=PROMO, keywords=KEYWORDS,
+    "ios": dict(name=NAME, subtitle=SUBTITLE, promotional_text=PROMO, keywords=KEYWORDS,
                 description=unwrap(DESC_IOS), whats_new=unwrap(NEW_IOS)),
-    "mac": dict(promotional_text=PROMO, keywords=KEYWORDS,
+    "mac": dict(name=NAME, subtitle=SUBTITLE, promotional_text=PROMO, keywords=KEYWORDS,
                 description=unwrap(DESC_MAC), whats_new=unwrap(NEW_MAC)),
 }
 
 BANNED = ["realtime", "real-time", "real time", "within seconds", "instantly"]
 
+# Words too generic to be worth a keyword slot, and which Apple ignores anyway.
+STOP = {"one", "way", "with", "and", "the", "for", "your", "you", "its", "it",
+        "a", "an", "of", "to", "in", "on", "or"}
+
+
+def tokens(text):
+    out = set()
+    for w in "".join(c.lower() if c.isalnum() else " " for c in text).split():
+        if len(w) >= 3 and w not in STOP:
+            out.add(w)
+    return out
+
+
+def check_overlap(fields):
+    """Apple indexes name + subtitle + keywords together. A word in two of them
+    buys nothing and costs characters in a 100-character field."""
+    indexed = tokens(fields["name"]) | tokens(fields["subtitle"])
+    kw = {k.strip().lower() for k in fields["keywords"].split(",") if k.strip()}
+    clash = sorted(indexed & kw)
+    if clash:
+        print("  !! keywords repeat words already in the name/subtitle: %s" % ", ".join(clash))
+    return bool(clash)
+
 fail = False
 for plat, fields in FIELDS.items():
+    if check_overlap(fields):
+        fail = True
     d = os.path.join(OUT, plat)
     os.makedirs(d, exist_ok=True)
     for name, val in fields.items():
