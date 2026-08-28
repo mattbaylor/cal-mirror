@@ -335,6 +335,46 @@ do {
     check(f.shorterThanMinutes == 0, "negative duration clamps to off")
 }
 
+print("Summaries:")
+check(MirrorSummary.clock(480) == "8am", "480 → 8am")
+check(MirrorSummary.clock(1050) == "5:30pm", "1050 → 5:30pm")
+check(MirrorSummary.clock(0) == "12am", "midnight → 12am")
+check(MirrorSummary.clock(12 * 60) == "12pm", "noon → 12pm")
+check(MirrorSummary.dayList([2, 3, 4, 5, 6]) == "Mon–Fri", "contiguous weekdays collapse to a range")
+check(MirrorSummary.dayList([1, 7]) == "Sun, Sat", "non-contiguous days are listed")
+check(MirrorSummary.dayList([1, 2, 3, 4, 5, 6, 7]) == "every day", "all seven → every day")
+
+check(MirrorSummary.projection(Projection()) == "Title and location", "default projection summary")
+check(MirrorSummary.projection(Projection(title: .redact, location: false, availability: .busy)) == "Busy only",
+      "busy preset summary")
+check(MirrorSummary.projection(Projection(notes: .tags, custom: true)).contains("tags only"),
+      "custom projection lists its parts")
+
+check(MirrorSummary.selection(EventFilters(), tagFilter: nil) == "Every event",
+      "no rules → Every event")
+check(MirrorSummary.selection(EventFilters(declined: true, allDay: true), tagFilter: nil)
+        == "Skips declined, all-day", "skip list reads as prose")
+do {
+    let f = EventFilters(declined: true, allDay: true,
+                         hours: .init(mode: .keep, startMinute: 8 * 60, endMinute: 18 * 60))
+    check(MirrorSummary.selection(f, tagFilter: TagFilter(mode: .include, tags: ["#ref"]))
+            == "Skips declined, all-day · 8am–6pm · only #ref", "full selection summary")
+}
+
+// The list row's second line: silent for an ordinary mirror, loud for an odd one.
+do {
+    let plain = Mirror(id: "a", name: "A", source: CalRef(title: "S"), dest: CalRef(title: "D"))
+    check(MirrorSummary.delta(plain) == nil, "a plain copy-everything mirror has no delta line")
+    var odd = plain
+    odd.projection = Projection(notes: .tags, custom: true)
+    odd.filters = EventFilters(declined: true)
+    check(MirrorSummary.delta(odd) == "tags only · 1 rule",
+          "delta is terse: diverging projection bits, then a rule count")
+    var busy = plain
+    busy.projection = Projection(title: .redact, location: false, availability: .busy)
+    check(MirrorSummary.delta(busy) == "Busy only", "a preset mirror names its preset")
+}
+
 print("SnapshotGuard:")
 func isSkip(_ d: SnapshotGuard.Decision) -> Bool { if case .skip = d { return true }; return false }
 check(SnapshotGuard.decide(stabilized: true,  count: 441, lastKnown: 441) == .proceed, "stable, matching count → proceed")
