@@ -31,10 +31,10 @@
   a{color:inherit}
   .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
 
-  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
+  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;flex-wrap:wrap;gap:12px}
   .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
   .brand .logo{width:30px;height:30px;border-radius:8px;display:block}
-  .nav-links{display:flex;gap:22px;align-items:center;font-size:14px;color:var(--mut)}
+  .nav-links{display:flex;gap:22px;align-items:center;font-size:14px;color:var(--mut);flex-wrap:wrap}
   .nav-links a{text-decoration:none}.nav-links a:hover{color:var(--tx)}
 
   header.hero{text-align:center;padding:64px 0 26px}
@@ -58,6 +58,15 @@
   h2{font-size:clamp(26px,3.6vw,34px);text-align:center;margin:.25em 0 .1em;letter-spacing:-.5px}
   .muted{color:var(--mut);text-align:center;max-width:660px;margin:0 auto}
 
+  /* "New in 1.4.0" marker. The App Store build is still 1.3.0, so anything
+     carrying this is available from source today and on the App Store later. */
+  .new{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
+    color:#06121f;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border-radius:999px;padding:3px 10px;vertical-align:middle;margin-left:8px}
+  .newnote{max-width:660px;margin:14px auto 0;text-align:center;font-size:13.5px;color:var(--dim);
+    border:1px dashed var(--line);border-radius:12px;padding:10px 16px}
+  .newnote b{color:var(--mut)}
+
   .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
   @media(max-width:820px){.grid{grid-template-columns:1fr}}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
@@ -70,15 +79,15 @@
   .show h3{font-size:22px;margin:0 0 .3em;letter-spacing:-.4px}
   .show p{color:var(--mut);margin:.5em 0}
 
-  .menu{background:var(--card2);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
-    padding:7px;font-size:13.5px;max-width:340px;margin:0 auto;width:100%}
-  .menu .row{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px}
-  .menu .row.head{color:var(--mut);font-size:12.5px}
-  .menu .row.sel{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06121f;font-weight:600}
-  .menu .row.item:hover{background:rgba(127,127,127,.10)}
-  .menu .sep{height:1px;background:var(--line);margin:5px 8px}
-  .menu .sp{margin-left:auto;color:var(--dim);font-size:12px}
-  .menu .sel .sp{color:#06121f;opacity:.8}
+  /* Screenshots. Every one is taken from a throwaway configuration with
+     invented calendar names — no real calendar, account or person appears. */
+  .shot{display:block;max-width:100%;height:auto;border-radius:12px;border:1px solid var(--line);
+    box-shadow:var(--shadow);margin:0 auto}
+  .shot.plain{box-shadow:none}
+  figure{margin:34px 0 0}
+  figcaption{text-align:center;color:var(--dim);font-size:13px;margin-top:12px}
+  .phones{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+  .phones img{width:260px;max-width:44vw;height:auto;border-radius:22px;border:1px solid var(--line);box-shadow:var(--shadow)}
 
   .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
   @media(max-width:820px){.steps{grid-template-columns:1fr}}
@@ -90,6 +99,15 @@
   pre{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow:auto;
     font:13.5px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--tx);max-width:640px;margin:18px auto 0}
   pre .c{color:var(--dim)}pre .k{color:var(--accent2)}
+
+  .cmp{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:24px 26px;margin-top:34px;text-align:center}
+  .cmp h3{margin:0 0 .3em;font-size:19px}
+  .cmp p{color:var(--mut);margin:.4em auto 0;max-width:620px;font-size:14.5px}
+  .cmpchips{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:18px}
+  .cmpchips a{font-size:13.5px;text-decoration:none;color:var(--mut);background:var(--card2);
+    border:1px solid var(--line);border-radius:999px;padding:6px 13px}
+  .cmpchips a:hover{color:var(--tx);border-color:var(--accent)}
 
   footer{border-top:1px solid var(--line);margin-top:30px;padding:28px 0 46px;color:var(--dim);
     display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13.5px}
@@ -103,8 +121,9 @@
     <div class="brand"><img class="logo" src="icon.png" alt="cal-mirror icon"> cal-mirror</div>
     <div class="nav-links">
       <a href="#what">What it does</a>
+      <a href="#filters">Which events</a>
       <a href="#how">How it works</a>
-      <a href="#get">Get it</a>
+      <a href="vs/">Compare</a>
       <a href="changelog.html">Release notes</a>
       <a href="https://github.com/mattbaylor/cal-mirror">GitHub ↗</a>
     </div>
@@ -125,8 +144,18 @@
       <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get it on the App Store</a>
       <a class="btn ghost" href="https://github.com/mattbaylor/cal-mirror">View source</a>
     </div>
-    <div class="sub">$0.99 — one purchase covers iPhone, iPad &amp; Mac. Or build it free from source.</div>
+    <div class="sub">$0.99 — one purchase covers iPhone, iPad &amp; Mac. Rising to $2.99 on 1 September 2026.
+      Or build it free from source.</div>
   </header>
+
+  <figure>
+    <picture>
+      <source srcset="img/manage-dark.png" media="(prefers-color-scheme: dark)">
+      <img class="shot" src="img/manage-light.png" width="900" height="572"
+           alt="The cal-mirror management window on Mac. A sidebar lists three mirrors grouped by the calendar they copy into; the pane on the right shows one mirror's source, destination and collapsed settings.">
+    </picture>
+    <figcaption>Every screenshot on this page comes from a throwaway setup with invented calendar names.</figcaption>
+  </figure>
 
   <section id="what">
     <div class="eyebrow">What it does</div>
@@ -144,6 +173,40 @@
       <div class="card"><div class="ic">📊</div><h3>Out of your way</h3><p>On Mac it sits in the menu bar — see that it's working, update now, or pause, all from a small icon up top. On iPhone and iPad it's the app itself.</p></div>
       <div class="card"><div class="ic">⏱️</div><h3>Runs on its own</h3><p>Pick how often it updates and forget about it. On Mac it keeps to the schedule. On iPhone and iPad it refreshes in the background when iOS allows, and a pull down updates it right now.</p></div>
     </div>
+  </section>
+
+  <section id="filters">
+    <div class="eyebrow">Which events</div>
+    <h2>Copy the meetings, skip the noise<span class="new">New in 1.4.0</span></h2>
+    <p class="muted">Not every event in a calendar is worth mirroring. A pair can skip the ones
+      you declined, the ones you haven't answered, the ones the organiser cancelled, all-day
+      events, and anything marked free — then narrow it further by length, by words in the title,
+      and by a window of the day on the weekdays you choose.</p>
+    <p class="muted" style="margin-top:14px">The important part: <b>this works on calendars you
+      don't control.</b> Tagging individual events is only possible on events you wrote yourself.
+      A subscribed work feed or an assigned-shifts calendar can only be filtered on what the
+      events already say about themselves.</p>
+
+    <figure>
+      <picture>
+        <source srcset="img/filters-dark.png" media="(prefers-color-scheme: dark)">
+        <img class="shot" src="img/filters-light.png" width="940" height="880"
+             alt="The 'Which events' panel expanded, showing switches for skipping declined, unanswered, cancelled, all-day and free events; duration bounds; a time-of-day window with weekday selectors; and a title rule.">
+      </picture>
+      <figcaption>Seven rules on one pair — collapsed to a single summary line when you're not editing it.</figcaption>
+    </figure>
+
+    <div class="grid">
+      <div class="card"><div class="ic">🙅</div><h3>Declined and cancelled</h3><p>A meeting you said no to isn't a commitment. Neither is one the organiser called off. Both can be dropped before they reach the copy.</p></div>
+      <div class="card"><div class="ic">⏳</div><h3>Too short, too long</h3><p>Skip anything under fifteen minutes, or over eight hours. Useful for stripping out reminders and week-long placeholders.</p></div>
+      <div class="card"><div class="ic">🕗</div><h3>Working hours only</h3><p>Copy only what falls between 8am and 6pm, Monday to Friday. An event counts if any part of it overlaps, so a 7am start still comes through.</p></div>
+    </div>
+
+    <div class="newnote"><b>Available now if you build from source.</b> The App Store version is
+      still 1.3.0; filters arrive there when 1.4.0 clears review. They're well covered by tests,
+      but have had less exercise against real declined and cancelled invitations than the rest of
+      the app — <a href="https://github.com/mattbaylor/cal-mirror/issues">tell me</a> if one
+      misfires.</div>
   </section>
 
   <section id="share">
@@ -169,35 +232,86 @@
     <p class="muted" style="margin-top:26px">You can point a pair at a tag, too — mirror only the
       events you&rsquo;ve tagged and leave the rest of the calendar behind. Useful when one shared
       calendar holds far more than you need to see.</p>
+
+    <h3 style="margin-top:38px;text-align:center">Two more things a copy can carry<span class="new">New in 1.4.0</span></h3>
+    <div class="grid">
+      <div class="card"><div class="ic">🏷️</div><h3>A label in front</h3><p>Put <code>[Work]</code> ahead of every copied title so you can see at a glance where a block came from. It applies to hidden titles too — <code>[Work] Busy</code> is a perfectly good block.</p></div>
+      <div class="card"><div class="ic">🔗</div><h3>The meeting link</h3><p>Carry the original event&rsquo;s link into the copy&rsquo;s notes, so a mirrored meeting is one you can actually join. Off by default, and never added to an event you&rsquo;ve marked <code>#private</code>.</p></div>
+    </div>
   </section>
 
   <section>
     <div class="eyebrow">The app</div>
-    <h2>Tells you it's working, then gets out of the way</h2>
+    <h2>Silent when it works. Loud when it stops.<span class="new">New in 1.4.0</span></h2>
+    <p class="muted">cal-mirror used to leave a small daily note in the copy saying when it last
+      ran. It doesn&rsquo;t any more, and that&rsquo;s deliberate: <b>a healthy pair writes nothing
+      at all.</b></p>
+    <p class="muted" style="margin-top:14px">The calendars you copy <em>into</em> are usually ones
+      you share with other people. A daily &ldquo;still working&rdquo; marker was something all of
+      them could see, and it told nobody anything they would act on. So the note only appears now
+      when a pair actually stops syncing — an all-day warning in the destination calendar, which
+      reaches you on your phone without opening anything, and clears itself the moment the pair
+      recovers.</p>
+
     <div class="show">
-      <div class="menu" aria-hidden="true">
-        <div class="row head">cal-mirror — updated 2 min ago</div>
-        <div class="sep"></div>
-        <div class="row sel">✓&nbsp; Work → Personal <span class="sp">439 events ▸</span></div>
-        <div class="sep"></div>
-        <div class="row item">Update now</div>
-        <div class="row item">Pause</div>
-        <div class="row item">How often <span class="sp">every 15 min ▸</span></div>
-        <div class="sep"></div>
-        <div class="row item">Manage copies…</div>
-        <div class="row item">Open Calendar</div>
-        <div class="sep"></div>
-        <div class="row item">Quit</div>
+      <div>
+        <img class="shot plain" src="img/menubar.png" width="273" height="331"
+             alt="The cal-mirror menu on Mac, listing three mirrors each with a green check, above Sync now, Pause syncing, Manage mirrors, Open Calendar, Open log and Quit.">
       </div>
       <div>
         <h3>One glance at the menu bar</h3>
-        <p>The icon says how things are going: a check when the copy is current, a warning if it
-          has fallen behind, a pause symbol when you've stopped it.</p>
+        <p>The icon says how things are going: a check when every copy is current, a warning if
+          one has fallen behind, a cross if something is broken, a pause symbol when you've
+          stopped it.</p>
         <p>To add a copy, open the window and pick two calendars from your own list — the one to
           copy from, and the one to copy into (only calendars you can edit show up as the target).</p>
-        <p>There's also an optional little note it leaves on the copy showing when it last ran, so
-          you can tell at a glance that it's still doing its job.</p>
+        <p>Each pair opens onto its own settings, and every section folds down to a line that says
+          what it&rsquo;s set to, so a heavily-configured pair still reads at a glance.</p>
       </div>
+    </div>
+
+    <div class="newnote"><b>On the App Store version (1.3.0), the old behaviour still applies</b> —
+      a pair with the banner switched on writes a daily &ldquo;last synced&rdquo; note into the
+      destination. Updating to 1.4.0 removes those notes automatically on the first sync.</div>
+  </section>
+
+  <section id="realtime">
+    <div class="eyebrow">Timing</div>
+    <h2>It notices when your calendar changes<span class="new">New in 1.4.0</span></h2>
+    <p class="muted">Instead of waiting for the next scheduled run, cal-mirror can watch for
+      calendar changes and update the copy <b>within seconds</b> of one. A five-minute pass still
+      runs underneath as a backstop — change notifications are best-effort, and it also repairs
+      anything that got deleted by hand.</p>
+
+    <div class="grid">
+      <div class="card"><div class="ic">⚡</div><h3>Seconds, not a schedule</h3><p>Move a meeting and the copy follows almost immediately, rather than at the top of the next quarter hour.</p></div>
+      <div class="card"><div class="ic">🖥️</div><h3>Mac, built from source</h3><p>This one is macOS-only, and only in the version you build yourself — not on iPhone, iPad, or the Mac App Store app, which keep to their schedules.</p></div>
+      <div class="card"><div class="ic">🌐</div><h3>Then it&rsquo;s up to iCloud</h3><p>cal-mirror writes the copy fast. How quickly that copy reaches your other devices is iCloud&rsquo;s business, on iCloud&rsquo;s schedule.</p></div>
+    </div>
+
+    <div class="newnote"><b>Worth being precise about.</b> cal-mirror detects the change and writes
+      the destination within seconds. It does not control how fast your other devices then see it
+      — no app does. Anything promising a change on your Mac will appear on your phone instantly
+      is describing something it doesn&rsquo;t own.</div>
+  </section>
+
+  <section>
+    <div class="eyebrow">On your phone</div>
+    <h2>The same pairs, in your pocket</h2>
+    <p class="muted">The iPhone and iPad app shows every pair grouped by the calendar it copies
+      into, with its health and how many events it&rsquo;s managing. Pull down to sync right now;
+      tap a pair to change what it copies.</p>
+    <div class="phones">
+      <picture>
+        <source srcset="img/iphone-list-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="img/iphone-list-light.png"
+             alt="The cal-mirror iPhone app listing three mirrors grouped under the calendars they copy into, each with a green check and an event count.">
+      </picture>
+      <picture>
+        <source srcset="img/iphone-detail-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="img/iphone-detail-light.png"
+             alt="One mirror's settings on iPhone: source and destination calendars, an Enabled switch, and collapsed rows summarising what crosses over and which events are copied.">
+      </picture>
     </div>
   </section>
 
@@ -211,16 +325,42 @@
     </div>
   </section>
 
+  <section id="compare">
+    <div class="eyebrow">Compared</div>
+    <h2>How it stacks up against the others</h2>
+    <p class="muted">There are good hosted tools that do some of this, and one or two do things
+      cal-mirror never will — booking links, a unified calendar view, Windows. Each comparison
+      page says plainly where the other tool is the better buy.</p>
+    <div class="cmp">
+      <h3>Seven honest comparisons</h3>
+      <p>Prices and features checked against each company&rsquo;s own site, dated, and linked.
+        Including the one that shut down, and the one that gets closest to cal-mirror.</p>
+      <div class="cmpchips">
+        <a href="vs/syncdate.html">vs SYNCDATE</a>
+        <a href="vs/onecal.html">vs OneCal</a>
+        <a href="vs/calendarbridge.html">vs CalendarBridge</a>
+        <a href="vs/syncthemcalendars.html">vs SyncThemCalendars</a>
+        <a href="vs/calendarsync.html">vs CalendarSync</a>
+        <a href="vs/reclaim.html">vs Reclaim.ai</a>
+        <a href="vs/clockwise.html">vs Clockwise</a>
+        <a href="vs/">All comparisons →</a>
+      </div>
+    </div>
+  </section>
+
   <section id="get">
     <div class="eyebrow">Get it</div>
     <h2>On the App Store, or build it yourself</h2>
     <p class="muted">One purchase — $0.99 — covers iPhone, iPad and Mac. It keeps the lights on for
       an app with no ads, no accounts, and no data collection. The source is open either way.</p>
+    <p class="muted" style="margin-top:14px"><b>The price rises to $2.99 on 1 September 2026.</b>
+      Buying before then keeps every future update at no extra cost.</p>
     <div class="cta" style="margin-top:24px">
       <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get it on the App Store</a>
       <a class="btn ghost" href="https://github.com/mattbaylor/cal-mirror#readme">Read the docs</a>
     </div>
-    <p class="muted" style="margin-top:34px">Prefer to build it from source? It's free and MIT-licensed.</p>
+    <p class="muted" style="margin-top:34px">Prefer to build it from source? It's free and
+      MIT-licensed — and it's where 1.4.0 lives until it clears App Store review.</p>
     <pre>git clone https://github.com/mattbaylor/cal-mirror.git
 <span class="k">cd</span> cal-mirror
 ./install.sh</pre>
@@ -231,6 +371,7 @@
     <div>
       <a href="https://apps.apple.com/us/app/cal-mirror/id6787358036">App Store</a> ·
       <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a> ·
+      <a href="vs/">Compare</a> ·
       <a href="changelog.html">Release notes</a> ·
       <a href="privacy.html">Privacy</a> ·
       <a href="https://github.com/mattbaylor/cal-mirror/issues">Issues</a>

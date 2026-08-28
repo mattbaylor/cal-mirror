@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cal-mirror vs CalendarBridge &mdash; cal-mirror</title>
+<meta name="description" content="An honest comparison of cal-mirror and CalendarBridge — pricing, iCloud sync intervals, HIPAA, and which one fits your setup. Checked August 2026.">
+<link rel="icon" href="../icon.png">
+<meta property="og:title" content="cal-mirror vs CalendarBridge">
+<meta property="og:description" content="An honest comparison of cal-mirror and CalendarBridge — pricing, iCloud sync intervals, HIPAA, and which one fits your setup. Checked August 2026.">
+<meta property="og:type" content="article">
+<style>
+  :root{
+    --bg:#0b0e14; --card:#151b28; --card2:#1b2333; --line:#232c3d; --tx:#e6edf3;
+    --mut:#93a1b5; --dim:#6b7a90; --accent:#3aa0ff; --accent2:#28c8b6;
+    --good:#2ecc71; --warn:#e2b04a; --radius:16px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f6f8fc; --card:#ffffff; --card2:#f3f6fb; --line:#e2e8f2;
+      --tx:#0d1220; --mut:#4a5568; --dim:#78889d; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--tx);background:radial-gradient(1000px 500px at 80% -10%, rgba(58,160,255,.14), transparent 60%),var(--bg);
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:820px;margin:0 auto;padding:0 22px 80px}
+  a{color:var(--accent)}
+
+  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;text-decoration:none;color:var(--tx)}
+  .brand img{width:30px;height:30px;border-radius:8px}
+  .nav-links{display:flex;gap:18px;align-items:center;font-size:14px;color:var(--mut);flex-wrap:wrap}
+  .nav-links a{text-decoration:none;color:var(--mut)}.nav-links a:hover{color:var(--tx)}
+
+  h1{font-size:clamp(28px,4.6vw,38px);letter-spacing:-.7px;margin:.4em 0 .12em;line-height:1.15}
+  .dateline{color:var(--dim);font-size:13.5px;margin:0 0 26px}
+  .lede{font-size:17.5px;color:var(--mut);margin:0 0 8px}
+  h2{font-size:21px;margin:2em 0 .35em;letter-spacing:-.3px}
+  h3{font-size:16px;margin:1.6em 0 .3em}
+  p{margin:.7em 0}
+
+  .verdict{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin:26px 0}
+  .verdict p{margin:.45em 0}
+  .verdict strong{color:var(--accent2)}
+
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.5px}
+  td:first-child{color:var(--mut);width:31%}
+  .tw{overflow-x:auto}
+
+  ul{margin:.3em 0;padding-left:20px}
+  li{margin:.4em 0}
+  .win li::marker{color:var(--good)}
+  .lose li::marker{color:var(--warn)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px}
+  @media(max-width:700px){.cols{grid-template-columns:1fr}}
+  .col{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  .col h3{margin:0 0 .3em;font-size:15.5px}
+  .col p{font-size:14.5px;color:var(--mut);margin:.4em 0}
+  .col ul{font-size:14.5px;color:var(--mut)}
+
+  .note{background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--accent2);
+    border-radius:10px;padding:14px 18px;margin:22px 0;font-size:14.5px;color:var(--mut)}
+  .note b{color:var(--tx)}
+
+  .src{font-size:13.5px;color:var(--mut)}
+  .src li{margin:.35em 0}
+
+  .others{border-top:1px solid var(--line);margin-top:44px;padding-top:22px}
+  .others h2{margin-top:0;font-size:17px}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+  .chip{display:inline-block;font-size:13.5px;text-decoration:none;color:var(--mut);
+    background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 13px}
+  .chip:hover{color:var(--tx);border-color:var(--accent)}
+  .chip.here{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06121f;border-color:transparent;font-weight:600}
+
+  .cta{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0 6px}
+  .btn{display:inline-flex;align-items:center;padding:11px 20px;border-radius:12px;font-weight:650;
+    text-decoration:none;font-size:14.5px;border:1px solid transparent}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06121f}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--tx)}
+
+  .foot{color:var(--dim);font-size:13.5px;margin-top:44px;border-top:1px solid var(--line);padding-top:18px}
+  .foot a{color:var(--mut);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav>
+    <a class="brand" href="../"><img src="../icon.png" alt="cal-mirror icon"> cal-mirror</a>
+    <div class="nav-links">
+      <a href="../#what">What it does</a>
+      <a href="../#filters">Filters</a>
+      <a href="index.html">Comparisons</a>
+      <a href="../changelog.html">Release notes</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub &#8599;</a>
+    </div>
+  </nav>
+
+  <h1>cal-mirror vs CalendarBridge</h1>
+  <p class="dateline">Compared August 2026 &middot; every price and feature below was checked
+    against CalendarBridge&rsquo;s own site on 28 August 2026. These change &mdash; check the
+    <a href="https://calendarbridge.com/">CalendarBridge site</a> before deciding.</p>
+
+  <p class="lede">Busy-block sync and scheduling pages, with a HIPAA agreement available.</p>
+
+  <div class="verdict">
+    <p><strong>CalendarBridge sells a compliance story.</strong> It offers a Business Associate Agreement on its higher tiers, which is the kind of thing a clinic or a firm needs on paper before it will let a tool near a calendar. cal-mirror cannot offer you a BAA, because there is no company on the other end of it.</p>
+    <p><strong>cal-mirror answers the same worry differently.</strong> Instead of a contract governing what a vendor may do with your calendar, there is no vendor: the copy is made on your device and nothing is transmitted. Whether that is better depends entirely on whether you need the paperwork.</p>
+  </div>
+
+  <h2>Side by side</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>cal-mirror</th><th>CalendarBridge</th></tr></thead>
+    <tbody>
+      <tr><td>Price</td><td>$0.99 once <span class='src'>(rising to $2.99 on 1 Sept 2026)</span> &middot; free from source</td><td>$5 / $10 / $40 per month for 2 / 5 / 8 calendars; $4 / $8 / $32 billed yearly</td></tr>
+      <tr><td>Account required</td><td>None</td><td>Yes; iCloud is connected with an app-specific password</td></tr>
+      <tr><td>Where your calendar goes</td><td>Nowhere. It never leaves the device.</td><td>To CalendarBridge's servers</td></tr>
+      <tr><td>Platforms</td><td>iPhone, iPad, Mac</td><td>Web</td></tr>
+      <tr><td>Calendar sources</td><td>Anything the device can see &mdash; iCloud, Google, Exchange, CalDAV, subscribed ICS feeds</td><td>Google, Outlook, iCloud and .ics URLs</td></tr>
+      <tr><td>Sync speed, Apple calendars</td><td>Detects changes within seconds on macOS <span class='src'>(standalone build)</span></td><td>&ldquo;every 5 to 10 minutes&rdquo; for iCloud and .ics sources, per their docs</td></tr>
+      <tr><td>Sync speed, Google / Outlook</td><td>Whatever the device's own account refresh is</td><td>Real-time, typically within a minute, per their docs</td></tr>
+      <tr><td>Privacy of copied events</td><td>Per-mirror: full copy, title and location only, or a plain &ldquo;Busy&rdquo; block</td><td>Controls over which events sync and which details sync</td></tr>
+      <tr><td>Scheduling pages</td><td>No</td><td>Yes &mdash; up to 10</td></tr>
+      <tr><td>HIPAA BAA</td><td>Not offered &mdash; there is no company to sign one</td><td>Available on Premium and Pro</td></tr>
+      <tr><td>Per-event override</td><td>Yes &mdash; a tag in an event's notes</td><td>Not published</td></tr>
+      <tr><td>Duration filters</td><td>Yes</td><td>Not published</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+
+  <h2>Being straight about it</h2>
+  <div class="cols">
+    <div class="col">
+      <h3>Where cal-mirror is the better pick</h3>
+      <ul class="win">
+        <li>No account, and no server holding a credential to your calendar. CalendarBridge asks for an Apple app-specific password; cal-mirror asks for nothing, because the calendars are already on the device.</li>
+        <li>$0.99 once against $48&ndash;$480 a year.</li>
+        <li>Faster on Apple calendars and on subscribed feeds. Their own documentation puts iCloud and .ics sources at five to ten minutes.</li>
+        <li>Per-event control with a tag, rather than per-rule only.</li>
+        <li>Duration bounds &mdash; skip anything under fifteen minutes, say.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3>Where CalendarBridge is the better pick</h3>
+      <ul class="lose">
+        <li>A HIPAA Business Associate Agreement, which some workplaces simply require.</li>
+        <li>Scheduling pages for sharing availability.</li>
+        <li>Real-time sync when the source is Google or Outlook.</li>
+        <li>Runs in a browser, on any OS, with no Apple device involved.</li>
+        <li>Keeps syncing while all your devices are off.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>What cal-mirror does not do, on any tier</h2>
+  <p>These are not oversights, and no future release is going to quietly fix them &mdash; most
+    are consequences of running on your device instead of a server:</p>
+  <ul class="lose">
+    <li><b>No booking or scheduling links.</b> Nothing generates a page other people can pick a slot from.</li>
+    <li><b>No unified calendar view.</b> cal-mirror makes copies; your calendar app displays them.</li>
+    <li><b>No team, admin or SSO features.</b> It is a single-person utility.</li>
+    <li><b>Apple only.</b> No Windows, no Android, no web.</li>
+    <li><b>Attendees are not replicated.</b> Apple&rsquo;s EventKit has no API to set participants on an
+      event, so a copy carries the time, and whatever else you allow, but never the guest list.</li>
+  </ul>
+
+  <div class="cta">
+    <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get cal-mirror &mdash; $0.99</a>
+    <a class="btn ghost" href="https://calendarbridge.com/">Visit CalendarBridge</a>
+  </div>
+  <p class="src">One purchase covers iPhone, iPad and Mac. The price rises to $2.99 on 1 September 2026.
+    cal-mirror is not affiliated with CalendarBridge in any way, and this page is written by cal-mirror&rsquo;s author.</p>
+
+  <h2>Sources</h2>
+  <ul class="src">
+      <li><a href="https://www.calendarbridge.com/pricing">CalendarBridge pricing</a></li>
+      <li><a href="https://help.calendarbridge.com/faq/how-often-do-calendars-sync/">CalendarBridge &mdash; How often do calendars sync?</a></li>
+  </ul>
+
+  <div class="others">
+    <h2>Compare with the others</h2>
+    <div class="chips">
+      <a class="chip" href="syncdate.html">vs SYNCDATE</a>
+      <a class="chip" href="onecal.html">vs OneCal</a>
+      <a class="chip here" href="calendarbridge.html">vs CalendarBridge</a>
+      <a class="chip" href="syncthemcalendars.html">vs SyncThemCalendars</a>
+      <a class="chip" href="calendarsync.html">vs CalendarSync</a>
+      <a class="chip" href="reclaim.html">vs Reclaim.ai</a>
+      <a class="chip" href="clockwise.html">vs Clockwise</a>
+      <a class="chip" href="index.html">All comparisons</a>
+    </div>
+  </div>
+
+  <div class="foot">
+    <a href="../">&larr; cal-mirror</a> &middot;
+    <a href="index.html">Comparisons</a> &middot;
+    <a href="../changelog.html">Release notes</a> &middot;
+    <a href="../privacy.html">Privacy</a> &middot;
+    <a href="https://github.com/mattbaylor/cal-mirror">Source</a> &middot;
+    MIT &copy; Matt Baylor
+  </div>
+</div>
+</body>
+</html>
