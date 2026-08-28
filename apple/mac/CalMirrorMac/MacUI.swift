@@ -9,7 +9,7 @@ struct MenuContent: View {
     private let intervals: [(String, Int)] = [("5 min", 300), ("15 min", 900), ("30 min", 1800), ("1 hour", 3600)]
 
     var body: some View {
-        Text("cal-mirror — \(model.headline)")
+        Text("Calendar Mirror — \(model.headline)")
         if model.config.mirrors.isEmpty { Text("No mirrors yet").font(.caption) }
         ForEach(model.config.mirrors) { m in
             let s = model.statuses[m.id]
