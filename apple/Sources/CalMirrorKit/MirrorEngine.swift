@@ -482,14 +482,23 @@ public final class MirrorEngine: @unchecked Sendable {
             existingList.append(.init(ref: ref, key: ownedRaw[old].key, fingerprint: ownedRaw[old].fp))
         }
 
-        func differ(_ copy: EKEvent, _ src: EKEvent, _ s: Snap, key: String) -> Bool {
-            copy.title != s.title || copy.startDate != src.startDate ||
-            copy.endDate != src.endDate || copy.isAllDay != src.isAllDay ||
-            (copy.location ?? "") != (s.location ?? "") ||
-            (copy.notes ?? "") != (s.notes ?? "") ||
-            copy.availability != s.availability ||
-            alarmSig(copy.alarms) != s.alarmSig ||
-            copy.url != Markers.copyURL(mirrorId: m.id, key: key)
+        // Which fields disagree, rather than merely whether any do. The counts
+        // go into the cycle's log line: a mirror that rewrites the same events
+        // every run is a real bug — wasted writes on a calendar you share, and
+        // under realtime a periodic write is the one shape that can re-trigger
+        // the sync that made it — and "~3" alone gives you nothing to chase.
+        func diffFields(_ copy: EKEvent, _ src: EKEvent, _ s: Snap, key: String) -> [String] {
+            var out: [String] = []
+            if copy.title != s.title { out.append("title") }
+            if copy.startDate != src.startDate { out.append("start") }
+            if copy.endDate != src.endDate { out.append("end") }
+            if copy.isAllDay != src.isAllDay { out.append("allDay") }
+            if (copy.location ?? "") != (s.location ?? "") { out.append("location") }
+            if (copy.notes ?? "") != (s.notes ?? "") { out.append("notes") }
+            if copy.availability != s.availability { out.append("availability") }
+            if alarmSig(copy.alarms) != s.alarmSig { out.append("alarms") }
+            if copy.url != Markers.copyURL(mirrorId: m.id, key: key) { out.append("marker") }
+            return out
         }
         func apply(_ copy: EKEvent, _ src: EKEvent, _ s: Snap, key: String) {
             copy.title = s.title
@@ -508,9 +517,31 @@ public final class MirrorEngine: @unchecked Sendable {
 
         // Pure planner decides create/match/delete and collapses duplicates.
         let plan = Reconciler.plan(desired: desiredList, existing: existingList)
+        var changedFields: [String: Int] = [:]
+        var staleKeys = 0
         for (di, ref) in plan.match {
             let copy = owned[ref], src = srcList[di], s = snaps[di], key = desiredList[di].key
-            if differ(copy, src, s, key: key) {   // includes url != new key → adopted copies re-stamp here
+            let fields = diffFields(copy, src, s, key: key)
+
+            // A marker-only difference means the copy's CONTENT is already right
+            // and only its occurrence key is older than the one the source hashes
+            // to now. Some feeds — on-call rotations especially — regenerate
+            // `calendarItemExternalIdentifier` on every fetch, so the key churns
+            // even though nothing about the event moved. Re-stamping buys nothing
+            // and rewrites the same events forever: wasted writes on a calendar
+            // you share, and under realtime a periodic write is the one shape
+            // that can re-trigger the sync that produced it.
+            //
+            // Leaving the older key is safe. It still names this mirror, so
+            // ownership and the delete-sweep are unaffected; the reconciler's
+            // fingerprint pass re-adopts the copy each cycle at no cost. And any
+            // real content change re-stamps anyway, because `apply` always
+            // rewrites the marker.
+            if fields == ["marker"] {
+                staleKeys += 1
+                r.unchanged += 1
+            } else if !fields.isEmpty {
+                for f in fields { changedFields[f, default: 0] += 1 }
                 apply(copy, src, s, key: key)
                 try? store.save(copy, span: .thisEvent, commit: false); pending += 1
                 r.updated += 1
@@ -541,7 +572,14 @@ public final class MirrorEngine: @unchecked Sendable {
         // future (possibly stale) snapshots against.
         lastOwned[m.id] = r.total
 
-        log?("[\(m.id)] +\(r.created) ~\(r.updated) =\(r.unchanged) -\(r.deleted)")
+        var why = changedFields.isEmpty ? ""
+            : " · changed: " + changedFields.sorted { $0.key < $1.key }
+                .map { "\($0.key)×\($0.value)" }.joined(separator: " ")
+        // Surfaced rather than silently absorbed: it means the source feed
+        // regenerates its event identifiers, which is worth knowing about even
+        // though it now costs nothing.
+        if staleKeys > 0 { why += " · stale keys×\(staleKeys) (source re-issues ids)" }
+        log?("[\(m.id)] +\(r.created) ~\(r.updated) =\(r.unchanged) -\(r.deleted)\(why)")
         return r
     }
 }
