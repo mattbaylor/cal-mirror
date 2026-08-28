@@ -301,17 +301,42 @@ public struct Mirror: Codable, Identifiable, Equatable, Sendable {
 public struct Config: Codable, Equatable, Sendable {
     public var paused: Bool
     public var intervalSeconds: Int
+    /// Sync as calendars change, rather than only on the schedule.
+    ///
+    /// Global, not per-mirror, and that is a property of the platform rather
+    /// than a simplification: `EKEventStoreChanged` reports that the store
+    /// changed, never *which* calendar. A per-mirror switch would be a promise
+    /// the API can't keep. The UI still presents it per mirror — turning it on
+    /// anywhere turns it on everywhere — and says so.
+    public var realtime: Bool
     public var mirrors: [Mirror]
 
-    public init(paused: Bool = false, intervalSeconds: Int = 900, mirrors: [Mirror] = []) {
-        self.paused = paused; self.intervalSeconds = intervalSeconds; self.mirrors = mirrors
+    /// The floor realtime pins the schedule to. Once changes drive the cycles,
+    /// the interval is only a backstop for missed notifications, and it stops
+    /// being worth configuring.
+    public static let realtimeFloorSeconds = 300
+
+    /// Note the asymmetry with `init(from:)` below, which is deliberate: a
+    /// config constructed fresh — a new install — gets realtime ON, while a
+    /// config decoded from a file that predates the key keeps it OFF. Upgrading
+    /// never silently changes how an existing setup syncs.
+    public init(paused: Bool = false, intervalSeconds: Int = 900,
+                realtime: Bool = true, mirrors: [Mirror] = []) {
+        self.paused = paused; self.intervalSeconds = intervalSeconds
+        self.realtime = realtime; self.mirrors = mirrors
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         paused = try c.decodeIfPresent(Bool.self, forKey: .paused) ?? false
         intervalSeconds = try c.decodeIfPresent(Int.self, forKey: .intervalSeconds) ?? 900
+        realtime = try c.decodeIfPresent(Bool.self, forKey: .realtime) ?? false
         mirrors = try c.decodeIfPresent([Mirror].self, forKey: .mirrors) ?? []
+    }
+
+    /// What the scheduler should use as its floor, given the mode.
+    public var effectiveIntervalSeconds: Int {
+        realtime ? Config.realtimeFloorSeconds : intervalSeconds
     }
 
     public static let empty = Config()

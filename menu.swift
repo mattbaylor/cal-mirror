@@ -15,7 +15,11 @@ struct CalInfo: Hashable, Identifiable {
     var label: String { "\(title) — \(account)" }
 }
 
-struct MirrorStatus { var ok = false; var error: String?; var created = 0, updated = 0, unchanged = 0, deleted = 0, total = 0 }
+// `error` is a real failure; `note` is a benign explanation for a cycle that did
+// nothing (disabled, paused, deferred, source unchanged). They used to share one
+// field, which made a healthy skip render as a hard ✗ in the menu bar.
+struct MirrorStatus { var ok = false; var error: String?; var note: String?
+                      var created = 0, updated = 0, unchanged = 0, deleted = 0, total = 0 }
 
 final class Model: ObservableObject {
     // The kit's own types — same Config, same Mirror, same EventFilters the
@@ -93,6 +97,7 @@ final class Model: ObservableObject {
             var s = MirrorStatus()
             s.ok = r["ok"] as? Bool ?? false
             s.error = r["error"] as? String
+            s.note = r["note"] as? String
             s.created = r["created"] as? Int ?? 0
             s.updated = r["updated"] as? Int ?? 0
             s.unchanged = r["unchanged"] as? Int ?? 0
@@ -107,7 +112,8 @@ final class Model: ObservableObject {
     func iconFor(_ id: String) -> String {
         if paused { return "pause.circle" }
         guard let s = statuses[id] else { return "questionmark.circle" }
-        if let e = s.error, !e.isEmpty { return e == "disabled" ? "minus.circle" : "xmark.octagon.fill" }
+        if let e = s.error, !e.isEmpty { return "xmark.octagon.fill" }
+        if s.note == "disabled" { return "minus.circle" }
         if !s.ok { return "xmark.octagon.fill" }
         if let last = lastRun, Date().timeIntervalSince(last) > Double(intervalSeconds) * 2 + 120 {
             return "exclamationmark.triangle.fill"
@@ -229,6 +235,7 @@ struct MenuContent: View {
             let s = model.statuses[m.id]
             Menu("\(symbol(model.iconFor(m.id)))  \(m.name)") {
                 if let s = s, let e = s.error, !e.isEmpty { Text("⚠︎ \(e)") }
+                else if let s = s, let n = s.note, !n.isEmpty { Text("\(n) · \(s.total) events") }
                 else if let s = s { Text("\(s.total) events  (+\(s.created) ~\(s.updated) −\(s.deleted))") }
                 Text("\(m.source.title)  →  \(m.dest.title)").font(.caption)
                 Divider()

@@ -131,7 +131,8 @@ final class Store: ObservableObject {
     func iconFor(_ id: String) -> String {
         if config.paused { return "pause.circle" }
         guard let s = statuses[id] else { return "questionmark.circle" }
-        if let e = s.error, !e.isEmpty { return e == "disabled" ? "minus.circle" : "xmark.octagon.fill" }
+        if let e = s.error, !e.isEmpty { return "xmark.octagon.fill" }
+        if s.note == "disabled" { return "minus.circle" }
         if !s.ok { return "xmark.octagon.fill" }
         if let last = lastRun, Date().timeIntervalSince(last) > Double(config.intervalSeconds) * 2 + 120 {
             return "exclamationmark.triangle.fill"

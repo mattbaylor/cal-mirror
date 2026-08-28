@@ -311,6 +311,44 @@ when you're back at the Mac.
 > Before v1.4 this wrote an all-day "last synced" banner on every successful
 > cycle. Those are removed automatically on the first sync after upgrading.
 
+## ⚡ Realtime sync
+
+By default the engine syncs on a schedule. Set `"realtime": true` at the top
+level of `config.json` and it syncs when your calendars actually change —
+usually within seconds — using EventKit's change notifications:
+
+```jsonc
+{
+  "realtime": true,
+  "intervalSeconds": 900,   // ignored while realtime is on; the floor is 5 min
+  "mirrors": [ /* … */ ]
+}
+```
+
+**The schedule never goes away.** Change notifications are best-effort:
+subscribed ICS feeds refresh on their own without announcing it, and sleep drops
+notifications outright. Realtime pins the floor to **5 minutes** as a backstop —
+without one, a missed notification would mean a mirror silently stale forever.
+The floor pass is also the *healing* pass: it always does a full reconcile, so a
+copy someone deleted by hand comes back within five minutes.
+
+Three things keep it from chasing its own tail. Changes are **debounced**, so one
+CalDAV pull delivering hundreds of events becomes one sync. Changes arriving just
+after our own writes are treated as **our echo** and ignored. And since v1.4 the
+in-calendar banner only writes when a mirror *breaks*, so a healthy cycle writes
+nothing at all and cannot re-trigger itself.
+
+A change-driven cycle skips mirrors whose source hasn't moved, comparing a cheap
+digest instead of re-walking every destination. Without that, one edited work
+event would make all your mirrors pay full price.
+
+> Realtime is a **global** setting, not per-mirror. EventKit reports that the
+> store changed, never *which* calendar, so a per-mirror switch would be a
+> promise the API can't keep.
+
+New installs get realtime on; upgrading an existing `config.json` leaves it off
+until you turn it on, so nothing about your sync changes underneath you.
+
 ## 🖥️ Menu bar
 
 ```

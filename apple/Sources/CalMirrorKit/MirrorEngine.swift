@@ -16,7 +16,13 @@ public struct MirrorResult: Identifiable, Sendable {
     public let id: String
     public let name: String
     public var ok: Bool
+    /// A real failure — something the user has to fix. Drives the ✗ health icon.
     public var error: String?
+    /// A benign explanation for a cycle that did nothing: disabled, paused,
+    /// deferred, or skipped because the source hadn't moved. Kept apart from
+    /// `error` because these used to share a field, which made a healthy skip
+    /// render as a hard failure in the menu bar.
+    public var note: String?
     public var created = 0, updated = 0, unchanged = 0, deleted = 0
     public var total: Int { created + updated + unchanged }
 }
@@ -36,7 +42,27 @@ public final class MirrorEngine: @unchecked Sendable {
     /// long it has been broken. Engine-lifetime only — a daemon restart forgets,
     /// and the banner simply omits the date until the first clean cycle.
     private var lastSuccessAt: [String: Date] = [:]
+    /// The source digest from each mirror's last completed cycle, so a
+    /// change-driven pass can skip mirrors whose source hasn't moved.
+    private var lastSourceDigest: [String: UInt64] = [:]
     public init() {}
+
+    // MARK: Change notifications
+
+    /// Call `onChange` whenever this engine's store reports a change — local
+    /// edits, and remote changes once a CalDAV/Exchange pull lands. Scoped to our
+    /// own store, and returns the observer token for the caller to hold.
+    ///
+    /// The engine owns the `EKEventStore`, so it owns the observation too; the
+    /// daemon just decides what to do about it.
+    public func observeChanges(_ onChange: @escaping @Sendable () -> Void) -> NSObjectProtocol {
+        NotificationCenter.default.addObserver(
+            forName: .EKEventStoreChanged, object: store, queue: nil) { _ in onChange() }
+    }
+
+    public func stopObserving(_ token: NSObjectProtocol) {
+        NotificationCenter.default.removeObserver(token)
+    }
 
     // MARK: Access
 
@@ -75,18 +101,24 @@ public final class MirrorEngine: @unchecked Sendable {
     // MARK: Sync
 
     /// Sync every enabled mirror in `config`. `log` receives progress lines.
+    ///
+    /// `trigger` says why this cycle is running. A `.change` cycle may skip
+    /// mirrors whose source hasn't moved; `.floor` and `.first` always do the
+    /// full reconcile, which is what keeps the destination self-healing — see
+    /// `syncMirror`.
     @discardableResult
     public func syncAll(_ config: Config, now: Date = Date(),
+                        trigger: SyncScheduler.Reason = .floor,
                         log: ((String) -> Void)? = nil) -> [MirrorResult] {
         let reversed = reversedMirrorIds(in: config)
         return config.mirrors.map { m in
-            if !m.enabled { return MirrorResult(id: m.id, name: m.name, ok: true, error: "disabled") }
+            if !m.enabled { return MirrorResult(id: m.id, name: m.name, ok: true, note: "disabled") }
             if reversed.contains(m.id) {
                 log?("[\(m.id)] REFUSED: reverse of another mirror — would create a copy loop")
                 return MirrorResult(id: m.id, name: m.name, ok: false,
                                     error: "Reverse of another mirror — refused to avoid a loop")
             }
-            return syncMirror(m, allMirrors: config.mirrors, now: now, log: log)
+            return syncMirror(m, allMirrors: config.mirrors, now: now, trigger: trigger, log: log)
         }
     }
 
@@ -320,6 +352,7 @@ public final class MirrorEngine: @unchecked Sendable {
     }
 
     private func syncMirror(_ m: Mirror, allMirrors: [Mirror], now: Date,
+                            trigger: SyncScheduler.Reason = .floor,
                             log: ((String) -> Void)?) -> MirrorResult {
         var r = MirrorResult(id: m.id, name: m.name, ok: true)
         // Destination first: the banner lives there, so a failure we can't write
@@ -345,35 +378,7 @@ public final class MirrorEngine: @unchecked Sendable {
         let winStart = now.addingTimeInterval(-m.windowPastDays * 86400)
         let winEnd = now.addingTimeInterval(m.windowFutureDays * 86400)
 
-        // --- Stale-snapshot protection ---------------------------------------
-        // A fresh EKEventStore serves a partial CalDAV snapshot until it settles.
-        // Refresh, then wait until the destination's owned-copy count is stable
-        // across reads; SnapshotGuard then vetoes acting on an unsettled or
-        // collapsed view (which is what created/kept duplicates). Runs on a
-        // background queue, so the brief blocking waits are fine.
         store.refreshSourcesIfNecessary()
-        func ownedCount() -> Int {
-            store.events(matching: store.predicateForEvents(
-                withStart: winStart.addingTimeInterval(-86400),
-                end: winEnd.addingTimeInterval(86400), calendars: [dest]))
-                .reduce(0) { Markers.owner(of: $1.url, mirrors: allMirrors)?.id == m.id ? $0 + 1 : $0 }
-        }
-        var prev = -1, stableReads = 0, waited = 0.0
-        let pollStep = 1.5, pollMax = 12.0
-        while stableReads < 2 && waited <= pollMax {
-            let c = ownedCount()
-            if c == prev { stableReads += 1 } else { stableReads = 0; prev = c }
-            if stableReads < 2 { Thread.sleep(forTimeInterval: pollStep); waited += pollStep }
-        }
-        if case let .skip(why) = SnapshotGuard.decide(
-            stabilized: stableReads >= 2, count: prev, lastKnown: lastOwned[m.id]) {
-            r.ok = true; r.error = "deferred: \(why)"
-            log?("[\(m.id)] DEFER — \(why)")
-            // .unknown, deliberately: a deferral neither raises a warning nor
-            // clears one that is already up.
-            applyBanner(.unknown, mirror: m, dest: dest, existing: nil, now: now)
-            return r
-        }
 
         let srcEvents = store.events(matching:
             store.predicateForEvents(withStart: winStart, end: winEnd, calendars: [source]))
@@ -399,6 +404,52 @@ public final class MirrorEngine: @unchecked Sendable {
                 key: keyFor(ev, now: now),
                 fingerprint: fingerprintOf(title: snap.title, start: ev.startDate,
                                            end: ev.endDate, allDay: ev.isAllDay, now: now)))
+        }
+
+
+        // Has this mirror's source actually moved? Digesting what we want is
+        // cheap; the settle-wait and destination scan below are not. On a
+        // change-driven cycle a store-wide notification means SOMETHING changed
+        // somewhere — usually in one calendar — and without this every mirror
+        // pays full price for it.
+        //
+        // Only ever skipped on a `.change` cycle. The scheduled floor always does
+        // the full reconcile, so the destination stays self-healing: a copy
+        // someone deleted by hand is restored within the interval, and the
+        // fast path can never quietly become the only path.
+        let digest = SourceDigest.of(desiredList)
+        if trigger == .change, lastSuccessAt[m.id] != nil, lastSourceDigest[m.id] == digest {
+            r.ok = true; r.note = "unchanged"
+            return r
+        }
+
+        // --- Stale-snapshot protection ---------------------------------------
+        // A fresh EKEventStore serves a partial CalDAV snapshot until it settles.
+        // Refresh, then wait until the destination's owned-copy count is stable
+        // across reads; SnapshotGuard then vetoes acting on an unsettled or
+        // collapsed view (which is what created/kept duplicates). Runs on a
+        // background queue, so the brief blocking waits are fine.
+        func ownedCount() -> Int {
+            store.events(matching: store.predicateForEvents(
+                withStart: winStart.addingTimeInterval(-86400),
+                end: winEnd.addingTimeInterval(86400), calendars: [dest]))
+                .reduce(0) { Markers.owner(of: $1.url, mirrors: allMirrors)?.id == m.id ? $0 + 1 : $0 }
+        }
+        var prev = -1, stableReads = 0, waited = 0.0
+        let pollStep = 1.5, pollMax = 12.0
+        while stableReads < 2 && waited <= pollMax {
+            let c = ownedCount()
+            if c == prev { stableReads += 1 } else { stableReads = 0; prev = c }
+            if stableReads < 2 { Thread.sleep(forTimeInterval: pollStep); waited += pollStep }
+        }
+        if case let .skip(why) = SnapshotGuard.decide(
+            stabilized: stableReads >= 2, count: prev, lastKnown: lastOwned[m.id]) {
+            r.ok = true; r.note = "deferred: \(why)"
+            log?("[\(m.id)] DEFER — \(why)")
+            // .unknown, deliberately: a deferral neither raises a warning nor
+            // clears one that is already up.
+            applyBanner(.unknown, mirror: m, dest: dest, existing: nil, now: now)
+            return r
         }
 
         let dstEvents = store.events(matching: store.predicateForEvents(
@@ -482,6 +533,7 @@ public final class MirrorEngine: @unchecked Sendable {
         // Status banner. Healthy is silent — this only clears whatever an
         // earlier failure left behind.
         lastSuccessAt[m.id] = now
+        lastSourceDigest[m.id] = digest
         applyBanner(.ok, mirror: m, dest: dest, existing: heartbeat, now: now,
                     lookUpIfMissing: false)
 
