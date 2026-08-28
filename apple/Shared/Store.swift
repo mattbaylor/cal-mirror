@@ -112,16 +112,22 @@ final class Store: ObservableObject {
         let rel = RelativeDateTimeFormatter(); rel.unitsStyle = .short
         return "Last sync \(rel.localizedString(for: last, relativeTo: Date()))"
     }
-    var overallIcon: String {
-        if config.paused { return "pause.circle" }
+    // What the menu-bar icon shows. Rows inside the menu keep their SF Symbols
+    // (iconFor) — a face next to a line of text reads worse than a checkmark.
+    #if os(macOS)
+    var menuBarState: MenuBarState {
+        if config.paused { return .paused }
         let enabled = config.mirrors.filter { $0.enabled }
-        if enabled.isEmpty { return "circle.dashed" }
+        if enabled.isEmpty { return .unconfigured }
         let icons = enabled.map { iconFor($0.id) }
-        if icons.contains("xmark.octagon.fill") { return "xmark.octagon.fill" }
-        if icons.contains("exclamationmark.triangle.fill") { return "exclamationmark.triangle.fill" }
-        if icons.contains("questionmark.circle") { return "questionmark.circle" }
-        return "checkmark.circle.fill"
+        if icons.contains("xmark.octagon.fill") { return .failing }
+        // Stale and never-run both fold into degraded: either way the mirror is
+        // not known to be current.
+        if icons.contains("exclamationmark.triangle.fill") { return .degraded }
+        if icons.contains("questionmark.circle") { return .degraded }
+        return .ok
     }
+    #endif
     func iconFor(_ id: String) -> String {
         if config.paused { return "pause.circle" }
         guard let s = statuses[id] else { return "questionmark.circle" }

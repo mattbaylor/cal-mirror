@@ -8,7 +8,7 @@ struct CalMirrorMacApp: App {
         MenuBarExtra {
             MenuContent(model: model)
         } label: {
-            Image(systemName: model.overallIcon)
+            Image(nsImage: menuBarImage(model.menuBarState))
         }
         .menuBarExtraStyle(.menu)
 
