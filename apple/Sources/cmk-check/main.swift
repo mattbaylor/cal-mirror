@@ -275,6 +275,115 @@ do {
     check(absent.mirrors[0].projection.titlePrefix == "", "absent titlePrefix → empty (no change)")
 }
 
+print("SyncScheduler:")
+do {
+    let t0 = Date(timeIntervalSince1970: 1_756_000_000)
+    func at(_ secs: TimeInterval) -> Date { t0.addingTimeInterval(secs) }
+    let FLOOR = 300     // the 5-minute backstop realtime pins
+
+    // Cold start.
+    do {
+        let s = SyncScheduler()
+        check(s.decide(now: t0, intervalSeconds: FLOOR) == .sync(.first), "nothing has run yet → sync")
+    }
+
+    // The floor fires on its own, with no changes at all.
+    do {
+        var s = SyncScheduler()
+        s.noteSyncFinished(at: t0)
+        check(s.decide(now: at(120), intervalSeconds: FLOOR) == .wait(180), "idle → wait out the floor")
+        check(s.decide(now: at(300), intervalSeconds: FLOOR) == .sync(.floor), "floor reached → sync")
+        check(s.decide(now: at(900), intervalSeconds: FLOOR) == .sync(.floor), "long past the floor → sync")
+    }
+
+    // A change syncs once quiet, not immediately.
+    do {
+        var s = SyncScheduler()
+        s.noteSyncFinished(at: t0)
+        s.noteChange(at: at(100))
+        check(s.decide(now: at(101), intervalSeconds: FLOOR) == .wait(9), "one change → wait out the debounce")
+        check(s.decide(now: at(110), intervalSeconds: FLOOR) == .sync(.change), "debounce elapsed → sync")
+    }
+
+    // A burst collapses into ONE sync: each change restarts the quiet period.
+    do {
+        var s = SyncScheduler()
+        s.noteSyncFinished(at: t0)
+        for i in 0..<20 { s.noteChange(at: at(100 + Double(i))) }   // one a second for 20s
+        check(s.decide(now: at(120), intervalSeconds: FLOOR) != .sync(.change),
+              "still arriving → not yet")
+        check(s.decide(now: at(129), intervalSeconds: FLOOR) == .sync(.change),
+              "quiet for the debounce after the last one → one sync for the whole burst")
+    }
+
+    // ...but a slow drip can't defer forever: the cap wins.
+    do {
+        var s = SyncScheduler()
+        s.noteSyncFinished(at: t0)
+        var when = 100.0
+        while when < 200 { s.noteChange(at: at(when)); when += 5 }   // never quiet for 10s
+        check(s.decide(now: at(160), intervalSeconds: FLOOR) == .sync(.change),
+              "maxDebounce reached → sync even though changes keep coming")
+    }
+
+    // Our own writes are ignored — this is what stops a sync triggering itself.
+    do {
+        var s = SyncScheduler()
+        s.noteSyncFinished(at: t0)
+        s.noteWrite(at: at(100))
+        check(s.noteChange(at: at(101)) == false, "a change right after our write is our echo")
+        check(s.decide(now: at(200), intervalSeconds: FLOOR) == .wait(100),
+              "the echo did not schedule anything")
+        check(s.noteChange(at: at(110)) == true, "past the window, changes count again")
+    }
+
+    // Change-driven syncs respect the minimum gap; the floor does not.
+    do {
+        var s = SyncScheduler(tuning: .init(debounce: 10, maxDebounce: 60, minGap: 60, selfWriteWindow: 5))
+        s.noteSyncFinished(at: t0)
+        s.noteChange(at: at(5))
+        check(s.decide(now: at(20), intervalSeconds: FLOOR) == .wait(40),
+              "debounced but inside minGap → wait out the gap")
+        check(s.decide(now: at(60), intervalSeconds: FLOOR) == .sync(.change), "gap elapsed → sync")
+    }
+    do {
+        // minGap must never suppress the backstop — it protects against exactly
+        // the notification stream that would be suppressing it.
+        var s = SyncScheduler(tuning: .init(debounce: 10, maxDebounce: 60, minGap: 600, selfWriteWindow: 5))
+        s.noteSyncFinished(at: t0)
+        check(s.decide(now: at(300), intervalSeconds: FLOOR) == .sync(.floor),
+              "the floor outranks minGap")
+    }
+
+    // Finishing a cycle clears the burst — it has already seen those changes.
+    do {
+        var s = SyncScheduler()
+        s.noteSyncFinished(at: t0)
+        s.noteChange(at: at(100))
+        s.noteSyncFinished(at: at(115))
+        check(s.decide(now: at(130), intervalSeconds: FLOOR) == .wait(285),
+              "after a cycle, only the floor is pending")
+    }
+
+    // A nonsense interval can't produce a hot loop.
+    do {
+        var s = SyncScheduler()
+        s.noteSyncFinished(at: t0)
+        check(s.decide(now: at(1), intervalSeconds: 0) == .wait(59), "interval is clamped to 60s")
+        check(s.decide(now: at(60), intervalSeconds: -5) == .sync(.floor), "negative interval clamps too")
+    }
+
+    // Never a zero or negative wait, whatever the arithmetic.
+    do {
+        var s = SyncScheduler()
+        s.noteSyncFinished(at: t0)
+        s.noteChange(at: at(299.9))
+        if case let .wait(w) = s.decide(now: at(299.95), intervalSeconds: FLOOR) {
+            check(w >= 0.5, "waits are always positive")
+        } else { check(true, "syncing instead of waiting is fine here") }
+    }
+}
+
 print("HeartbeatPolicy:")
 do {
     typealias HP = HeartbeatPolicy
