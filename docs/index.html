@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cal-mirror — keep a copy of one calendar inside another</title>
+<title>Calendar Mirror — keep a copy of one calendar inside another</title>
 <meta name="description" content="A small app that keeps a one-way copy of one calendar inside another, on iPhone, iPad & Mac. Your original is never touched, and nothing leaves your device. On the App Store, or free from source.">
 <link rel="icon" href="icon.png">
-<meta property="og:title" content="cal-mirror">
+<meta property="og:title" content="Calendar Mirror">
 <meta property="og:description" content="Keep a copy of one calendar inside another — one direction, nothing leaves your device. On iPhone, iPad & Mac.">
 <meta property="og:image" content="icon.png">
 <meta property="og:type" content="website">
@@ -89,6 +89,14 @@
   .phones{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin-top:34px}
   .phones img{width:260px;max-width:44vw;height:auto;border-radius:22px;border:1px solid var(--line);box-shadow:var(--shadow)}
 
+  .states{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:30px}
+  .state{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:16px 14px 13px;width:150px;text-align:center}
+  .state img{width:48px;height:48px;display:block;margin:0 auto 9px}
+  @media (prefers-color-scheme: dark){ .state img{filter:invert(1)} }
+  .state b{display:block;font-size:13.5px}
+  .state span{display:block;color:var(--mut);font-size:12.5px;margin-top:2px}
+
   .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
   @media(max-width:820px){.steps{grid-template-columns:1fr}}
   .step{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
@@ -118,7 +126,7 @@
 <div class="wrap">
 
   <nav>
-    <div class="brand"><img class="logo" src="icon.png" alt="cal-mirror icon"> cal-mirror</div>
+    <div class="brand"><img class="logo" src="icon.png" alt="Calendar Mirror icon"> Calendar Mirror</div>
     <div class="nav-links">
       <a href="#what">What it does</a>
       <a href="#filters">Which events</a>
@@ -137,31 +145,29 @@
       <span class="pill">Open source</span>
     </div>
     <h1>Keep a copy of one calendar<br><span class="grad">inside another</span>.</h1>
-    <p class="lede">Point cal-mirror at a calendar you can see but can't share — a work
+    <p class="lede">Point Calendar Mirror at a calendar you can see but can't share — a work
       schedule, a subscribed feed — and it keeps an up-to-date copy in a calendar you
       control. It only copies one way, so your original is never touched.</p>
     <div class="cta">
       <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get it on the App Store</a>
       <a class="btn ghost" href="https://github.com/mattbaylor/cal-mirror">View source</a>
     </div>
-    <div class="sub">$0.99 — one purchase covers iPhone, iPad &amp; Mac. Rising to $2.99 on 1 September 2026.
-      Or build it free from source.</div>
+    <div class="sub">$2.99 — one purchase covers iPhone, iPad &amp; Mac. Or build it free from source.</div>
   </header>
 
   <figure>
     <picture>
       <source srcset="img/manage-dark.png" media="(prefers-color-scheme: dark)">
       <img class="shot" src="img/manage-light.png" width="900" height="572"
-           alt="The cal-mirror management window on Mac. A sidebar lists three mirrors grouped by the calendar they copy into; the pane on the right shows one mirror's source, destination and collapsed settings.">
+           alt="The Calendar Mirror management window on Mac. A sidebar lists three mirrors grouped by the calendar they copy into; the pane on the right shows one mirror's source, destination and collapsed settings.">
     </picture>
-    <figcaption>Every screenshot on this page comes from a throwaway setup with invented calendar names.</figcaption>
   </figure>
 
   <section id="what">
     <div class="eyebrow">What it does</div>
     <h2>A copy you can actually use</h2>
     <p class="muted">Some calendars you can see but not share: a subscribed work schedule, a
-      read-only team calendar, an account that isn't yours. cal-mirror copies one into a
+      read-only team calendar, an account that isn't yours. Calendar Mirror copies one into a
       calendar you own — so you can reshare it, recolor it, or just see it beside everything
       else. And because the copy lives in your own account, it shows up on your phone and
       other devices on its own.</p>
@@ -243,7 +249,7 @@
   <section>
     <div class="eyebrow">The app</div>
     <h2>Silent when it works. Loud when it stops.<span class="new">New in 1.4.0</span></h2>
-    <p class="muted">cal-mirror used to leave a small daily note in the copy saying when it last
+    <p class="muted">Calendar Mirror used to leave a small daily note in the copy saying when it last
       ran. It doesn&rsquo;t any more, and that&rsquo;s deliberate: <b>a healthy pair writes nothing
       at all.</b></p>
     <p class="muted" style="margin-top:14px">The calendars you copy <em>into</em> are usually ones
@@ -256,7 +262,7 @@
     <div class="show">
       <div>
         <img class="shot plain" src="img/menubar.png" width="273" height="331"
-             alt="The cal-mirror menu on Mac, listing three mirrors each with a green check, above Sync now, Pause syncing, Manage mirrors, Open Calendar, Open log and Quit.">
+             alt="The Calendar Mirror menu on Mac, listing three mirrors each with a green check, above Sync now, Pause syncing, Manage mirrors, Open Calendar, Open log and Quit.">
       </div>
       <div>
         <h3>One glance at the menu bar</h3>
@@ -270,6 +276,19 @@
       </div>
     </div>
 
+    <h3 style="margin-top:44px;text-align:center">A new icon, with five faces<span class="new">New in 1.4.0</span></h3>
+    <p class="muted">The menu bar used to show a bare checkmark or triangle, which said nothing
+      about which app it belonged to. Now it&rsquo;s Calendar Mirror&rsquo;s own icon, redrawn small
+      enough to stay legible at menu-bar size, wearing the expression that matches what&rsquo;s
+      happening.</p>
+    <div class="states">
+      <div class="state"><img src="img/state-ok.png" alt=""><b>All good</b><span>Every copy current</span></div>
+      <div class="state"><img src="img/state-degraded.png" alt=""><b>Behind</b><span>Not synced lately</span></div>
+      <div class="state"><img src="img/state-failing.png" alt=""><b>Broken</b><span>A copy is failing</span></div>
+      <div class="state"><img src="img/state-paused.png" alt=""><b>Paused</b><span>You stopped it</span></div>
+      <div class="state"><img src="img/state-unconfigured.png" alt=""><b>Nothing set up</b><span>No copies yet</span></div>
+    </div>
+
     <div class="newnote"><b>On the App Store version (1.3.0), the old behaviour still applies</b> —
       a pair with the banner switched on writes a daily &ldquo;last synced&rdquo; note into the
       destination. Updating to 1.4.0 removes those notes automatically on the first sync.</div>
@@ -278,7 +297,7 @@
   <section id="realtime">
     <div class="eyebrow">Timing</div>
     <h2>It notices when your calendar changes<span class="new">New in 1.4.0</span></h2>
-    <p class="muted">Instead of waiting for the next scheduled run, cal-mirror can watch for
+    <p class="muted">Instead of waiting for the next scheduled run, Calendar Mirror can watch for
       calendar changes and update the copy <b>within seconds</b> of one. A five-minute pass still
       runs underneath as a backstop — change notifications are best-effort, and it also repairs
       anything that got deleted by hand.</p>
@@ -286,13 +305,12 @@
     <div class="grid">
       <div class="card"><div class="ic">⚡</div><h3>Seconds, not a schedule</h3><p>Move a meeting and the copy follows almost immediately, rather than at the top of the next quarter hour.</p></div>
       <div class="card"><div class="ic">🖥️</div><h3>Mac, built from source</h3><p>This one is macOS-only, and only in the version you build yourself — not on iPhone, iPad, or the Mac App Store app, which keep to their schedules.</p></div>
-      <div class="card"><div class="ic">🌐</div><h3>Then it&rsquo;s up to iCloud</h3><p>cal-mirror writes the copy fast. How quickly that copy reaches your other devices is iCloud&rsquo;s business, on iCloud&rsquo;s schedule.</p></div>
+      <div class="card"><div class="ic">🌐</div><h3>Then it&rsquo;s up to iCloud</h3><p>Calendar Mirror writes the copy fast. How quickly that copy reaches your other devices is iCloud&rsquo;s business, on iCloud&rsquo;s schedule.</p></div>
     </div>
 
-    <div class="newnote"><b>Worth being precise about.</b> cal-mirror detects the change and writes
-      the destination within seconds. It does not control how fast your other devices then see it
-      — no app does. Anything promising a change on your Mac will appear on your phone instantly
-      is describing something it doesn&rsquo;t own.</div>
+    <div class="newnote">Calendar Mirror detects the change and writes the destination within seconds.
+      How fast your other devices then see it is iCloud&rsquo;s schedule — not something any app
+      controls.</div>
   </section>
 
   <section>
@@ -305,7 +323,7 @@
       <picture>
         <source srcset="img/iphone-list-dark.png" media="(prefers-color-scheme: dark)">
         <img src="img/iphone-list-light.png"
-             alt="The cal-mirror iPhone app listing three mirrors grouped under the calendars they copy into, each with a green check and an event count.">
+             alt="The Calendar Mirror iPhone app listing three mirrors grouped under the calendars they copy into, each with a green check and an event count.">
       </picture>
       <picture>
         <source srcset="img/iphone-detail-dark.png" media="(prefers-color-scheme: dark)">
@@ -329,12 +347,17 @@
     <div class="eyebrow">Compared</div>
     <h2>How it stacks up against the others</h2>
     <p class="muted">There are good hosted tools that do some of this, and one or two do things
-      cal-mirror never will — booking links, a unified calendar view, Windows. Each comparison
+      Calendar Mirror never will — booking links, a unified calendar view, Windows. Each comparison
       page says plainly where the other tool is the better buy.</p>
+    <p class="muted" style="margin-top:14px"><b>Several of them can&rsquo;t read an iCloud calendar
+      at all.</b> Reclaim.ai and CalendarSync are Google-and-Outlook only, and the rest poll iCloud
+      every five to ten minutes because Apple gives them no push API. Mirror your iCloud calendar
+      into a Google calendar on your own Mac and point them at that copy — Calendar Mirror turns a
+      calendar they can&rsquo;t see into one they can.</p>
     <div class="cmp">
       <h3>Seven honest comparisons</h3>
       <p>Prices and features checked against each company&rsquo;s own site, dated, and linked.
-        Including the one that shut down, and the one that gets closest to cal-mirror.</p>
+        Including the one that shut down, and the one that gets closest to Calendar Mirror.</p>
       <div class="cmpchips">
         <a href="vs/syncdate.html">vs SYNCDATE</a>
         <a href="vs/onecal.html">vs OneCal</a>
@@ -351,23 +374,24 @@
   <section id="get">
     <div class="eyebrow">Get it</div>
     <h2>On the App Store, or build it yourself</h2>
-    <p class="muted">One purchase — $0.99 — covers iPhone, iPad and Mac. It keeps the lights on for
+    <p class="muted">One purchase — $2.99 — covers iPhone, iPad and Mac. It keeps the lights on for
       an app with no ads, no accounts, and no data collection. The source is open either way.</p>
-    <p class="muted" style="margin-top:14px"><b>The price rises to $2.99 on 1 September 2026.</b>
-      Buying before then keeps every future update at no extra cost.</p>
     <div class="cta" style="margin-top:24px">
       <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get it on the App Store</a>
       <a class="btn ghost" href="https://github.com/mattbaylor/cal-mirror#readme">Read the docs</a>
     </div>
     <p class="muted" style="margin-top:34px">Prefer to build it from source? It's free and
       MIT-licensed — and it's where 1.4.0 lives until it clears App Store review.</p>
+    <p class="muted" style="margin-top:10px;font-size:14px">The open-source project is called
+      <code>cal-mirror</code>; on the App Store it's <b>Calendar Mirror</b>. Same app, same
+      engine — the shorter name is just what the repository has always been called.</p>
     <pre>git clone https://github.com/mattbaylor/cal-mirror.git
 <span class="k">cd</span> cal-mirror
 ./install.sh</pre>
   </section>
 
   <footer>
-    <div>cal-mirror · a small, private calendar utility · MIT © Matt Baylor</div>
+    <div>Calendar Mirror · a small, private calendar utility · MIT © Matt Baylor</div>
     <div>
       <a href="https://apps.apple.com/us/app/cal-mirror/id6787358036">App Store</a> ·
       <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a> ·

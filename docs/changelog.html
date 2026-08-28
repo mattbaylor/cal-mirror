@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cal-mirror — Release notes</title>
-<meta name="description" content="What changed in each release of cal-mirror, including fixes.">
+<title>Calendar Mirror — Release notes</title>
+<meta name="description" content="What changed in each release of Calendar Mirror, including fixes.">
 <link rel="icon" href="icon.png">
 <style>
   :root{ --bg:#0b0e14; --card:#151b28; --line:#232c3d; --tx:#e6edf3; --mut:#93a1b5;
@@ -39,7 +39,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="brand"><img src="icon.png" alt="cal-mirror icon"> cal-mirror</div>
+  <div class="brand"><img src="icon.png" alt="Calendar Mirror icon"> Calendar Mirror</div>
 
   <h1>Release notes</h1>
   <p class="sub">What changed in each release, including the fixes.</p>
@@ -73,7 +73,14 @@
         the copy&rsquo;s notes, so a mirrored meeting isn&rsquo;t a dead end you can see but not
         join. Off by default, and suppressed on any event marked <code>#private</code> &mdash; a
         meeting link says plenty about a meeting whose title you chose to hide.</li>
-      <li><b>Sync as your calendars change.</b> On the Mac version built from source, cal-mirror
+      <li><b>A new menu-bar icon on Mac.</b> The bar used to show a bare checkmark, triangle or
+        cross &mdash; symbols that said nothing about which app they belonged to. It now shows
+        Calendar Mirror&rsquo;s own icon, redrawn at menu-bar size, with a face that changes by state:
+        a smile when every copy is current, warning triangles when one has fallen behind, crossed
+        eyes when one is failing, a flat expression when you&rsquo;ve paused it, and a plus when
+        no copies are set up yet. The outline stays identical in every state, so the icon never
+        shifts position in the bar when something changes.</li>
+      <li><b>Sync as your calendars change.</b> On the Mac version built from source, Calendar Mirror
         can watch for calendar changes and sync within seconds of one, instead of waiting for the
         next scheduled run. A five-minute pass still runs underneath as a backstop, and also
         repairs anything deleted by hand. This is macOS-only and applies to every pair at once,
@@ -164,7 +171,7 @@
   <p class="note">Versions 1.1 and 1.2 were prepared but never released; their changes ship as
     part of 1.3.0.</p>
 
-  <div class="foot"><a href="./">&larr; cal-mirror</a> &middot; <a href="privacy.html">Privacy</a>
+  <div class="foot"><a href="./">&larr; Calendar Mirror</a> &middot; <a href="privacy.html">Privacy</a>
     &middot; <a href="https://github.com/mattbaylor/cal-mirror">Source</a> &middot; MIT &copy; Matt Baylor</div>
 </div>
 </body>
