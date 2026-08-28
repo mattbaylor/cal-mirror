@@ -34,6 +34,12 @@ final class Model: ObservableObject {
     /// realtime on for anyone who merely edited a mirror. No toggle yet — the
     /// realtime UI is a separate change; this only preserves what's on disk.
     @Published var realtime = false
+    /// What the daemon last reported: whether it believes realtime is on, and
+    /// whether it actually has the change observer up. Deliberately taken from
+    /// status.json rather than config, so toggling realtime doesn't flash a
+    /// warning during the cycle before the daemon has picked the change up.
+    @Published var daemonRealtime = false
+    @Published var daemonObserving = false
     @Published var intervalSeconds = 900
     @Published var statuses: [String: MirrorStatus] = [:]
     @Published var lastRun: Date?
@@ -98,6 +104,8 @@ final class Model: ObservableObject {
     func loadStatus() {
         guard let o = json("status.json") else { return }
         if let v = o["lastRun"] as? String { lastRun = ISO8601DateFormatter().date(from: v) }
+        daemonRealtime = o["realtime"] as? Bool ?? false
+        daemonObserving = o["observing"] as? Bool ?? false
         var map: [String: MirrorStatus] = [:]
         for r in (o["mirrors"] as? [[String: Any]] ?? []) {
             guard let id = r["id"] as? String else { continue }
@@ -136,6 +144,11 @@ final class Model: ObservableObject {
         if enabled.isEmpty { return .unconfigured }
         let icons = enabled.map { iconFor($0.id) }
         if icons.contains("xmark.octagon.fill") { return .failing }
+        // Realtime asked for but not running. The data may well be current — the
+        // floor keeps working — but the app is not operating as configured, and
+        // staying silent would mean nobody ever learns the headline feature is
+        // dead. The menu line below says which kind of degraded this is.
+        if realtimeStalled { return .degraded }
         // Stale and never-run both fold into degraded: either way the mirror is
         // not known to be current.
         if icons.contains("exclamationmark.triangle.fill") { return .degraded }
@@ -143,6 +156,22 @@ final class Model: ObservableObject {
         return .ok
     }
     #endif
+    /// The daemon wants realtime but has no observer up.
+    var realtimeStalled: Bool { daemonRealtime && !daemonObserving && !paused }
+
+    /// One line for the menu describing how syncing is currently driven.
+    var syncModeLine: String {
+        if paused { return "Paused" }
+        if realtimeStalled { return "⚠︎ Realtime not active — using the 5 min schedule" }
+        if daemonRealtime { return "Realtime · 5 min safety check" }
+        let mins = max(1, intervalSeconds / 60)
+        return "Every \(mins) min"
+    }
+
+    /// Turning realtime on for one mirror turns it on for all of them — see the
+    /// note in the editor. There is only one flag to flip.
+    func toggleRealtime() { realtime.toggle(); saveConfig(); reload() }
+
     var headline: String {
         if paused { return "Paused" }
         guard let last = lastRun else { return "No sync yet" }
@@ -256,9 +285,17 @@ struct MenuContent: View {
             if model.paused { model.togglePause() } else { model.syncNow() }
         }
         Button("Pause syncing") { model.togglePause() }.disabled(model.paused)
-        Menu("Sync interval") {
-            ForEach(intervals, id: \.1) { name, secs in
-                Button(name + (model.intervalSeconds == secs ? "  ✓" : "")) { model.setInterval(secs) }
+        Text(model.syncModeLine).font(.caption)
+        if model.realtime {
+            // The schedule still runs underneath — pinned to 5 minutes as the
+            // backstop for a missed notification — but there is nothing left to
+            // choose, so the picker would only invite a change it can't make.
+            Text("Sync interval — set by realtime").font(.caption)
+        } else {
+            Menu("Sync interval") {
+                ForEach(intervals, id: \.1) { name, secs in
+                    Button(name + (model.intervalSeconds == secs ? "  ✓" : "")) { model.setInterval(secs) }
+                }
             }
         }
         Divider()
@@ -463,6 +500,29 @@ struct MirrorDetail: View {
                 } label: {
                     SummaryLabel(title: "Which events", trailing: ruleCountLabel,
                                  detail: MirrorSummary.selection(m.filters, tagFilter: m.tagFilter))
+                }
+            }
+
+            // Presented per mirror because that is where you go looking for it,
+            // but backed by one global flag — turning it on here turns it on for
+            // every mirror, and the note says so. The alternative, a per-mirror
+            // switch, would be a promise the platform can't keep: EventKit
+            // reports that the store changed, never which calendar.
+            Section("Timing") {
+                Toggle("Sync in realtime", isOn: Binding(
+                    get: { model.realtime },
+                    set: { _ in model.toggleRealtime() }))
+                Text("Applies to every mirror. macOS reports calendar changes for the whole store at once, not per calendar, so realtime is all-or-nothing.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if model.realtime {
+                    if model.realtimeStalled {
+                        Label("Not active right now — falling back to the 5 minute schedule.",
+                              systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption).foregroundStyle(.orange)
+                    } else {
+                        Text("Changes sync within seconds. The 5 minute schedule still runs underneath, as the backstop for a missed notification.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             }
 
