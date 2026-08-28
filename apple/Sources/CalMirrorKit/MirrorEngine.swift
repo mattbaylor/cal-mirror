@@ -237,11 +237,19 @@ public final class MirrorEngine: @unchecked Sendable {
         // .busy on write, so comparing against it would flag a diff every run.
         let resolved: EKEventAvailability = busy ? .busy : src.availability
         let avail: EKEventAvailability = (resolved == .notSupported) ? .busy : resolved
-        let copiedNotes: String?
+        var copiedNotes: String?
         switch notes {
         case .none: copiedNotes = nil
         case .tags: copiedNotes = renderTagsOnly(src.notes)
         case .full: copiedNotes = renderCopiedNotes(src.notes, copyNotesTags: m.copyNotesTags)
+        }
+        // The link rides on whatever notes survived, and orthogonally to them —
+        // a copy with no notes at all still gets the link if it is asked for.
+        // #private suppresses it along with everything else: the point of a
+        // redacted block is that it says nothing about the meeting, and a
+        // meeting URL says plenty.
+        if p.sourceLink && !nt.forcePrivate {
+            copiedNotes = withSourceLink(copiedNotes, src.url)
         }
         return Snap(title: title, location: loc ? src.location : nil, notes: copiedNotes,
                     availability: avail, alarmSig: alarms ? alarmSig(src.alarms) : "", copyAlarms: alarms)

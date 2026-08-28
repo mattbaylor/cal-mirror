@@ -31,6 +31,16 @@ public struct Projection: Codable, Equatable, Sendable {
     /// title the copy ends up with — real or redacted — so a redacting mirror
     /// can still say which mirror a block came from ("[Work] Busy").
     public var titlePrefix: String
+    /// Carry the source event's own link into the copy's notes.
+    ///
+    /// Without it a mirrored event is a dead end: you can see the block but not
+    /// join the call it stands for, because cal-mirror's marker occupies the
+    /// copy's `url` field and the source's is lost. Appending it to the notes is
+    /// the one place left to put it.
+    ///
+    /// Off by default, and deliberately so: on a redacting mirror a meeting link
+    /// can identify the meeting the title was hiding.
+    public var sourceLink: Bool
     public var location: Bool
     public var notes: NotesMode
     public var alarms: Bool
@@ -38,10 +48,11 @@ public struct Projection: Codable, Equatable, Sendable {
     public var custom: Bool             // UI: user explicitly chose "Custom" (persisted so it sticks)
 
     public init(title: TitleMode = .copy, titleText: String = "Busy",
-                titlePrefix: String = "",
+                titlePrefix: String = "", sourceLink: Bool = false,
                 location: Bool = true, notes: NotesMode = .none, alarms: Bool = false,
                 availability: Availability = .source, custom: Bool = false) {
         self.title = title; self.titleText = titleText; self.titlePrefix = titlePrefix
+        self.sourceLink = sourceLink
         self.location = location; self.notes = notes; self.alarms = alarms
         self.availability = availability; self.custom = custom
     }
@@ -60,6 +71,7 @@ public struct Projection: Codable, Equatable, Sendable {
         title = (try? c.decode(TitleMode.self, forKey: .title)) ?? .copy
         titleText = ((try? c.decode(String.self, forKey: .titleText)).flatMap { $0.isEmpty ? nil : $0 }) ?? "Busy"
         titlePrefix = (try? c.decode(String.self, forKey: .titlePrefix)) ?? ""
+        sourceLink = (try? c.decode(Bool.self, forKey: .sourceLink)) ?? false
         location = (try? c.decode(Bool.self, forKey: .location)) ?? true
         // `notes` was a Bool before tags-only mode existed. Accept both: a
         // string is the current form, a legacy `true` means the whole note.
@@ -179,6 +191,25 @@ public func renderTagsOnly(_ notes: String?) -> String? {
         return token[token.index(token.startIndex, offsetBy: 1)] != "-"   // scanNoteTags ⇒ count ≥ 2
     }
     return kept.isEmpty ? nil : kept.joined(separator: " ")
+}
+
+/// Append a source event's link to the copy's notes, as its own trailing line.
+///
+/// Only `http`/`https` is carried. An event's `url` can hold anything — a
+/// `message:` reference to the invitation mail, a local file — and none of that
+/// resolves on another device or for anyone the destination is shared with; a
+/// link that can't be followed is just a leak.
+///
+/// Skipped when the notes already contain the link, which is common: plenty of
+/// invitations put the meeting URL in the body as well as the URL field, and
+/// printing it twice makes the copy look broken.
+public func withSourceLink(_ notes: String?, _ link: URL?) -> String? {
+    guard let link, let scheme = link.scheme?.lowercased(),
+          scheme == "http" || scheme == "https" else { return notes }
+    let text = link.absoluteString
+    guard let notes, !notes.isEmpty else { return text }
+    guard !notes.contains(text) else { return notes }
+    return notes + "\n\n" + text
 }
 
 /// Per-mirror event selection by notes tag. A mirror runs in ONE mode — include

@@ -484,6 +484,55 @@ do {
     check(HP.dayLabel(now) == HP.dayLabel(now), "dayLabel is stable")
 }
 
+print("Source link:")
+do {
+    let https = URL(string: "https://zoom.us/j/12345")!
+    check(withSourceLink(nil, https) == "https://zoom.us/j/12345",
+          "no notes → the link becomes the notes")
+    check(withSourceLink("Agenda attached", https) == "Agenda attached\n\nhttps://zoom.us/j/12345",
+          "appended as its own trailing line")
+    check(withSourceLink("Notes", nil) == "Notes", "no link → notes untouched")
+    check(withSourceLink(nil, nil) == nil, "no notes and no link → nil")
+
+    // Only followable links. An event's url can hold a message: reference to the
+    // invitation mail or a local file, and neither resolves for anyone the
+    // destination is shared with — an unfollowable link is just a leak.
+    check(withSourceLink("Notes", URL(string: "message://%3c123@mail%3e")!) == "Notes",
+          "message: links are not carried")
+    check(withSourceLink("Notes", URL(string: "file:///Users/me/x.txt")!) == "Notes",
+          "file: links are not carried")
+    check(withSourceLink(nil, URL(string: "http://example.com/e")!) == "http://example.com/e",
+          "plain http is carried")
+
+    // Invitations routinely put the meeting URL in the body AND the url field;
+    // printing it twice makes the copy look broken.
+    let already = "Join here: https://zoom.us/j/12345 — see you then"
+    check(withSourceLink(already, https) == already, "a link already in the notes is not repeated")
+
+    // Idempotent: rendering the same source twice gives the same notes, which is
+    // what keeps differ() from rewriting the copy every cycle.
+    let once = withSourceLink("Agenda", https)
+    check(withSourceLink(once, https) == once, "applying twice changes nothing")
+
+    // Not part of any preset, and named in the summaries.
+    let p = Projection(sourceLink: true)
+    check(MirrorSummary.preset(of: p) == .custom, "a source link forces Custom")
+    check(MirrorSummary.projection(p).contains("source link"), "the summary names it")
+    check(MirrorSummary.preset(of: Projection()) == .details, "absent → still the details preset")
+
+    // Absent in JSON → off, and it round-trips.
+    let j = """
+    { "mirrors": [ { "id": "w", "source": {"title":"S"}, "dest": {"title":"D"},
+      "projection": { "sourceLink": true } } ] }
+    """.data(using: .utf8)!
+    let cfg = try JSONDecoder().decode(Config.self, from: j)
+    check(cfg.mirrors[0].projection.sourceLink, "sourceLink decodes")
+    let again = try JSONDecoder().decode(Config.self, from: JSONEncoder().encode(cfg))
+    check(cfg == again, "sourceLink round-trips")
+    let absent = try JSONDecoder().decode(Config.self, from: json)
+    check(!absent.mirrors[0].projection.sourceLink, "absent sourceLink → off (no change)")
+}
+
 print("EventFilters:")
 // Absent block → copies everything (the historical contract).
 do {

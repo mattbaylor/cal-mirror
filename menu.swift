@@ -651,6 +651,10 @@ struct ProjectionEditor: View {
                 Text("Copies just the #tags onto the event, not the note text.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Toggle("Include source link", isOn: $m.projection.sourceLink)
+                .onChange(of: m.projection.sourceLink) { _, _ in onChange() }
+            Text("Adds the source event's own link (a meeting URL, say) to the copy's notes, so a mirrored block isn't a dead end. Off on redacting mirrors unless you mean it — a meeting link can identify the meeting the title is hiding.")
+                .font(.caption).foregroundStyle(.secondary)
             Toggle("Copy alarms", isOn: $m.projection.alarms)
                 .onChange(of: m.projection.alarms) { _, _ in onChange() }
             Toggle("Always show as busy", isOn: Binding(

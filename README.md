@@ -141,6 +141,7 @@ location, no notes/alarms). The menu bar exposes this as three presets plus
   "title":        "copy",     // "copy" | "redact"
   "titleText":    "Busy",     // shown when title = "redact"
   "titlePrefix":  "",         // prepended to the copy's title, e.g. "[Work]"
+  "sourceLink":   false,      // append the source event's link to the copy's notes
   "location":     true,
   "notes":        "none",     // "none" | "tags" | "full"  (legacy true/false still read)
   "alarms":       false,       // off avoids duplicate notifications on the dest
@@ -167,9 +168,19 @@ isn't part of any preset. Changing it rewrites existing copies in place rather
 than duplicating them: the marker key is untouched, so the reconciler matches
 each copy exactly and updates its title.
 
+`sourceLink` appends the source event's own link — a meeting URL, usually — to
+the copy's notes, so a mirrored block isn't a dead end you can see but not act
+on. Only `http`/`https` is carried: an event's URL field can hold a `message:`
+reference to the invitation mail or a local file, and neither resolves for
+anyone the destination is shared with. A link already present in the notes isn't
+repeated, which matters because invitations routinely put it in both places.
+`#private` suppresses it along with everything else — the point of a redacted
+block is that it says nothing about the meeting, and a meeting link says plenty.
+
 *Two EventKit limits worth knowing:* **attendees can't be replicated** (no API
-to set participants), and the source event's **URL is unavailable** because that
-field carries cal-mirror's own per-copy marker.
+to set participants), and the copy's **URL field carries cal-mirror's own
+per-copy marker**, which is why the source's link goes in the notes rather than
+where you would expect it.
 
 ### Notes tags
 

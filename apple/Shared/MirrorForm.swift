@@ -125,6 +125,10 @@ struct ProjectionFields: View {
                 Text("Copies just the #tags onto the event, not the note text.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Toggle("Include source link", isOn: $mirror.projection.sourceLink)
+                .onChange(of: mirror.projection.sourceLink) { _, _ in onChange() }
+            Text("Adds the source event's own link (a meeting URL, say) to the copy's notes, so a mirrored block isn't a dead end. Off on redacting mirrors unless you mean it — a meeting link can identify the meeting the title is hiding.")
+                .font(.caption).foregroundStyle(.secondary)
             Toggle("Copy alarms", isOn: $mirror.projection.alarms)
                 .onChange(of: mirror.projection.alarms) { _, _ in onChange() }
             Toggle("Always show as busy", isOn: Binding(
