@@ -1,0 +1,1 @@
+Copy one calendar into another, one direction only. Skip declined, cancelled and all-day events. No account, no server, nothing leaves your device.
