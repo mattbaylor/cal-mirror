@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cal-mirror — Release notes</title>
-<meta name="description" content="What changed in each release of cal-mirror, including fixes.">
+<title>Calendar Mirror — Release notes</title>
+<meta name="description" content="What changed in each release of Calendar Mirror, including fixes.">
 <link rel="icon" href="icon.png">
 <style>
   :root{ --bg:#0b0e14; --card:#151b28; --line:#232c3d; --tx:#e6edf3; --mut:#93a1b5;
@@ -39,13 +39,83 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="brand"><img src="icon.png" alt="cal-mirror icon"> cal-mirror</div>
+  <div class="brand"><img src="icon.png" alt="Calendar Mirror icon"> Calendar Mirror</div>
 
   <h1>Release notes</h1>
   <p class="sub">What changed in each release, including the fixes.</p>
 
   <div class="rel">
-    <div class="relhead"><h2>1.3.0</h2><span class="date">27 August 2026</span></div>
+    <div class="relhead"><h2>1.4.0</h2><span class="date">28 August 2026</span>
+      <span class="tag">Build from source</span></div>
+
+    <p class="note" style="margin-top:14px">1.4.0 is finished and available today if you
+      <a href="https://github.com/mattbaylor/cal-mirror#readme">build it from source</a>. It has
+      <b>not yet been released on the App Store</b> &mdash; the App Store version is still 1.3.0,
+      and everything below arrives there when 1.4.0 clears review.</p>
+
+    <h3>New</h3>
+    <ul>
+      <li><b>Choose which events get copied, without tagging them.</b> A pair can now skip events
+        you declined, ones you haven&rsquo;t answered, ones the organiser cancelled, all-day
+        events, and events marked free. It can skip anything shorter or longer than a set number
+        of minutes, skip or keep titles containing particular words, and limit copying to a
+        window of the day on chosen weekdays. This works on calendars you don&rsquo;t control
+        &mdash; a subscribed work feed, a team calendar &mdash; where tagging individual events
+        was never an option.</li>
+      <li><b>A rebuilt management window on Mac.</b> Pairs are listed down the side, grouped by
+        the calendar they copy into, and each one opens in its own pane. Sections collapse to a
+        single line describing what they&rsquo;re set to, so a pair with a dozen settings still
+        reads at a glance.</li>
+      <li><b>Put a label in front of copied titles.</b> Set a prefix like <code>[Work]</code> and
+        every copy carries it. It applies to hidden titles too, so a busy-only pair can still say
+        where the block came from &mdash; <code>[Work] Busy</code>.</li>
+      <li><b>Copy the meeting link across.</b> A pair can carry the source event&rsquo;s link into
+        the copy&rsquo;s notes, so a mirrored meeting isn&rsquo;t a dead end you can see but not
+        join. Off by default, and suppressed on any event marked <code>#private</code> &mdash; a
+        meeting link says plenty about a meeting whose title you chose to hide.</li>
+      <li><b>A new menu-bar icon on Mac.</b> The bar used to show a bare checkmark, triangle or
+        cross &mdash; symbols that said nothing about which app they belonged to. It now shows
+        Calendar Mirror&rsquo;s own icon, redrawn at menu-bar size, with a face that changes by state:
+        a smile when every copy is current, warning triangles when one has fallen behind, crossed
+        eyes when one is failing, a flat expression when you&rsquo;ve paused it, and a plus when
+        no copies are set up yet. The outline stays identical in every state, so the icon never
+        shifts position in the bar when something changes.</li>
+      <li><b>Sync as your calendars change.</b> On the Mac version built from source, Calendar Mirror
+        can watch for calendar changes and sync within seconds of one, instead of waiting for the
+        next scheduled run. A five-minute pass still runs underneath as a backstop, and also
+        repairs anything deleted by hand. This is macOS-only and applies to every pair at once,
+        because macOS reports that <em>something</em> changed without saying which calendar.</li>
+    </ul>
+
+    <h3>Changed</h3>
+    <ul>
+      <li><b>The in-calendar note is now a warning, not a heartbeat.</b> Previously a pair could
+        write an all-day &ldquo;last synced&rdquo; note into the destination on every successful
+        run. It no longer does: <b>a healthy pair writes nothing at all</b>, and a note appears
+        only when a pair stops syncing. Destination calendars are usually ones you share, and a
+        daily &ldquo;still working&rdquo; marker was an artefact other people could see that told
+        nobody anything useful. Old notes are removed automatically on the first sync after
+        updating.</li>
+    </ul>
+
+    <h3>Fixed</h3>
+    <ul>
+      <li>Copies were rewritten on every run when the source calendar reissued its identifier for
+        an event that had not otherwise changed. Nothing was lost, but the copies churned
+        needlessly &mdash; and on a shared destination, that churn was visible to everyone.</li>
+      <li>Saving a pair in the Mac management window could switch realtime syncing on for every
+        pair, whether or not it had been turned on.</li>
+    </ul>
+
+    <p class="note">Event filters are covered thoroughly by the test suite, but they have had
+      comparatively little exercise against real declined and cancelled invitations in the wild.
+      If a filter drops something it shouldn&rsquo;t, or keeps something it shouldn&rsquo;t,
+      <a href="https://github.com/mattbaylor/cal-mirror/issues">please open an issue</a>.</p>
+  </div>
+
+  <div class="rel">
+    <div class="relhead"><h2>1.3.0</h2><span class="date">27 August 2026</span>
+      <span class="tag">On the App Store</span></div>
 
     <h3>New</h3>
     <ul>
@@ -101,7 +171,7 @@
   <p class="note">Versions 1.1 and 1.2 were prepared but never released; their changes ship as
     part of 1.3.0.</p>
 
-  <div class="foot"><a href="./">&larr; cal-mirror</a> &middot; <a href="privacy.html">Privacy</a>
+  <div class="foot"><a href="./">&larr; Calendar Mirror</a> &middot; <a href="privacy.html">Privacy</a>
     &middot; <a href="https://github.com/mattbaylor/cal-mirror">Source</a> &middot; MIT &copy; Matt Baylor</div>
 </div>
 </body>

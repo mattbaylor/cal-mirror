@@ -5,7 +5,7 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleDisplayName</key>
-  <string>cal-mirror</string>
+  <string>Calendar Mirror</string>
   <key>CFBundleExecutable</key>
   <string>$(EXECUTABLE_NAME)</string>
   <key>CFBundleIdentifier</key>
@@ -47,9 +47,9 @@
 
   <!-- Calendar access (iOS 17 full-access key + legacy key) -->
   <key>NSCalendarsFullAccessUsageDescription</key>
-  <string>cal-mirror mirrors events between the calendars you configure.</string>
+  <string>Calendar Mirror mirrors events between the calendars you configure.</string>
   <key>NSCalendarsUsageDescription</key>
-  <string>cal-mirror mirrors events between the calendars you configure.</string>
+  <string>Calendar Mirror mirrors events between the calendars you configure.</string>
 
   <!-- Opportunistic background refresh -->
   <key>BGTaskSchedulerPermittedIdentifiers</key>

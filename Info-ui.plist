@@ -23,8 +23,8 @@
   <key>LSUIElement</key>
   <true/>
   <key>NSCalendarsUsageDescription</key>
-  <string>CalMirrorMenu lists your calendars so you can choose which to mirror.</string>
+  <string>Calendar Mirror lists your calendars so you can choose which to mirror.</string>
   <key>NSCalendarsFullAccessUsageDescription</key>
-  <string>CalMirrorMenu lists your calendars so you can choose which to mirror.</string>
+  <string>Calendar Mirror lists your calendars so you can choose which to mirror.</string>
 </dict>
 </plist>

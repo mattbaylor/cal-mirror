@@ -74,7 +74,7 @@ public enum HeartbeatPolicy {
     public static func title(mirrorName: String, reason: String,
                              lastSuccess: Date?, now: Date,
                              calendar: Calendar = .current) -> String {
-        var s = "⚠︎ cal-mirror — \(mirrorName): \(reason)"
+        var s = "⚠︎ Calendar Mirror — \(mirrorName): \(reason)"
         if let lastSuccess, !calendar.isDate(lastSuccess, inSameDayAs: now) {
             s += " · last synced \(dayLabel(lastSuccess, calendar: calendar))"
         }

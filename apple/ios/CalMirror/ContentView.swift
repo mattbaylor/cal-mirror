@@ -58,11 +58,11 @@ struct ContentView: View {
                             Text(name).tag(secs)
                         }
                     }
-                    Text("iOS decides when background refreshes actually run — this is the earliest one may start, not a guarantee. It needs Background App Refresh enabled for cal-mirror in Settings, and fires more reliably on a phone you use regularly. Pull to refresh any time for an immediate sync.")
+                    Text("iOS decides when background refreshes actually run — this is the earliest one may start, not a guarantee. It needs Background App Refresh enabled for Calendar Mirror in Settings, and fires more reliably on a phone you use regularly. Pull to refresh any time for an immediate sync.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("cal-mirror")
+            .navigationTitle("Calendar Mirror")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Sync now") { Task { await model.syncNow() } }.disabled(model.syncing)

@@ -1,0 +1,72 @@
+Some calendars you can see but cannot reshare. A subscribed work schedule. A read-only team feed. An account that is not yours.
+
+Calendar Mirror makes an editable copy of one calendar inside another calendar you own — one direction only, so the original is never touched. And because the copy lives in your own account, macOS pushes it wherever that account syncs.
+
+LIVES IN YOUR MENU BAR
+
+A small icon shows how things are going at a glance, with a face that changes by state: a smile when every copy is current, warning triangles when one has fallen behind, crossed eyes when one is failing, a flat expression when you have paused it, and a plus when nothing is set up yet.
+
+Click it to sync now, pause, change the interval, or open the management window. Calendar Mirror can start at login and work quietly from there.
+
+PICK TWO CALENDARS
+
+Choose the calendar to copy from and the calendar to copy into. Add as many pairs as you like; two can share one destination without disturbing each other, and anything you add to the destination by hand is left alone.
+
+Pairs are listed down the side of the management window, grouped by the calendar they copy into, and every section folds down to a line describing what it is set to.
+
+Repeating events, all-day events and moved occurrences all come across correctly.
+
+CHOOSE HOW MUCH CROSSES OVER
+
+Each pair decides for itself:
+
+• Full copy — titles, locations and notes as written.
+• Just the basics — real titles and locations, nothing else.
+• Busy only — every event becomes a plain block reading "Busy". Your time is visible; nothing else is.
+
+Put a label in front of copied titles, too — "[Work] Standup", or even "[Work] Busy" on a pair that hides the details. A pair can also carry the source event's meeting link into the copy's notes, so a mirrored meeting is one you can actually join.
+
+CHOOSE WHICH EVENTS
+
+Not everything in a calendar is worth copying. A pair can skip:
+
+• Meetings you declined, or have not answered yet
+• Events the organiser cancelled
+• All-day events, and anything marked free
+• Anything shorter or longer than a set number of minutes
+• Titles containing words you choose, such as "Lunch" or "Focus time"
+• Anything outside a window of the day, on the weekdays you pick
+
+This works on calendars you do not control, which is the point — tagging individual events is only possible on events you wrote yourself.
+
+OR DECIDE ONE EVENT AT A TIME
+
+Type a tag into a source event's notes and that event gets its own rule:
+
+• #nomirror — never copy this one
+• #private — copy it as a busy block with no details
+• #public — copy it in full, even on a pair that normally hides things
+
+You can also point a whole pair at a tag and copy only the events you have marked.
+
+IT TELLS YOU WHEN SOMETHING BREAKS
+
+A healthy pair is silent. If one stops syncing, an all-day warning appears in the destination calendar itself — so you find out on your phone, without opening anything. It clears the moment the pair recovers.
+
+WHAT IT DOES NOT DO
+
+Being straight with you before you buy:
+
+• No booking or scheduling links.
+• No unified calendar view — it makes copies; your calendar app shows them.
+• No team, admin or SSO features. It is a single-person utility.
+• Attendees are never copied. Apple's calendar framework has no way to set guests on an event, so a copy carries the time and whatever else you allow, but never the guest list.
+• It cannot sync a calendar your device cannot already see.
+
+PRIVACY
+
+No account. No server. No analytics, no tracking, no telemetry, no ads. There is nothing to sign up for and no password to hand over, because it works through the calendars already configured on your device.
+
+Once a copy lands in an account like iCloud, Google or Exchange, that provider syncs and stores it under their policies, exactly as it would for any event you added yourself. That is the honest boundary.
+
+Open source under the MIT licence. One purchase covers iPhone, iPad and Mac.

@@ -32,7 +32,14 @@ normal account, macOS then pushes it wherever that account syncs.
 | | Built from | Runs as |
 |---|---|---|
 | **Standalone macOS** (this README) | `./install.sh` — free, MIT | A launchd daemon + `CalMirrorMenu.app` in the menu bar |
-| **App Store apps** ([`apple/`](apple/README.md)) | Xcode / `release-appstore.sh` — $0.99 universal | Sandboxed apps on iPhone, iPad and Mac; no LaunchAgent |
+| **App Store apps** ([`apple/`](apple/README.md)) | Xcode / `release-appstore.sh` — $2.99 universal | Sandboxed apps on iPhone, iPad and Mac; no LaunchAgent |
+
+> **Two names, one product.** The App Store listing is **Calendar Mirror**, and
+> that is the name the apps show in their own UI. `cal-mirror` stays the name of
+> this repository, the standalone `cal-mirror.app` and `CalMirrorMenu.app`
+> bundles, the bundle identifiers, `~/.local/cal-mirror/`, and the
+> `x-calmirror:` marker — none of which are user-facing, and all of which would
+> break existing installs if renamed.
 
 Both run the **same** sync engine, [`CalMirrorKit`](apple/README.md#shared-package--calmirrorkit) —
 `main.swift` is a thin daemon wrapper around it. Everything below about configuration,
@@ -302,7 +309,7 @@ matching too):
 stops syncing:
 
 ```
-⚠︎ cal-mirror — Work Mirror: Source not found · last synced Tue 26 Aug
+⚠︎ Calendar Mirror — Work Mirror: Source not found · last synced Tue 26 Aug
 ```
 
 An all-day event on today, cleared automatically the moment the mirror syncs
@@ -363,7 +370,7 @@ until you turn it on, so nothing about your sync changes underneath you.
 ## 🖥️ Menu bar
 
 ```
- cal-mirror — Last sync 2 min ago
+ Calendar Mirror — Last sync 2 min ago
  ────────────────────────────────
  ✓ Work → Personal        ▸  439 events (+0 ~0 −0)
  ────────────────────────────────

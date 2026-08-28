@@ -23,8 +23,8 @@
   <key>LSUIElement</key>
   <true/>
   <key>NSCalendarsUsageDescription</key>
-  <string>cal-mirror mirrors events between your configured calendars.</string>
+  <string>Calendar Mirror mirrors events between your configured calendars.</string>
   <key>NSCalendarsFullAccessUsageDescription</key>
-  <string>cal-mirror mirrors events between your configured calendars.</string>
+  <string>Calendar Mirror mirrors events between your configured calendars.</string>
 </dict>
 </plist>

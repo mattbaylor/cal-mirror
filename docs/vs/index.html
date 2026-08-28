@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar Mirror compared &mdash; calendar sync tools, honestly</title>
+<meta name="description" content="How Calendar Mirror compares to OneCal, CalendarBridge, SyncThemCalendars, SYNCDATE, Reclaim.ai, Clockwise and inovex/CalendarSync — including where it loses. Prices checked August 2026.">
+<link rel="icon" href="../icon.png">
+<meta property="og:title" content="Calendar Mirror compared with every calendar sync tool we could find">
+<meta property="og:description" content="Seven honest comparisons, including where Calendar Mirror loses. Prices checked August 2026.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --bg:#0b0e14; --card:#151b28; --card2:#1b2333; --line:#232c3d; --tx:#e6edf3;
+    --mut:#93a1b5; --dim:#6b7a90; --accent:#3aa0ff; --accent2:#28c8b6;
+    --good:#2ecc71; --warn:#e2b04a; --radius:16px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f6f8fc; --card:#ffffff; --card2:#f3f6fb; --line:#e2e8f2;
+      --tx:#0d1220; --mut:#4a5568; --dim:#78889d; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--tx);background:radial-gradient(1000px 500px at 80% -10%, rgba(58,160,255,.14), transparent 60%),var(--bg);
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:820px;margin:0 auto;padding:0 22px 80px}
+  a{color:var(--accent)}
+
+  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;text-decoration:none;color:var(--tx)}
+  .brand img{width:30px;height:30px;border-radius:8px}
+  .nav-links{display:flex;gap:18px;align-items:center;font-size:14px;color:var(--mut);flex-wrap:wrap}
+  .nav-links a{text-decoration:none;color:var(--mut)}.nav-links a:hover{color:var(--tx)}
+
+  h1{font-size:clamp(28px,4.6vw,38px);letter-spacing:-.7px;margin:.4em 0 .12em;line-height:1.15}
+  .dateline{color:var(--dim);font-size:13.5px;margin:0 0 26px}
+  .lede{font-size:17.5px;color:var(--mut);margin:0 0 8px}
+  h2{font-size:21px;margin:2em 0 .35em;letter-spacing:-.3px}
+  h3{font-size:16px;margin:1.6em 0 .3em}
+  p{margin:.7em 0}
+
+  .verdict{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin:26px 0}
+  .verdict p{margin:.45em 0}
+  .verdict strong{color:var(--accent2)}
+
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.5px}
+  td:first-child{color:var(--mut);width:31%}
+  .tw{overflow-x:auto}
+
+  ul{margin:.3em 0;padding-left:20px}
+  li{margin:.4em 0}
+  .win li::marker{color:var(--good)}
+  .lose li::marker{color:var(--warn)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px}
+  @media(max-width:700px){.cols{grid-template-columns:1fr}}
+  .col{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  .col h3{margin:0 0 .3em;font-size:15.5px}
+  .col p{font-size:14.5px;color:var(--mut);margin:.4em 0}
+  .col ul{font-size:14.5px;color:var(--mut)}
+
+  .note{background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--accent2);
+    border-radius:10px;padding:14px 18px;margin:22px 0;font-size:14.5px;color:var(--mut)}
+  .note b{color:var(--tx)}
+
+  .src{font-size:13.5px;color:var(--mut)}
+  .src li{margin:.35em 0}
+
+  .others{border-top:1px solid var(--line);margin-top:44px;padding-top:22px}
+  .others h2{margin-top:0;font-size:17px}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+  .chip{display:inline-block;font-size:13.5px;text-decoration:none;color:var(--mut);
+    background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 13px}
+  .chip:hover{color:var(--tx);border-color:var(--accent)}
+  .chip.here{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06121f;border-color:transparent;font-weight:600}
+
+  .cta{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0 6px}
+  .btn{display:inline-flex;align-items:center;padding:11px 20px;border-radius:12px;font-weight:650;
+    text-decoration:none;font-size:14.5px;border:1px solid transparent}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#06121f}
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--tx)}
+
+  .foot{color:var(--dim);font-size:13.5px;margin-top:44px;border-top:1px solid var(--line);padding-top:18px}
+  .foot a{color:var(--mut);text-decoration:none}
+  .card{display:block;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px;text-decoration:none;color:var(--tx);transition:.15s border-color}
+  .card:hover{border-color:var(--accent)}
+  .card h3{margin:0 0 .25em;font-size:16.5px}
+  .card p{margin:.25em 0;color:var(--mut);font-size:14.5px}
+  .card .price{color:var(--dim);font-size:13px;margin-top:.6em}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+  @media(max-width:700px){.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav>
+    <a class="brand" href="../"><img src="../icon.png" alt="Calendar Mirror icon"> Calendar Mirror</a>
+    <div class="nav-links">
+      <a href="../#what">What it does</a>
+      <a href="../#filters">Filters</a>
+      <a href="index.html">Comparisons</a>
+      <a href="../changelog.html">Release notes</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub &#8599;</a>
+    </div>
+  </nav>
+
+  <h1>Calendar Mirror, compared</h1>
+  <p class="dateline">Prices and features checked against each company&rsquo;s own site on 28 August 2026.
+    They change often &mdash; follow the links before you decide anything.</p>
+
+  <p class="lede">Seven tools that overlap with what Calendar Mirror does, each with its own page,
+    and each saying where the other tool is the better buy.</p>
+
+  <div class="verdict">
+    <p><strong>The short version.</strong> Calendar Mirror is a $2.99 one-time app that copies one
+      calendar into another on Apple devices, with no account, no server, and nothing
+      transmitted anywhere. Everything else on this list is a hosted service with a
+      subscription &mdash; except <a href="calendarsync.html">inovex/CalendarSync</a>, which is
+      local like Calendar Mirror but has no Apple support at all.</p>
+    <p><strong>And where it loses.</strong> No booking links, no unified calendar view, no team
+      or admin features, Apple only, and attendees are never copied. If you need any of those,
+      buy one of the others &mdash; the pages below say which.</p>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="syncdate.html">
+      <h3>Calendar Mirror vs SYNCDATE</h3>
+      <p>Free tier, live sync, broad CalDAV support. The closest competitor, and the fairest fight.</p>
+      <p class="price">Free &middot; Plus $7.42/mo &middot; Pro $14.08/mo</p>
+    </a>
+    <a class="card" href="onecal.html">
+      <h3>Calendar Mirror vs OneCal</h3>
+      <p>Multi-way sync plus booking links and a unified view, for Google and Outlook lives.</p>
+      <p class="price">$5&ndash;$25 per user / month</p>
+    </a>
+    <a class="card" href="calendarbridge.html">
+      <h3>Calendar Mirror vs CalendarBridge</h3>
+      <p>Busy-block sync, scheduling pages, and a HIPAA agreement on the higher tiers.</p>
+      <p class="price">$4&ndash;$40 / month</p>
+    </a>
+    <a class="card" href="syncthemcalendars.html">
+      <h3>Calendar Mirror vs SyncThemCalendars</h3>
+      <p>Hosted sync with field masking, priced by how many syncs you run.</p>
+      <p class="price">$3.99&ndash;$17.99 / month</p>
+    </a>
+    <a class="card" href="calendarsync.html">
+      <h3>Calendar Mirror vs CalendarSync</h3>
+      <p>Open-source Go CLI. No server &mdash; but Google and Outlook only, with no Apple support.</p>
+      <p class="price">Free</p>
+    </a>
+    <a class="card" href="reclaim.html">
+      <h3>Calendar Mirror vs Reclaim.ai</h3>
+      <p>AI scheduling for Google and Outlook. No iCloud support listed.</p>
+      <p class="price">Free &middot; $10&ndash;$22 / month</p>
+    </a>
+    <a class="card" href="clockwise.html">
+      <h3>Calendar Mirror vs Clockwise</h3>
+      <p>Discontinued on 27 March 2026. What happened, and what to use now.</p>
+      <p class="price">No longer sold</p>
+    </a>
+  </div>
+
+  <h2>Or use Calendar Mirror <em>with</em> one of them</h2>
+  <p>Several of these tools cannot read an iCloud calendar at all, and the rest read it slowly,
+    because Apple gives third parties no push API. That is a gap Calendar Mirror can close rather than
+    compete with.</p>
+  <p>Mirror the iCloud calendar into a Google or Outlook calendar on your own Mac &mdash; busy-only
+    if you&rsquo;d rather not hand over the details &mdash; and point the other service at that copy.
+    <a href="reclaim.html">Reclaim</a> can then defend a week it otherwise cannot see;
+    <a href="calendarsync.html">CalendarSync</a> gets an Apple source it has no adapter for; and
+    <a href="onecal.html">OneCal</a> and <a href="calendarbridge.html">CalendarBridge</a> get iCloud
+    events on their real-time path instead of a 5&ndash;10 minute poll. Each page explains the
+    setup for that tool.</p>
+
+  <h2>Sourcing</h2>
+  <p>Every claim about another product comes from that company&rsquo;s own public site and is
+    linked at the foot of its page. Nothing is asserted about anyone&rsquo;s internals or data
+    handling beyond what they publish. Calendar Mirror is not affiliated with any of them.</p>
+
+  <div class="note">
+    <b>On sync speed.</b> Calendar Mirror detects a calendar change and writes the copy within seconds
+    on macOS. How fast iCloud then carries that copy to your other devices is Apple&rsquo;s
+    schedule, not something any app controls.
+  </div>
+
+  <div class="cta">
+    <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get Calendar Mirror &mdash; $2.99</a>
+    <a class="btn ghost" href="../">What it does</a>
+  </div>
+  <p class="src">One purchase covers iPhone, iPad and Mac.</p>
+
+  <div class="foot">
+    <a href="../">&larr; Calendar Mirror</a> &middot;
+    <a href="../changelog.html">Release notes</a> &middot;
+    <a href="../privacy.html">Privacy</a> &middot;
+    <a href="https://github.com/mattbaylor/cal-mirror">Source</a> &middot;
+    MIT &copy; Matt Baylor
+  </div>
+</div>
+</body>
+</html>
