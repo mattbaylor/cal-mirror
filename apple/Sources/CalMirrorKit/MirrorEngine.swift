@@ -32,6 +32,10 @@ public final class MirrorEngine: @unchecked Sendable {
     /// `SnapshotGuard` to veto reconciling against a collapsed/stale view.
     /// Meaningful only on a long-lived engine (reuse one instance across syncs).
     private var lastOwned: [String: Int] = [:]
+    /// When each mirror last synced cleanly, so a warning banner can say how
+    /// long it has been broken. Engine-lifetime only — a daemon restart forgets,
+    /// and the banner simply omits the date until the first clean cycle.
+    private var lastSuccessAt: [String: Date] = [:]
     public init() {}
 
     // MARK: Access
@@ -223,6 +227,64 @@ public final class MirrorEngine: @unchecked Sendable {
         return EKAlarm(relativeOffset: a.relativeOffset)
     }
 
+    // MARK: Status banner
+
+    /// The mirror's existing banner in `dest`, if any. Searched over a wide past
+    /// window because a warning can sit on the day it was raised for as long as
+    /// the outage lasts.
+    private func findBanner(dest: EKCalendar, mirror m: Mirror, now: Date) -> EKEvent? {
+        let evs = store.events(matching: store.predicateForEvents(
+            withStart: now.addingTimeInterval(-400 * 86400),
+            end: now.addingTimeInterval(2 * 86400), calendars: [dest]))
+        let legacyHB = m.legacyScheme.map { $0 + "-status" }
+        return evs.first { ev in
+            guard let sc = ev.url?.scheme, sc == Markers.heartbeatScheme || sc == legacyHB else { return false }
+            if sc == legacyHB { return true }
+            let opaque = ev.url!.absoluteString.split(separator: ":", maxSplits: 1).last.map(String.init) ?? ""
+            return opaque == m.id
+        }
+    }
+
+    /// Carry out whatever `HeartbeatPolicy` decided. Pinned to today, so a
+    /// standing warning moves forward once a day rather than stranding itself on
+    /// the date the outage began — presence is the signal here, not position.
+    private func applyBanner(_ health: HeartbeatPolicy.Health, mirror m: Mirror,
+                             dest: EKCalendar, existing: EKEvent?, now: Date,
+                             lookUpIfMissing: Bool = true) {
+        // The success path has already scanned the destination and passes what it
+        // found, so it opts out of the lookup: searching again on every healthy
+        // cycle would be a wide query per mirror for a banner that is almost
+        // always absent — and once syncs are change-driven, cycles are frequent.
+        var banner = existing
+        if banner == nil, lookUpIfMissing, health != .unknown {
+            banner = findBanner(dest: dest, mirror: m, now: now)
+        }
+        let dayStart = Calendar.current.startOfDay(for: now)
+        let action = HeartbeatPolicy.decide(
+            enabled: m.showHeartbeat, health: health, existingTitle: banner?.title,
+            mirrorName: m.name, lastSuccess: lastSuccessAt[m.id], now: now)
+
+        switch action {
+        case .none:
+            // A banner whose text is right but which is sitting on an older day
+            // still needs moving to today; that is the one write an ongoing
+            // outage costs, and it costs it once a day.
+            if case .failing = health, let b = banner, b.startDate != dayStart {
+                b.isAllDay = true; b.startDate = dayStart; b.endDate = dayStart
+                try? store.save(b, span: .thisEvent, commit: true)
+            }
+        case .remove:
+            if let b = banner { try? store.remove(b, span: .thisEvent, commit: true) }
+        case .write(let title):
+            let ev = banner ?? EKEvent(eventStore: store)
+            ev.calendar = dest
+            ev.isAllDay = true; ev.startDate = dayStart; ev.endDate = dayStart
+            ev.title = title
+            ev.url = Markers.heartbeatURL(mirrorId: m.id)
+            try? store.save(ev, span: .thisEvent, commit: true)
+        }
+    }
+
     /// Adapt an `EKEvent` into the pure slice `EventFilters` reads, so every
     /// selection rule stays testable without EventKit.
     private func filterable(_ ev: EKEvent) -> FilterableEvent {
@@ -260,17 +322,24 @@ public final class MirrorEngine: @unchecked Sendable {
     private func syncMirror(_ m: Mirror, allMirrors: [Mirror], now: Date,
                             log: ((String) -> Void)?) -> MirrorResult {
         var r = MirrorResult(id: m.id, name: m.name, ok: true)
-        guard let source = findCalendar(m.source) else {
-            r.ok = false; r.error = "Source not found"; return r
-        }
+        // Destination first: the banner lives there, so a failure we can't write
+        // anywhere is a failure we can't announce. A missing or read-only
+        // destination is exactly that case — nothing to do but report it.
         guard let dest = findCalendar(m.dest) else {
             r.ok = false; r.error = "Destination not found"; return r
         }
-        if source.calendarIdentifier == dest.calendarIdentifier {
-            r.ok = false; r.error = "Source and destination are the same"; return r
-        }
         guard dest.allowsContentModifications else {
             r.ok = false; r.error = "Destination is read-only"; return r
+        }
+        func fail(_ why: String) -> MirrorResult {
+            r.ok = false; r.error = why
+            applyBanner(.failing(why), mirror: m, dest: dest,
+                        existing: findBanner(dest: dest, mirror: m, now: now), now: now)
+            return r
+        }
+        guard let source = findCalendar(m.source) else { return fail("Source not found") }
+        if source.calendarIdentifier == dest.calendarIdentifier {
+            return fail("Source and destination are the same")
         }
 
         let winStart = now.addingTimeInterval(-m.windowPastDays * 86400)
@@ -300,6 +369,9 @@ public final class MirrorEngine: @unchecked Sendable {
             stabilized: stableReads >= 2, count: prev, lastKnown: lastOwned[m.id]) {
             r.ok = true; r.error = "deferred: \(why)"
             log?("[\(m.id)] DEFER — \(why)")
+            // .unknown, deliberately: a deferral neither raises a warning nor
+            // clears one that is already up.
+            applyBanner(.unknown, mirror: m, dest: dest, existing: nil, now: now)
             return r
         }
 
@@ -407,19 +479,11 @@ public final class MirrorEngine: @unchecked Sendable {
         }
         maybeCommit(true)
 
-        // Heartbeat banner
-        if !m.showHeartbeat {
-            if let hb = heartbeat { try? store.remove(hb, span: .thisEvent, commit: true) }
-        } else {
-            let dayStart = Calendar.current.startOfDay(for: now)
-            let tf = DateFormatter(); tf.dateFormat = "h:mm a"
-            let ev = heartbeat ?? EKEvent(eventStore: store)
-            ev.calendar = dest
-            ev.isAllDay = true; ev.startDate = dayStart; ev.endDate = dayStart
-            ev.title = "🗓️ \(m.name) ✓ \(r.total) events · \(tf.string(from: now))"
-            ev.url = Markers.heartbeatURL(mirrorId: m.id)
-            try? store.save(ev, span: .thisEvent, commit: true)
-        }
+        // Status banner. Healthy is silent — this only clears whatever an
+        // earlier failure left behind.
+        lastSuccessAt[m.id] = now
+        applyBanner(.ok, mirror: m, dest: dest, existing: heartbeat, now: now,
+                    lookUpIfMissing: false)
 
         // Trust this cycle's owned-copy count as the baseline the guard compares
         // future (possibly stale) snapshots against.

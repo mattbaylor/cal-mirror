@@ -371,8 +371,10 @@ struct AdvancedFields: View {
     let onChange: () -> Void
 
     var body: some View {
-        Toggle("Heartbeat banner", isOn: $mirror.showHeartbeat)
+        Toggle("Warn in calendar if this stops syncing", isOn: $mirror.showHeartbeat)
             .onChange(of: mirror.showHeartbeat) { _, _ in onChange() }
+        Text("Healthy is silent. If this mirror stops syncing, an all-day warning appears in the destination calendar — visible on your phone, without opening anything.")
+            .font(.caption).foregroundStyle(.secondary)
         Stepper("History window: \(Int(mirror.windowPastDays)) days",
                 value: $mirror.windowPastDays, in: 1...3650, step: 5)
             .onChange(of: mirror.windowPastDays) { _, _ in onChange() }
