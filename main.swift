@@ -45,12 +45,22 @@ func log(_ s: String) {
 let engine = MirrorEngine()
 
 // ---- Access --------------------------------------------------------------
+// Carries a value out of a Task without mutating a captured var, which older
+// Swift toolchains reject ("mutation of captured var in concurrently-executing
+// code") even though newer ones allow it under region-based isolation. The
+// semaphore below orders the write before the read, so unchecked Sendable is
+// an honest claim here rather than a silencer.
+final class Holder<T>: @unchecked Sendable {
+    var value: T
+    init(_ value: T) { self.value = value }
+}
+
 func requestAccessBlocking() -> Bool {
     let sema = DispatchSemaphore(value: 0)
-    var granted = false
-    Task { granted = await engine.requestAccess(); sema.signal() }
+    let granted = Holder(false)
+    Task { granted.value = await engine.requestAccess(); sema.signal() }
     sema.wait()
-    return granted
+    return granted.value
 }
 
 // ---- Outputs the UI reads ------------------------------------------------
