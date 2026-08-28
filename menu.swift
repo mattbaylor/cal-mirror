@@ -28,6 +28,12 @@ final class Model: ObservableObject {
     // any key this side didn't know about was dropped on the next save.
     @Published var mirrors: [Mirror] = []
     @Published var paused = false
+    /// Carried through so saving from this window can't change it. `Config`'s
+    /// initialiser defaults realtime ON (that is what a new install should get),
+    /// so rebuilding a Config from parts here without this would silently switch
+    /// realtime on for anyone who merely edited a mirror. No toggle yet — the
+    /// realtime UI is a separate change; this only preserves what's on disk.
+    @Published var realtime = false
     @Published var intervalSeconds = 900
     @Published var statuses: [String: MirrorStatus] = [:]
     @Published var lastRun: Date?
@@ -84,6 +90,7 @@ final class Model: ObservableObject {
         guard FileManager.default.fileExists(atPath: configURL.path) else { return }
         let cfg = ConfigStore.load(from: configURL)
         paused = cfg.paused
+        realtime = cfg.realtime
         intervalSeconds = cfg.intervalSeconds
         mirrors = cfg.mirrors
     }
@@ -145,7 +152,8 @@ final class Model: ObservableObject {
 
     // ---- Config persistence ----
     func saveConfig() {
-        let cfg = Config(paused: paused, intervalSeconds: intervalSeconds, mirrors: mirrors)
+        let cfg = Config(paused: paused, intervalSeconds: intervalSeconds,
+                         realtime: realtime, mirrors: mirrors)
         try? ConfigStore.save(cfg, to: configURL)
     }
 
