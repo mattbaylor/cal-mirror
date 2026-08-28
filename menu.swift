@@ -476,7 +476,9 @@ struct MirrorDetail: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(m.name.isEmpty ? "Mirror" : m.name)
+        // Deliberately NO .navigationTitle here: in a NavigationSplitView the
+        // detail pane's title becomes the WINDOW's title, which would rename
+        // "Manage Mirrors" to whichever mirror happens to be selected.
     }
 
     private var ruleCountLabel: String? {
