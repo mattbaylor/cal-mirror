@@ -9,9 +9,19 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec, utils as asym_utils
 
 APP = "6787358036"
-VERSION = os.environ.get("CM_WATCH_VERSION", "1.3.0")
 PAGE = "docs/changelog.html"
+HOME = "docs/index.html"
 LIVE = {"READY_FOR_DISTRIBUTION", "READY_FOR_SALE"}
+
+# Which version to watch is read off the changelog itself — whichever entry
+# carries the "In review" pill. Hardcoding it here meant the workflow's commit
+# messages still said 1.3.0 while 1.4.0 was the one in review, and nobody
+# noticed because the watcher is a no-op almost every time it runs.
+PILL = re.compile(r'<h2>([0-9][0-9.]*)</h2>\s*<span class="tag">In review</span>')
+
+# Copy that is only true while a version is unreleased is wrapped in these, so
+# it can be removed without hand-editing prose on the day review clears.
+UNRELEASED = re.compile(r'[ \t]*<!--UNRELEASED-->.*?<!--/UNRELEASED-->[ \t]*\n?', re.S)
 
 def token():
     key_id = os.environ["ASC_KEY_ID"]
@@ -33,18 +43,21 @@ def get(path, tok):
 
 def main():
     src = open(PAGE).read()
-    if "In review" not in src:
+    m = PILL.search(src)
+    if not m:
         print(f"{PAGE} carries no 'In review' pill — nothing to do.")
         return 0
+    version = m.group(1)
+    print(f"watching {version}")
 
     tok = token()
     states = {}
     for v in get(f"/v1/apps/{APP}/appStoreVersions?limit=20", tok).get("data", []):
         a = v["attributes"]
-        if a.get("versionString") == VERSION:
+        if a.get("versionString") == version:
             states[a.get("platform")] = a.get("appVersionState") or a.get("appStoreState")
     if not states:
-        print(f"No {VERSION} versions found.")
+        print(f"No {version} versions found.")
         return 0
 
     print("state:", ", ".join(f"{k}={v}" for k, v in sorted(states.items())))
@@ -59,11 +72,22 @@ def main():
     if n != 1:
         print("::error::could not rewrite the pill — markup changed?")
         return 1
+    out = UNRELEASED.sub("", out)
     open(PAGE, "w").write(out)
-    print(f"stamped {VERSION} as released on {today}")
+
+    # The home page carries the same "not on the App Store yet" claims. Left
+    # alone they would tell buyers a shipped feature is unavailable.
+    home = open(HOME).read()
+    stripped = UNRELEASED.sub("", home)
+    if stripped != home:
+        open(HOME, "w").write(stripped)
+        print(f"removed unreleased notes from {HOME}")
+
+    print(f"stamped {version} as released on {today}")
     with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
         fh.write("released=true\n")
         fh.write(f"date={today}\n")
+        fh.write(f"version={version}\n")
     return 0
 
 if __name__ == "__main__":

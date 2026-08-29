@@ -21,7 +21,25 @@ LIMITS = {"name": 30, "subtitle": 30, "promotional_text": 170,
 # search and treats them as one pool, so a word spent in one is wasted in the
 # others — see the "Listing fields" section of ../README.md.
 NAME = "Calendar Mirror"
-SUBTITLE = "One-way sync with busy blocks"
+
+# TWO subtitles, on purpose.
+#
+# SUBTITLE_LIVE is what App Store Connect actually has, and what Apple is
+# indexing right now. 1.4.0 was submitted for review before the subtitle was
+# changed, so it is locked in until the next version ships.
+#
+# SUBTITLE_NEXT is the replacement, and the reason for it: name + subtitle +
+# keywords are indexed as one pool, and the live subtitle spends all 30 of its
+# characters on "It's", "Your", "Control", "It" — none of which anyone searches
+# — plus a second copy of "Calendar" that is already in the name.
+#
+# KEYWORDS below are matched to the LIVE subtitle, because that is what is
+# indexed today: they carry `sync` and `busy`, which the live subtitle does not.
+# Adopting SUBTITLE_NEXT means dropping those two from keywords again; the
+# report at the bottom of this script says exactly which, so nobody has to
+# remember.
+SUBTITLE_LIVE = "It's Your Calendar: Control It"
+SUBTITLE_NEXT = "One-way sync with busy blocks"
 
 PROMO = ("Copy one calendar into another, one direction only. Skip declined, cancelled "
          "and all-day events. No account, no server, nothing leaves your device.")
@@ -31,8 +49,8 @@ PROMO = ("Copy one calendar into another, one direction only. Skip declined, can
 # Nothing here may repeat a word from NAME or SUBTITLE — the check below fails
 # the build if it does, because Apple gains nothing from the repetition and the
 # field is only 100 characters.
-KEYWORDS = ("copy,availability,icloud,caldav,ical,exchange,privacy,duplicate,"
-            "work,shared,feed,declined,hide,ics")
+KEYWORDS = ("sync,busy,copy,icloud,availability,privacy,exchange,caldav,"
+            "declined,work,shared,ical,duplicate,ics")
 
 COMMON_TAIL = """
 WHAT IT DOES NOT DO
@@ -366,9 +384,9 @@ def unwrap(t):
 
 
 FIELDS = {
-    "ios": dict(name=NAME, subtitle=SUBTITLE, promotional_text=PROMO, keywords=KEYWORDS,
+    "ios": dict(name=NAME, subtitle=SUBTITLE_LIVE, promotional_text=PROMO, keywords=KEYWORDS,
                 description=unwrap(DESC_IOS), whats_new=unwrap(NEW_IOS)),
-    "mac": dict(name=NAME, subtitle=SUBTITLE, promotional_text=PROMO, keywords=KEYWORDS,
+    "mac": dict(name=NAME, subtitle=SUBTITLE_LIVE, promotional_text=PROMO, keywords=KEYWORDS,
                 description=unwrap(DESC_MAC), whats_new=unwrap(NEW_MAC)),
 }
 
@@ -416,5 +434,22 @@ for plat, fields in FIELDS.items():
             print("  !! %s/%s mentions %s — not in the App Store build" % (plat, name, hits))
         open(os.path.join(d, name + ".txt"), "w").write(val)
         print("%-4s %-18s %5d / %-4d %s" % (plat, name, n, lim, flag))
+    # The staged subtitle, under a filename that is its own reminder.
+    open(os.path.join(d, "subtitle-NEXT-RELEASE.txt"), "w").write(SUBTITLE_NEXT)
+
+# What changes when SUBTITLE_NEXT is adopted. Printed every run so the decision
+# is never rediscovered from scratch.
+_next = tokens(NAME) | tokens(SUBTITLE_NEXT)
+_kw = [k.strip() for k in KEYWORDS.split(",") if k.strip()]
+_clash = [k for k in _kw if k.lower() in _next]
+print()
+print("PENDING: App Store Connect still has the old subtitle.")
+print("  live:  %s" % SUBTITLE_LIVE)
+print("  next:  %s   <- apply with the next version" % SUBTITLE_NEXT)
+if _clash:
+    print("  when you do, drop these keywords (the new subtitle covers them): %s"
+          % ", ".join(_clash))
+    _free = sum(len(k) + 1 for k in _clash)
+    print("  that frees %d characters for new terms." % _free)
 
 sys.exit(1 if fail else 0)
