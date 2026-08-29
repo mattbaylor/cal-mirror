@@ -188,10 +188,10 @@
       you declined, the ones you haven't answered, the ones the organiser cancelled, all-day
       events, and anything marked free — then narrow it further by length, by words in the title,
       and by a window of the day on the weekdays you choose.</p>
-    <p class="muted" style="margin-top:14px">The important part: <b>this works on calendars you
-      don't control.</b> Tagging individual events is only possible on events you wrote yourself.
-      A subscribed work feed or an assigned-shifts calendar can only be filtered on what the
-      events already say about themselves.</p>
+    <p class="muted" style="margin-top:14px"><b>This works on calendars you don't control.</b>
+      Tagging events one by one only works on events you wrote yourself — a subscribed work feed
+      or an assigned-shifts calendar can only be filtered on what the events already say about
+      themselves.</p>
 
     <figure>
       <picture>
@@ -208,11 +208,11 @@
       <div class="card"><div class="ic">🕗</div><h3>Working hours only</h3><p>Copy only what falls between 8am and 6pm, Monday to Friday. An event counts if any part of it overlaps, so a 7am start still comes through.</p></div>
     </div>
 
-    <div class="newnote"><b>Available now if you build from source.</b> The App Store version is
-      still 1.3.0; filters arrive there when 1.4.0 clears review. They're well covered by tests,
-      but have had less exercise against real declined and cancelled invitations than the rest of
-      the app — <a href="https://github.com/mattbaylor/cal-mirror/issues">tell me</a> if one
-      misfires.</div>
+    <!--UNRELEASED--><div class="newnote"><b>In review.</b> 1.4.0 is with Apple; until it clears,
+      filters are in the build-from-source version only.</div><!--/UNRELEASED-->
+    <div class="newnote">Filters are well covered by tests, but have had less exercise against
+      real declined and cancelled invitations than the rest of the app —
+      <a href="https://github.com/mattbaylor/cal-mirror/issues">tell me</a> if one misfires.</div>
   </section>
 
   <section id="share">
@@ -249,15 +249,12 @@
   <section>
     <div class="eyebrow">The app</div>
     <h2>Silent when it works. Loud when it stops.<span class="new">New in 1.4.0</span></h2>
-    <p class="muted">Calendar Mirror used to leave a small daily note in the copy saying when it last
-      ran. It doesn&rsquo;t any more, and that&rsquo;s deliberate: <b>a healthy pair writes nothing
-      at all.</b></p>
-    <p class="muted" style="margin-top:14px">The calendars you copy <em>into</em> are usually ones
-      you share with other people. A daily &ldquo;still working&rdquo; marker was something all of
-      them could see, and it told nobody anything they would act on. So the note only appears now
-      when a pair actually stops syncing — an all-day warning in the destination calendar, which
-      reaches you on your phone without opening anything, and clears itself the moment the pair
-      recovers.</p>
+    <p class="muted"><b>A working pair writes nothing into your calendar at all.</b> If one stops
+      syncing, an all-day warning turns up in the destination — so you find out on your phone,
+      without opening anything. It clears itself as soon as the pair recovers.</p>
+    <p class="muted" style="margin-top:14px">Older versions left a daily &ldquo;last synced&rdquo;
+      note instead. On a calendar you share with other people, that was a marker all of them could
+      see and none of them could use.</p>
 
     <div class="show">
       <div>
@@ -277,9 +274,8 @@
     </div>
 
     <h3 style="margin-top:44px;text-align:center">A new icon, with five faces<span class="new">New in 1.4.0</span></h3>
-    <p class="muted">The menu bar used to show a bare checkmark or triangle, which said nothing
-      about which app it belonged to. Now it&rsquo;s Calendar Mirror&rsquo;s own icon, redrawn small
-      enough to stay legible at menu-bar size, wearing the expression that matches what&rsquo;s
+    <p class="muted">Not a generic checkmark — Calendar Mirror&rsquo;s own icon, redrawn small
+      enough to stay sharp at menu-bar size, wearing whichever face matches what&rsquo;s
       happening.</p>
     <div class="states">
       <div class="state"><img src="img/state-ok.png" alt=""><b>All good</b><span>Every copy current</span></div>
@@ -289,9 +285,9 @@
       <div class="state"><img src="img/state-unconfigured.png" alt=""><b>Nothing set up</b><span>No copies yet</span></div>
     </div>
 
-    <div class="newnote"><b>On the App Store version (1.3.0), the old behaviour still applies</b> —
-      a pair with the banner switched on writes a daily &ldquo;last synced&rdquo; note into the
-      destination. Updating to 1.4.0 removes those notes automatically on the first sync.</div>
+    <!--UNRELEASED--><div class="newnote"><b>On the App Store version (1.3.0) the old behaviour
+      still applies</b> — a pair with the banner on writes a daily &ldquo;last synced&rdquo; note.
+      Updating to 1.4.0 removes those automatically on the first sync.</div><!--/UNRELEASED-->
   </section>
 
   <section id="realtime">
@@ -308,9 +304,6 @@
       <div class="card"><div class="ic">🌐</div><h3>Then it&rsquo;s up to iCloud</h3><p>Calendar Mirror writes the copy fast. How quickly that copy reaches your other devices is iCloud&rsquo;s business, on iCloud&rsquo;s schedule.</p></div>
     </div>
 
-    <div class="newnote">Calendar Mirror detects the change and writes the destination within seconds.
-      How fast your other devices then see it is iCloud&rsquo;s schedule — not something any app
-      controls.</div>
   </section>
 
   <section>
@@ -345,20 +338,16 @@
 
   <section id="compare">
     <div class="eyebrow">Compared</div>
-    <h2>How it stacks up against the others</h2>
-    <p class="muted">Fantastical added on-device mirroring in 2026, three other App Store apps
-      do it the same way this one does, and several hosted services do it from their servers.
-      Each comparison page says plainly where the other tool is the better buy — including the
-      one that says to try Fantastical's first if you already subscribe.</p>
-    <p class="muted" style="margin-top:14px"><b>Several of them can&rsquo;t read an iCloud calendar
-      at all.</b> Reclaim.ai and CalendarSync are Google-and-Outlook only, and the rest poll iCloud
-      every five to ten minutes because Apple gives them no push API. Mirror your iCloud calendar
-      into a Google calendar on your own Mac and point them at that copy — Calendar Mirror turns a
-      calendar they can&rsquo;t see into one they can.</p>
+    <h2>Not sure this is the one?</h2>
+    <p class="muted">Twelve other tools do some of what Calendar Mirror does. If you already
+      subscribe to Fantastical, start with the mirroring you have already paid for — that page
+      says so first.</p>
+    <p class="muted" style="margin-top:14px"><b>Some of them can&rsquo;t read an iCloud calendar
+      at all.</b> If one of those is what you want, Calendar Mirror can mirror your iCloud calendar
+      into a Google calendar it <em>can</em> read, and the pages below walk through the setup.</p>
     <div class="cmp">
-      <h3>Twelve honest comparisons</h3>
-      <p>Prices and features checked against each company&rsquo;s own site, dated, and linked.
-        Including the one that shut down, and the one that gets closest to Calendar Mirror.</p>
+      <h3>Twelve comparisons</h3>
+      <p>Every price checked against that company&rsquo;s own site, dated, and linked.</p>
       <div class="cmpchips">
         <a href="vs/fantastical.html">vs Fantastical</a>
         <a href="vs/localcalendarsync.html">vs Local Calendar Sync</a>
@@ -387,7 +376,8 @@
       <a class="btn ghost" href="https://github.com/mattbaylor/cal-mirror#readme">Read the docs</a>
     </div>
     <p class="muted" style="margin-top:34px">Prefer to build it from source? It's free and
-      MIT-licensed — and it's where 1.4.0 lives until it clears App Store review.</p>
+      MIT-licensed.<!--UNRELEASED--> It's also where 1.4.0 lives until it clears App Store
+      review.<!--/UNRELEASED--></p>
     <p class="muted" style="margin-top:10px;font-size:14px">The open-source project is called
       <code>cal-mirror</code>; on the App Store it's <b>Calendar Mirror</b>. Same app, same
       engine — the shorter name is just what the repository has always been called.</p>
