@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Calendar Mirror vs CalendarBridge &mdash; Calendar Mirror</title>
-<meta name="description" content="An honest comparison of Calendar Mirror and CalendarBridge — pricing, iCloud sync intervals, HIPAA, and which one fits your setup. Checked August 2026.">
+<title>Calendar Mirror vs Calends &mdash; Calendar Mirror</title>
+<meta name="description" content="An honest comparison of Calendar Mirror and Calends: Merge Calendars — one merges many calendars into a master, the other keeps pairs in sync. Checked August 2026.">
 <link rel="icon" href="../icon.png">
-<meta property="og:title" content="Calendar Mirror vs CalendarBridge">
-<meta property="og:description" content="An honest comparison of Calendar Mirror and CalendarBridge — pricing, iCloud sync intervals, HIPAA, and which one fits your setup. Checked August 2026.">
+<meta property="og:title" content="Calendar Mirror vs Calends">
+<meta property="og:description" content="An honest comparison of Calendar Mirror and Calends: Merge Calendars — one merges many calendars into a master, the other keeps pairs in sync. Checked August 2026.">
 <meta property="og:type" content="article">
 <style>
   :root{
@@ -100,73 +100,65 @@
     </div>
   </nav>
 
-  <h1>Calendar Mirror vs CalendarBridge</h1>
+  <h1>Calendar Mirror vs Calends</h1>
   <p class="dateline">Compared August 2026 &middot; every price and feature below was checked
-    against CalendarBridge&rsquo;s own site on 28 August 2026. These change &mdash; check the
-    <a href="https://calendarbridge.com/">CalendarBridge site</a> before deciding.</p>
+    against Calends&rsquo;s own App Store listing on 28 August 2026. These change &mdash; check the
+    <a href="https://apps.apple.com/us/app/calends-merge-calendars/id6777328427">Calends App Store listing</a> before deciding.</p>
 
-  <p class="lede">Busy-block sync and scheduling pages, with a HIPAA agreement available.</p>
+  <p class="lede">Many calendars folded into one you can share. A different shape of the same idea.</p>
 
   <div class="verdict">
-    <p><strong>CalendarBridge sells a compliance story.</strong> It offers a Business Associate Agreement on its higher tiers, which is the kind of thing a clinic or a firm needs on paper before it will let a tool near a calendar. Calendar Mirror cannot offer you a BAA, because there is no company on the other end of it.</p>
-    <p><strong>Calendar Mirror answers the same worry differently.</strong> Instead of a contract governing what a vendor may do with your calendar, there is no vendor: the copy is made on your device and nothing is transmitted. Whether that is better depends entirely on whether you need the paperwork.</p>
+    <p><strong>Calends solves the other half of the problem.</strong> Where Calendar Mirror keeps <em>pairs</em> in sync, Calends folds <em>many</em> calendars into a single master calendar that lives in Apple Calendar and can be shared with anyone &mdash; deduplicated, and kept filled in the background. If what you want is one calendar to hand to your family or your assistant, that is the shape you want.</p>
+    <p><strong>Calendar Mirror can merge, but it does not deduplicate.</strong> Point several mirrors at one destination and you get the same effect; what you do not get is Calends&rsquo; removal of the same event arriving from two sources. Going the other way, Calends is built around a master calendar rather than per-pair rules, so per-pair projection and per-event tags are not what it is for.</p>
   </div>
 
   <h2>Side by side</h2>
   <div class="tw">
   <table>
-    <thead><tr><th></th><th>Calendar Mirror</th><th>CalendarBridge</th></tr></thead>
+    <thead><tr><th></th><th>Calendar Mirror</th><th>Calends</th></tr></thead>
     <tbody>
-      <tr><td>Price</td><td>$2.99 once &middot; free from source</td><td>$5 / $10 / $40 per month for 2 / 5 / 8 calendars; $4 / $8 / $32 billed yearly</td></tr>
-      <tr><td>Account required</td><td>None</td><td>Yes; iCloud is connected with an app-specific password</td></tr>
-      <tr><td>Where your calendar goes</td><td>Nowhere. It never leaves the device.</td><td>To CalendarBridge's servers</td></tr>
-      <tr><td>Platforms</td><td>iPhone, iPad, Mac</td><td>Web</td></tr>
-      <tr><td>Calendar sources</td><td>Anything the device can see &mdash; iCloud, Google, Exchange, CalDAV, subscribed ICS feeds</td><td>Google, Outlook, iCloud and .ics URLs</td></tr>
-      <tr><td>Sync speed, Apple calendars</td><td>Detects changes within seconds on macOS <span class='src'>(standalone build)</span></td><td>&ldquo;every 5 to 10 minutes&rdquo; for iCloud and .ics sources, per their docs</td></tr>
-      <tr><td>Sync speed, Google / Outlook</td><td>Whatever the device's own account refresh is</td><td>Real-time, typically within a minute, per their docs</td></tr>
-      <tr><td>Privacy of copied events</td><td>Per-mirror: full copy, title and location only, or a plain &ldquo;Busy&rdquo; block</td><td>Controls over which events sync and which details sync</td></tr>
-      <tr><td>Scheduling pages</td><td>No</td><td>Yes &mdash; up to 10</td></tr>
-      <tr><td>HIPAA BAA</td><td>Not offered &mdash; there is no company to sign one</td><td>Available on Premium and Pro</td></tr>
-      <tr><td>Per-event override</td><td>Yes &mdash; a tag in an event's notes</td><td>Not published</td></tr>
-      <tr><td>Duration filters</td><td>Yes</td><td>Not published</td></tr>
+      <tr><td>Price</td><td>$2.99 once &middot; free from source</td><td>Free for 30 days, then $14.99 once</td></tr>
+      <tr><td>Shape</td><td>One source to one destination, as many pairs as you like</td><td>Many sources folded into one master calendar</td></tr>
+      <tr><td>Where it runs</td><td>Entirely on your device</td><td>Entirely on your device</td></tr>
+      <tr><td>Account required</td><td>None</td><td>None &mdash; &ldquo;No OAuth, no password&rdquo;</td></tr>
+      <tr><td>Platforms</td><td>iPhone, iPad, Mac</td><td>iPhone, iPad, Mac</td></tr>
+      <tr><td>Open source</td><td>Yes &mdash; MIT</td><td>No</td></tr>
+      <tr><td>Deduplication across sources</td><td>No &mdash; each mirror keeps its own copies</td><td>Yes</td></tr>
+      <tr><td>Busy-only sharing</td><td>Yes, with your own label and an optional prefix</td><td>Yes, with a label of your choosing</td></tr>
+      <tr><td>Filters</td><td>Declined, unanswered, cancelled, all-day, free, duration, title, time of day</td><td>Not published</td></tr>
+      <tr><td>Per-event override</td><td>Yes &mdash; a tag in the notes</td><td>Not published</td></tr>
+      <tr><td>Family Sharing</td><td>Not offered</td><td>Included</td></tr>
+      <tr><td>Free trial</td><td>No &mdash; but the source builds for free</td><td>30 days</td></tr>
     </tbody>
   </table>
   </div>
 
+  <div class="note"><p><b>This is not a privacy comparison.</b> Calends runs on your device, with no account and no server, exactly as Calendar Mirror does. Anyone telling you one of these is the private option and the other is not has not looked. The differences are elsewhere.</p></div>
 
   <h2>Being straight about it</h2>
   <div class="cols">
     <div class="col">
       <h3>Where Calendar Mirror is the better pick</h3>
       <ul class="win">
-        <li>No account, and no server holding a credential to your calendar. CalendarBridge asks for an Apple app-specific password; Calendar Mirror asks for nothing, because the calendars are already on the device.</li>
-        <li>$2.99 once against $48&ndash;$480 a year.</li>
-        <li>Faster on Apple calendars and on subscribed feeds. Their own documentation puts iCloud and .ics sources at five to ten minutes.</li>
-        <li>Per-event control with a tag, rather than per-rule only.</li>
-        <li>Duration bounds &mdash; skip anything under fifteen minutes, say.</li>
+        <li>$2.99 once against $14.99 once.</li>
+        <li>Per-pair control: each pair decides for itself how much crosses over, rather than one master calendar with one policy.</li>
+        <li>Filters on declined, unanswered, cancelled, all-day, free, duration, title and time of day.</li>
+        <li>Per-event tags, for the one meeting that should behave differently from the rest.</li>
+        <li>Open source under MIT.</li>
       </ul>
     </div>
     <div class="col">
-      <h3>Where CalendarBridge is the better pick</h3>
+      <h3>Where Calends is the better pick</h3>
       <ul class="lose">
-        <li>A HIPAA Business Associate Agreement, which some workplaces simply require.</li>
-        <li>Scheduling pages for sharing availability.</li>
-        <li>Real-time sync when the source is Google or Outlook.</li>
-        <li>Runs in a browser, on any OS, with no Apple device involved.</li>
-        <li>Keeps syncing while all your devices are off.</li>
+        <li>Deduplication &mdash; the same event arriving from two sources appears once. Calendar Mirror would copy it twice.</li>
+        <li>A 30-day trial and Family Sharing, neither of which this app offers.</li>
+        <li>It is purpose-built for producing one calendar to share outward, which is a cleaner fit than assembling it from pairs.</li>
+        <li>Merging is what it does, so the setup for that job is simpler than configuring several mirrors by hand.</li>
       </ul>
     </div>
   </div>
 
 
-  <h2>Use them together</h2>
-  <div class="verdict">
-    <h3 style="margin-top:0">Put iCloud and .ics feeds on the fast path</h3>
-    <p>CalendarBridge is real-time when the source is Google or Outlook, and every 5 to 10 minutes when it is iCloud or an .ics URL &mdash; their documentation says so plainly.</p><p><b>Calendar Mirror can change which of those applies.</b> Mirror the iCloud calendar or the subscribed feed into a Google or Outlook calendar on your Mac, then let CalendarBridge use that as the source. You keep its scheduling pages and, on the higher tiers, its BAA &mdash; and the slow half of the pipeline gets replaced by something that reacts in seconds.</p>
-    <p class="src">Bridging adds a hop: Calendar Mirror writes the copy on your device, and the other
-      service then reads that copy on its own schedule. It needs the destination account set up on
-      your Mac or iPhone, and the copy is one-way, like every Calendar Mirror mirror.</p>
-  </div>
   <h2>What Calendar Mirror does not do, on any tier</h2>
   <p>These are not oversights, and no future release is going to quietly fix them &mdash; most
     are consequences of running on your device instead of a server:</p>
@@ -181,15 +173,14 @@
 
   <div class="cta">
     <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get Calendar Mirror &mdash; $2.99</a>
-    <a class="btn ghost" href="https://calendarbridge.com/">Visit CalendarBridge</a>
+    <a class="btn ghost" href="https://apps.apple.com/us/app/calends-merge-calendars/id6777328427">Visit Calends</a>
   </div>
   <p class="src">One purchase covers iPhone, iPad and Mac.
-    Calendar Mirror is not affiliated with CalendarBridge in any way, and this page is written by Calendar Mirror&rsquo;s author.</p>
+    Calendar Mirror is not affiliated with Calends in any way, and this page is written by Calendar Mirror&rsquo;s author.</p>
 
   <h2>Sources</h2>
   <ul class="src">
-      <li><a href="https://www.calendarbridge.com/pricing">CalendarBridge pricing</a></li>
-      <li><a href="https://help.calendarbridge.com/faq/how-often-do-calendars-sync/">CalendarBridge &mdash; How often do calendars sync?</a></li>
+      <li><a href="https://apps.apple.com/us/app/calends-merge-calendars/id6777328427">Calends: Merge Calendars on the App Store</a></li>
   </ul>
 
   <div class="others">
@@ -197,11 +188,11 @@
     <div class="chips">
       <a class="chip" href="localcalendarsync.html">vs Local Calendar Sync</a>
       <a class="chip" href="reciprocal.html">vs ReciproCal Sync</a>
-      <a class="chip" href="calends.html">vs Calends</a>
+      <a class="chip here" href="calends.html">vs Calends</a>
       <a class="chip" href="calmirror.html">vs CalMirror</a>
       <a class="chip" href="syncdate.html">vs SYNCDATE</a>
       <a class="chip" href="onecal.html">vs OneCal</a>
-      <a class="chip here" href="calendarbridge.html">vs CalendarBridge</a>
+      <a class="chip" href="calendarbridge.html">vs CalendarBridge</a>
       <a class="chip" href="syncthemcalendars.html">vs SyncThemCalendars</a>
       <a class="chip" href="calendarsync.html">vs CalendarSync</a>
       <a class="chip" href="reclaim.html">vs Reclaim.ai</a>

@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendar Mirror vs inovex/CalendarSync &mdash; Calendar Mirror</title>
-<meta name="description" content="An honest comparison of Calendar Mirror and inovex/CalendarSync — the only other tool here with no server. Adapters, credentials, scheduling, and which fits. Checked August 2026.">
+<meta name="description" content="An honest comparison of Calendar Mirror and inovex/CalendarSync — a local-only Go CLI with no Apple support. Adapters, credentials, scheduling, and which fits. Checked August 2026.">
 <link rel="icon" href="../icon.png">
 <meta property="og:title" content="Calendar Mirror vs inovex/CalendarSync">
-<meta property="og:description" content="An honest comparison of Calendar Mirror and inovex/CalendarSync — the only other tool here with no server. Adapters, credentials, scheduling, and which fits. Checked August 2026.">
+<meta property="og:description" content="An honest comparison of Calendar Mirror and inovex/CalendarSync — a local-only Go CLI with no Apple support. Adapters, credentials, scheduling, and which fits. Checked August 2026.">
 <meta property="og:type" content="article">
 <style>
   :root{
@@ -108,7 +108,7 @@
   <p class="lede">A free, open-source Go CLI that keeps your calendar data off other people's servers.</p>
 
   <div class="verdict">
-    <p><strong>CalendarSync is the only other tool here with no server in the middle.</strong> It is a stateless MIT-licensed Go CLI: you write a <code>sync.yaml</code>, run the binary, and your calendar data stays between you and the providers.</p>
+    <p><strong>CalendarSync keeps your calendar data off other people&rsquo;s servers</strong> &mdash; as do the on-device Apple apps compared here. What makes it unusual in that group is that it is a stateless MIT-licensed Go CLI: you write a <code>sync.yaml</code>, run the binary, and it runs anywhere Go does.</p>
     <p><strong>The dividing line is Apple.</strong> CalendarSync's adapters are Google, Outlook and ZEP for sources, and Google and Outlook for destinations. There is no iCloud adapter and no CalDAV adapter. If the calendar you need mirrored is an iCloud calendar or a subscribed ICS feed, CalendarSync cannot reach it and Calendar Mirror is built for nothing else.</p>
   </div>
 
@@ -194,6 +194,9 @@
   <div class="others">
     <h2>Compare with the others</h2>
     <div class="chips">
+      <a class="chip" href="localcalendarsync.html">vs Local Calendar Sync</a>
+      <a class="chip" href="reciprocal.html">vs ReciproCal Sync</a>
+      <a class="chip" href="calends.html">vs Calends</a>
       <a class="chip" href="calmirror.html">vs CalMirror</a>
       <a class="chip" href="syncdate.html">vs SYNCDATE</a>
       <a class="chip" href="onecal.html">vs OneCal</a>
