@@ -176,18 +176,36 @@ asc_args() {
 }
 
 # ship <file> <platform>
+# altool can exit 0 on a delivery it did NOT perform: it prints "ERROR: ..." and
+# "Failed to upload package." and still returns success. Three consecutive
+# release runs therefore reported green while App Store Connect rejected every
+# build ("The bundle version must be higher than the previously uploaded
+# version"), which is indistinguishable from a working release until you go
+# looking for the build and it is not there.
+#
+# So the exit code is necessary but not sufficient: scan the output too, and
+# fail on either.
+run_altool() {
+  local mode="$1" file="$2" platform="$3" out rc=0
+  # shellcheck disable=SC2046
+  out="$(xcrun altool "$mode" -f "$file" -t "$platform" $(asc_args) 2>&1)" || rc=$?
+  printf '%s\n' "$out"
+  if [ "$rc" -ne 0 ] || printf '%s' "$out" | grep -qiE 'ERROR:|Failed to (upload|validate)'; then
+    echo "::error::altool $mode failed for $(basename "$file") — see the output above" >&2
+    return 1
+  fi
+}
+
 ship() {
   local file="$1" platform="$2"
   [ -f "$file" ] || { echo "missing artifact: $file" >&2; exit 1; }
   if [ "$DO_VALIDATE" = 1 ]; then
     echo "==> Validating $(basename "$file")"
-    # shellcheck disable=SC2046
-    xcrun altool --validate-app -f "$file" -t "$platform" $(asc_args)
+    run_altool --validate-app "$file" "$platform"
   fi
   if [ "$DO_UPLOAD" = 1 ]; then
     echo "==> Uploading $(basename "$file") — this publishes to App Store Connect"
-    # shellcheck disable=SC2046
-    xcrun altool --upload-app -f "$file" -t "$platform" $(asc_args)
+    run_altool --upload-app "$file" "$platform"
   fi
 }
 
