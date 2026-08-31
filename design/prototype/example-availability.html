@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Book time with Matt</title>
+<style>
+:root{--bg:#f6f8fc;--card:#fff;--line:#e2e8f2;--tx:#0d1220;--mut:#4a5568;--accent:#3aa0ff;--accent2:#28c8b6}
+@media(prefers-color-scheme:dark){:root{--bg:#0b0e14;--card:#151b28;--line:#232c3d;--tx:#e6edf3;--mut:#93a1b5}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+color:var(--tx);background:var(--bg)}
+.wrap{max-width:640px;margin:0 auto;padding:40px 22px 80px}
+h1{font-size:28px;letter-spacing:-.5px;margin:.2em 0 .1em}
+.sub{color:var(--mut);margin:0 0 26px;font-size:14.5px}
+.me{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:22px}
+.me label{display:block;font-size:13px;color:var(--mut);margin:.5em 0 .2em}
+.me input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+background:var(--bg);color:var(--tx);font-size:15px}
+.day{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+color:var(--mut);margin:22px 0 8px}
+.slots{display:flex;flex-wrap:wrap;gap:8px}
+.slot{background:var(--card);border:1px solid var(--line);border-radius:999px;
+padding:8px 15px;font-size:14.5px;cursor:pointer;color:var(--tx)}
+.slot:hover{border-color:var(--accent)}
+.slot[disabled]{opacity:.5;cursor:default}
+.note{color:var(--mut);font-size:13.5px;margin-top:30px;border-top:1px solid var(--line);padding-top:16px}
+.err{color:#c0392b;font-size:13.5px;min-height:1.2em;margin-top:6px}
+</style></head><body><div class="wrap">
+<h1>Book time with Matt</h1>
+<p class="sub">Times I&rsquo;m usually free, as of 3:06 PM on 31 August 2026. Pick one and your calendar
+app will send me an invitation &mdash; I&rsquo;ll accept or suggest another time.</p>
+
+<div class="me">
+  <label for="n">Your name</label><input id="n" placeholder="Alex Fisher">
+  <label for="e">Your email</label><input id="e" type="email" placeholder="alex@example.com">
+  <label for="w">What&rsquo;s it about? (optional)</label><input id="w" placeholder="Intro call">
+  <div class="err" id="err"></div>
+</div>
+
+<div class="day">Monday 31 August</div><div class="slots"><button class="slot" onclick="book('2026-08-31T15:30:00','2026-08-31T16:00:00')">3:30 pm</button><button class="slot" onclick="book('2026-08-31T16:00:00','2026-08-31T16:30:00')">4:00 pm</button><button class="slot" onclick="book('2026-08-31T16:30:00','2026-08-31T17:00:00')">4:30 pm</button></div>
+<div class="day">Tuesday 1 September</div><div class="slots"><button class="slot" onclick="book('2026-09-01T11:00:00','2026-09-01T11:30:00')">11:00 am</button><button class="slot" onclick="book('2026-09-01T11:30:00','2026-09-01T12:00:00')">11:30 am</button><button class="slot" onclick="book('2026-09-01T12:00:00','2026-09-01T12:30:00')">12:00 pm</button><button class="slot" onclick="book('2026-09-01T12:30:00','2026-09-01T13:00:00')">12:30 pm</button><button class="slot" onclick="book('2026-09-01T14:30:00','2026-09-01T15:00:00')">2:30 pm</button><button class="slot" onclick="book('2026-09-01T15:00:00','2026-09-01T15:30:00')">3:00 pm</button><button class="slot" onclick="book('2026-09-01T15:30:00','2026-09-01T16:00:00')">3:30 pm</button><button class="slot" onclick="book('2026-09-01T16:00:00','2026-09-01T16:30:00')">4:00 pm</button><button class="slot" onclick="book('2026-09-01T16:30:00','2026-09-01T17:00:00')">4:30 pm</button></div>
+<div class="day">Wednesday 2 September</div><div class="slots"><button class="slot" onclick="book('2026-09-02T11:00:00','2026-09-02T11:30:00')">11:00 am</button><button class="slot" onclick="book('2026-09-02T11:30:00','2026-09-02T12:00:00')">11:30 am</button><button class="slot" onclick="book('2026-09-02T12:00:00','2026-09-02T12:30:00')">12:00 pm</button><button class="slot" onclick="book('2026-09-02T12:30:00','2026-09-02T13:00:00')">12:30 pm</button><button class="slot" onclick="book('2026-09-02T14:30:00','2026-09-02T15:00:00')">2:30 pm</button><button class="slot" onclick="book('2026-09-02T15:00:00','2026-09-02T15:30:00')">3:00 pm</button><button class="slot" onclick="book('2026-09-02T15:30:00','2026-09-02T16:00:00')">3:30 pm</button><button class="slot" onclick="book('2026-09-02T16:00:00','2026-09-02T16:30:00')">4:00 pm</button><button class="slot" onclick="book('2026-09-02T16:30:00','2026-09-02T17:00:00')">4:30 pm</button></div>
+<div class="day">Thursday 3 September</div><div class="slots"><button class="slot" onclick="book('2026-09-03T11:00:00','2026-09-03T11:30:00')">11:00 am</button><button class="slot" onclick="book('2026-09-03T11:30:00','2026-09-03T12:00:00')">11:30 am</button><button class="slot" onclick="book('2026-09-03T12:00:00','2026-09-03T12:30:00')">12:00 pm</button><button class="slot" onclick="book('2026-09-03T12:30:00','2026-09-03T13:00:00')">12:30 pm</button><button class="slot" onclick="book('2026-09-03T14:30:00','2026-09-03T15:00:00')">2:30 pm</button><button class="slot" onclick="book('2026-09-03T15:00:00','2026-09-03T15:30:00')">3:00 pm</button><button class="slot" onclick="book('2026-09-03T15:30:00','2026-09-03T16:00:00')">3:30 pm</button><button class="slot" onclick="book('2026-09-03T16:00:00','2026-09-03T16:30:00')">4:00 pm</button><button class="slot" onclick="book('2026-09-03T16:30:00','2026-09-03T17:00:00')">4:30 pm</button></div>
+<div class="day">Friday 4 September</div><div class="slots"><button class="slot" onclick="book('2026-09-04T11:00:00','2026-09-04T11:30:00')">11:00 am</button><button class="slot" onclick="book('2026-09-04T11:30:00','2026-09-04T12:00:00')">11:30 am</button><button class="slot" onclick="book('2026-09-04T12:00:00','2026-09-04T12:30:00')">12:00 pm</button><button class="slot" onclick="book('2026-09-04T12:30:00','2026-09-04T13:00:00')">12:30 pm</button><button class="slot" onclick="book('2026-09-04T14:30:00','2026-09-04T15:00:00')">2:30 pm</button><button class="slot" onclick="book('2026-09-04T15:00:00','2026-09-04T15:30:00')">3:00 pm</button><button class="slot" onclick="book('2026-09-04T15:30:00','2026-09-04T16:00:00')">3:30 pm</button><button class="slot" onclick="book('2026-09-04T16:00:00','2026-09-04T16:30:00')">4:00 pm</button><button class="slot" onclick="book('2026-09-04T16:30:00','2026-09-04T17:00:00')">4:30 pm</button></div>
+
+<p class="note">This page is a single file. It makes no network requests, has no
+analytics, and nothing you type here is sent anywhere &mdash; the invitation is
+built in your browser and handed to your own calendar app. Because it is a
+snapshot, a time shown free may have been taken since; I confirm every request.</p>
+</div>
+<script>
+const OWNER = {"email": "x9f2k7@icloud.com"};
+function pad(n){return String(n).padStart(2,'0')}
+function ical(d){return d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+'T'
+  +pad(d.getUTCHours())+pad(d.getUTCMinutes())+'00Z'}
+function esc(s){return String(s).replace(/([,;\\])/g,'\\$1').replace(/\n/g,'\\n')}
+function book(startISO, endISO){
+  const name=document.getElementById('n').value.trim();
+  const mail=document.getElementById('e').value.trim();
+  const err=document.getElementById('err');
+  if(!name||!mail.includes('@')){err.textContent='Add your name and email first.';return}
+  err.textContent='';
+  const what=document.getElementById('w').value.trim()||('Meeting with '+name);
+  const s=new Date(startISO), e=new Date(endISO);
+  // METHOD:REQUEST with the requester as ORGANIZER: their client is what sends
+  // the invitation, so no server is involved on either side.
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//cal-mirror//availability//EN',
+    'METHOD:REQUEST','BEGIN:VEVENT',
+    'UID:'+Date.now()+'-'+Math.random().toString(36).slice(2)+'@cal-mirror',
+    'DTSTAMP:'+ical(new Date()),'DTSTART:'+ical(s),'DTEND:'+ical(e),
+    'SUMMARY:'+esc(what),
+    'ORGANIZER;CN='+esc(name)+':mailto:'+mail,
+    'ATTENDEE;CN='+esc(name)+';PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:'+mail,
+    'ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:'+OWNER.email,
+    'DESCRIPTION:'+esc('Requested from '+location.href),
+    'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const url=URL.createObjectURL(new Blob([ics],{type:'text/calendar;charset=utf-8'}));
+  const a=document.createElement('a');
+  a.href=url; a.download='invite.ics'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+  // Fallback for clients that open the file without sending anything: a plain
+  // mailto, which cannot carry an attachment but always reaches a human.
+  const body=encodeURIComponent(what+'\n\n'+s.toLocaleString()+' \u2013 '+e.toLocaleTimeString()
+    +'\n\nSent from '+location.href);
+  document.getElementById('fb').innerHTML='Calendar app didn\u2019t send it? '
+    +'<a href="mailto:'+OWNER.email+'?subject='+encodeURIComponent(what)+'&body='+body+'">Email me instead</a>.';
+}
+</script>
+<div class="wrap" style="padding-top:0"><p class="note" id="fb"></p></div>
+</body></html>
