@@ -21,7 +21,25 @@ PILL = re.compile(r'<h2>([0-9][0-9.]*)</h2>\s*<span class="tag">In review</span>
 
 # Copy that is only true while a version is unreleased is wrapped in these, so
 # it can be removed without hand-editing prose on the day review clears.
-UNRELEASED = re.compile(r'[ \t]*<!--UNRELEASED-->.*?<!--/UNRELEASED-->[ \t]*\n?', re.S)
+#
+# Tag the version it belongs to — <!--UNRELEASED:1.4.1-->. Untagged blocks are
+# still honoured, but only cleared once nothing at all is pending: with two
+# versions in review, a global marker means the first one to ship leaves its own
+# "waiting on review" note standing, which is how 1.4.0 briefly told people its
+# features were source-only after it had shipped.
+UNRELEASED = re.compile(
+    r'[ \t]*<!--UNRELEASED(?::([0-9][0-9.]*))?-->.*?<!--/UNRELEASED-->[ \t]*\n?', re.S)
+
+
+def strip_unreleased(text, version, nothing_pending):
+    def repl(m):
+        tag = m.group(1)
+        if tag == version:               # this version just shipped
+            return ""
+        if tag is None and nothing_pending:
+            return ""
+        return m.group(0)                # belongs to something still in review
+    return UNRELEASED.sub(repl, text)
 
 def token():
     key_id = os.environ["ASC_KEY_ID"]
@@ -84,15 +102,14 @@ def main():
     # waiting — with another version in review those notes are still true.
     still_pending = PILL.findall(out)
     if still_pending:
-        print("still in review, keeping the unreleased notes: %s" % ", ".join(still_pending))
-        open(PAGE, "w").write(out)
-    else:
-        open(PAGE, "w").write(UNRELEASED.sub("", out))
-        home = open(HOME).read()
-        stripped = UNRELEASED.sub("", home)
-        if stripped != home:
-            open(HOME, "w").write(stripped)
-            print(f"removed unreleased notes from {HOME}")
+        print("still in review: %s" % ", ".join(still_pending))
+    open(PAGE, "w").write(strip_unreleased(out, version, not still_pending))
+
+    home = open(HOME).read()
+    stripped = strip_unreleased(home, version, not still_pending)
+    if stripped != home:
+        open(HOME, "w").write(stripped)
+        print(f"removed {version} notes from {HOME}")
 
     print(f"stamped {version} as released on {today}")
     with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
