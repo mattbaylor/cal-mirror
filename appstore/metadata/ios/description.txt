@@ -51,6 +51,10 @@ Every pair in one list, grouped by the calendar it copies into, with its health 
 
 Background refreshes are scheduled at the interval you choose, but iOS decides when they actually run — treat the setting as the earliest a sync may start, not a guarantee. Pull to refresh whenever you want it now.
 
+SHORTCUTS
+
+A Sync Now action for the Shortcuts app. Drop it into an automation and sync when you arrive somewhere, at a set time, or when a Focus turns on — it runs without opening the app and reports what changed.
+
 WHAT IT DOES NOT DO
 
 Being straight with you before you buy:

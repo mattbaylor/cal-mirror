@@ -1,1 +1,1 @@
-sync,busy,copy,icloud,availability,privacy,exchange,caldav,declined,work,shared,ical,duplicate,ics
+copy,availability,icloud,caldav,ical,exchange,privacy,work,shared,feed,declined,hide,ics,shortcuts

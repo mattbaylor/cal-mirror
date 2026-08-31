@@ -43,11 +43,16 @@ def get(path, tok):
 
 def main():
     src = open(PAGE).read()
-    m = PILL.search(src)
-    if not m:
+    pending = PILL.findall(src)
+    if not pending:
         print(f"{PAGE} carries no 'In review' pill — nothing to do.")
         return 0
-    version = m.group(1)
+    # Two versions can be waiting at once — 1.4.1 submitted while 1.4.0 is still
+    # in review. Take the lowest, which is the one that clears first; the next
+    # scheduled run picks up the one after it.
+    version = min(pending, key=lambda v: tuple(int(x) for x in v.split(".")))
+    if len(pending) > 1:
+        print("pending: %s — taking %s" % (", ".join(pending), version))
     print(f"watching {version}")
 
     tok = token()
@@ -67,21 +72,27 @@ def main():
 
     # Approved everywhere — swap the pill for today's date.
     today = time.strftime("%-d %B %Y")
-    out, n = re.subn(r'<span class="tag">In review</span><span class="date">submitted [^<]*</span>',
-                     f'<span class="date">{today}</span>', src, count=1)
+    # Anchored to this version's heading: rewriting the first pill in document
+    # order would stamp the newest entry, not the one that actually shipped.
+    stamp = re.compile(r'(<h2>' + re.escape(version) + r'</h2>)\s*'
+                       r'<span class="tag">In review</span><span class="date">submitted [^<]*</span>')
+    out, n = stamp.subn(r'\1<span class="date">' + today + '</span>', src, count=1)
     if n != 1:
         print("::error::could not rewrite the pill — markup changed?")
         return 1
-    out = UNRELEASED.sub("", out)
-    open(PAGE, "w").write(out)
-
-    # The home page carries the same "not on the App Store yet" claims. Left
-    # alone they would tell buyers a shipped feature is unavailable.
-    home = open(HOME).read()
-    stripped = UNRELEASED.sub("", home)
-    if stripped != home:
-        open(HOME, "w").write(stripped)
-        print(f"removed unreleased notes from {HOME}")
+    # Only clear the "not on the App Store yet" copy once nothing is still
+    # waiting — with another version in review those notes are still true.
+    still_pending = PILL.findall(out)
+    if still_pending:
+        print("still in review, keeping the unreleased notes: %s" % ", ".join(still_pending))
+        open(PAGE, "w").write(out)
+    else:
+        open(PAGE, "w").write(UNRELEASED.sub("", out))
+        home = open(HOME).read()
+        stripped = UNRELEASED.sub("", home)
+        if stripped != home:
+            open(HOME, "w").write(stripped)
+            print(f"removed unreleased notes from {HOME}")
 
     print(f"stamped {version} as released on {today}")
     with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
