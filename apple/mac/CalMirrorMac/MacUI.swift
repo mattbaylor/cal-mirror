@@ -19,7 +19,7 @@ struct MenuContent: View {
                 Text("\(m.source.title)  →  \(m.dest.title)").font(.caption)
                 Divider()
                 Toggle("Enabled", isOn: Binding(get: { m.enabled }, set: { _ in model.toggleEnabled(m.id) }))
-                Toggle("Heartbeat banner", isOn: Binding(get: { m.showHeartbeat }, set: { _ in model.toggleHeartbeat(m.id) }))
+                Toggle("Warn in calendar if this stops syncing", isOn: Binding(get: { m.showHeartbeat }, set: { _ in model.toggleHeartbeat(m.id) }))
             }
         }
         Divider()
@@ -27,11 +27,21 @@ struct MenuContent: View {
             if model.config.paused { model.togglePause() } else { Task { await model.syncNow() } }
         }
         Button("Pause syncing") { model.togglePause() }.disabled(model.config.paused)
+        Toggle("Sync in realtime", isOn: Binding(get: { model.config.realtime },
+                                                 set: { _ in model.toggleRealtime() }))
+        if model.config.realtime {
+            // The switch says what was asked for; this says what is actually
+            // happening, which is the part worth knowing when it is not.
+            Text(model.observing ? "Watching for changes · 5 min safety check"
+                                 : "Not watching — using the 5 min schedule")
+                .font(.caption)
+        }
         Menu("Sync interval") {
             ForEach(intervals, id: \.1) { name, secs in
                 Button(name + (model.config.intervalSeconds == secs ? "  ✓" : "")) { model.setInterval(secs) }
             }
         }
+        .disabled(model.config.realtime)
         Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) }))
         Divider()
         Button("Manage mirrors…") {
