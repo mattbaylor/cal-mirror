@@ -40,7 +40,7 @@ targets:
         PRODUCT_NAME: cal-mirror
         PRODUCT_BUNDLE_IDENTIFIER: io.github.mattbaylor.cal-mirror
         MARKETING_VERSION: "1.4.1"
-        CURRENT_PROJECT_VERSION: "9"
+        CURRENT_PROJECT_VERSION: "10"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: CalMirrorMac/Info.plist
         CODE_SIGN_ENTITLEMENTS: CalMirrorMac/CalMirrorMac.entitlements
