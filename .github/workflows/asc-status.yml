@@ -1,0 +1,29 @@
+# Read-only look at what App Store Connect holds for a version.
+#
+# Exists because the alternative is guessing. Nothing in this workflow creates,
+# changes or submits anything — it is safe to run at any point in a release.
+name: App Store Connect status
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to inspect
+        type: string
+        default: "1.4.1"
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet cryptography
+      - env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          CM_VERSION: ${{ inputs.version }}
+        run: python3 .github/scripts/asc_status.py
