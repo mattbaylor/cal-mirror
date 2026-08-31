@@ -22,24 +22,12 @@ LIMITS = {"name": 30, "subtitle": 30, "promotional_text": 170,
 # others — see the "Listing fields" section of ../README.md.
 NAME = "Calendar Mirror"
 
-# TWO subtitles, on purpose.
-#
-# SUBTITLE_LIVE is what App Store Connect actually has, and what Apple is
-# indexing right now. 1.4.0 was submitted for review before the subtitle was
-# changed, so it is locked in until the next version ships.
-#
-# SUBTITLE_NEXT is the replacement, and the reason for it: name + subtitle +
-# keywords are indexed as one pool, and the live subtitle spends all 30 of its
-# characters on "It's", "Your", "Control", "It" — none of which anyone searches
-# — plus a second copy of "Calendar" that is already in the name.
-#
-# KEYWORDS below are matched to the LIVE subtitle, because that is what is
-# indexed today: they carry `sync` and `busy`, which the live subtitle does not.
-# Adopting SUBTITLE_NEXT means dropping those two from keywords again; the
-# report at the bottom of this script says exactly which, so nobody has to
-# remember.
-SUBTITLE_LIVE = "It's Your Calendar: Control It"
-SUBTITLE_NEXT = "One-way sync with busy blocks"
+# 1.4.0 shipped with "It's Your Calendar: Control It", which spent all 30 of its
+# characters on words nobody searches plus a second copy of "Calendar" already
+# in the name. Name + subtitle + keywords are one index, so that was 30
+# characters buying nothing. Subtitle is version-scoped metadata, so 1.4.1 is
+# the first chance to change it — that is what this release is for.
+SUBTITLE = "One-way sync with busy blocks"
 
 PROMO = ("Copy one calendar into another, one direction only. Skip declined, cancelled "
          "and all-day events. No account, no server, nothing leaves your device.")
@@ -49,10 +37,19 @@ PROMO = ("Copy one calendar into another, one direction only. Skip declined, can
 # Nothing here may repeat a word from NAME or SUBTITLE — the check below fails
 # the build if it does, because Apple gains nothing from the repetition and the
 # field is only 100 characters.
-KEYWORDS = ("sync,busy,copy,icloud,availability,privacy,exchange,caldav,"
-            "declined,work,shared,ical,duplicate,ics")
+# Nothing here repeats a word from NAME or SUBTITLE — the check below fails the
+# build if it does. "shortcuts" earns its slot in 1.4.1; "duplicate" gave up its
+# place for it.
+KEYWORDS = ("copy,availability,icloud,caldav,ical,exchange,privacy,work,"
+            "shared,feed,declined,hide,ics,shortcuts")
 
 COMMON_TAIL = """
+SHORTCUTS
+
+A Sync Now action for the Shortcuts app. Drop it into an automation and sync
+when you arrive somewhere, at a set time, or when a Focus turns on — it runs
+without opening the app and reports what changed.
+
 WHAT IT DOES NOT DO
 
 Being straight with you before you buy:
@@ -161,23 +158,21 @@ LIVES IN YOUR MENU BAR
 
 A small icon shows how things are going at a glance, with a face that changes
 by state: a smile when every copy is current, warning triangles when one has
-fallen behind, crossed eyes when one is failing, a flat expression when you
-have paused it, and a plus when nothing is set up yet.
+fallen behind, crossed eyes when one is failing, a flat expression when paused.
 
 Click it to sync now, pause, change the interval, or open the management
-window. Calendar Mirror can start at login and work quietly from there.
+window. It can start at login and work quietly from there.
 
 PICK TWO CALENDARS
 
-Choose the calendar to copy from and the calendar to copy into. Add as many
-pairs as you like; two can share one destination without disturbing each other,
-and anything you add to the destination by hand is left alone.
+Choose the calendar to copy from and the one to copy into. Add as many pairs as
+you like; two can share a destination without disturbing each other, and
+anything you add by hand is left alone.
 
-Pairs are listed down the side of the management window, grouped by the
-calendar they copy into, and every section folds down to a line describing what
-it is set to.
+Pairs are listed down the side, grouped by the calendar they copy into, and
+every section folds down to a line saying what it is set to.
 
-Repeating events, all-day events and moved occurrences all come across
+Repeating and all-day events, and moved occurrences, all come across
 correctly.
 
 CHOOSE HOW MUCH CROSSES OVER
@@ -186,13 +181,12 @@ Each pair decides for itself:
 
 • Full copy — titles, locations and notes as written.
 • Just the basics — real titles and locations, nothing else.
-• Busy only — every event becomes a plain block reading "Busy". Your time is
-  visible; nothing else is.
+• Busy only — a plain block reading "Busy". Your time is visible, nothing else.
 
 Put a label in front of copied titles, too — "[Work] Standup", or even
-"[Work] Busy" on a pair that hides the details. A pair can also carry the
-source event's meeting link into the copy's notes, so a mirrored meeting is one
-you can actually join.
+"[Work] Busy" on a pair that hides the details. A pair can also carry the source
+event's meeting link into the copy's notes, so a mirrored meeting is one you can
+join.
 
 CHOOSE WHICH EVENTS
 
@@ -205,8 +199,8 @@ Not everything in a calendar is worth copying. A pair can skip:
 • Titles containing words you choose, such as "Lunch" or "Focus time"
 • Anything outside a window of the day, on the weekdays you pick
 
-This works on calendars you do not control, which is the point — tagging
-individual events is only possible on events you wrote yourself.
+This works on calendars you do not control — tagging events one by one is only
+possible on events you wrote yourself.
 
 OR DECIDE ONE EVENT AT A TIME
 
@@ -226,139 +220,33 @@ the destination calendar itself — so you find out on your phone, without
 opening anything. It clears the moment the pair recovers.
 """ + COMMON_TAIL
 
-NEW_IOS = """Version 1.4 is mostly about giving you control over which events
-get copied, rather than just how much of each one crosses over.
+NEW_IOS = """Shortcuts.
 
-CHOOSE WHICH EVENTS GET COPIED
+Calendar Mirror now has a Sync Now action for the Shortcuts app, on iPhone, iPad
+and Mac.
 
-A pair can now skip events on their own properties, with no tagging involved:
+Put it in a Shortcut, on your Home Screen, or in an automation: sync when you
+arrive at the office, every weekday at eight, or when a Focus turns on. It runs
+in the background without opening the app.
 
-• Meetings you declined, or have not answered yet
-• Events the organiser cancelled
-• All-day events, and anything marked free
-• Anything shorter or longer than a set number of minutes
-• Titles containing words you choose, such as "Lunch" or "Focus time"
-• Anything outside a window of the day, on the weekdays you pick
-
-This is the part that works on calendars you do not control — a subscribed work
-feed, an assigned-shifts calendar — where tagging individual events was never
-an option.
-
-A LABEL IN FRONT OF COPIED TITLES
-
-Set a prefix such as "[Work]" and every copy carries it. It applies to hidden
-titles too, so a busy-only pair can still say where a block came from:
-"[Work] Busy".
-
-CARRY THE MEETING LINK
-
-A pair can now copy the source event's link into the copy's notes, so a
-mirrored meeting is not a dead end you can see but cannot join. It is off by
-default, and it is never added to an event you marked #private — a meeting link
-says plenty about a meeting whose title you chose to hide.
-
-THE IN-CALENDAR NOTE IS NOW A WARNING
-
-Previously a pair could write an all-day "last synced" note into the
-destination on every successful run. It no longer does. A healthy pair writes
-nothing at all, and a note appears only when a pair actually stops syncing.
-
-Destination calendars are usually ones you share with other people, and a daily
-"still working" marker was an artefact all of them could see that told nobody
-anything they would act on. Old notes are removed automatically on the first
-sync after updating.
-
-CLEARER SETTINGS
-
-Each pair's settings now fold down to a single line describing what they are
-set to, so a pair with a dozen options still reads at a glance.
-
-FIXED
-
-• Copies were rewritten on every run when a source calendar reissued its
-  identifier for an event that had not otherwise changed. Nothing was lost, but
-  the copies churned needlessly — and on a shared destination, that churn was
-  visible to everyone.
-
-Event filters are covered thoroughly by the test suite, but they have had less
-exercise against real declined and cancelled invitations than the rest of the
-app. If a filter drops something it should not, or keeps something it should
-not, please open an issue on GitHub — the source is public.
+It reports what actually changed rather than just "done" — "3 added, 1 updated",
+or which pair failed and why. Siri understands "Sync my calendars with Calendar
+Mirror" without you building anything first.
 """
 
-NEW_MAC = """Version 1.4 is mostly about giving you control over which events
-get copied, rather than just how much of each one crosses over.
+NEW_MAC = """Shortcuts.
 
-CHOOSE WHICH EVENTS GET COPIED
+Calendar Mirror now has a Sync Now action for the Shortcuts app, on iPhone, iPad
+and Mac.
 
-A pair can now skip events on their own properties, with no tagging involved:
+Put it in a Shortcut, on your Home Screen, or in an automation: sync when you
+arrive at the office, every weekday at eight, or when a Focus turns on. It runs
+in the background without opening the app.
 
-• Meetings you declined, or have not answered yet
-• Events the organiser cancelled
-• All-day events, and anything marked free
-• Anything shorter or longer than a set number of minutes
-• Titles containing words you choose, such as "Lunch" or "Focus time"
-• Anything outside a window of the day, on the weekdays you pick
-
-This is the part that works on calendars you do not control — a subscribed work
-feed, an assigned-shifts calendar — where tagging individual events was never
-an option.
-
-A REBUILT MANAGEMENT WINDOW
-
-Pairs are now listed down the side, grouped by the calendar they copy into, and
-each one opens in its own pane. Every section folds down to a single line
-describing what it is set to, so a pair with a dozen options still reads at a
-glance.
-
-A NEW MENU-BAR ICON
-
-The menu bar used to show a bare checkmark, triangle or cross — symbols that
-said nothing about which app they belonged to. It now shows Calendar Mirror's
-own icon, redrawn to stay legible at menu-bar size, with a face that changes by
-state: a smile when every copy is current, warning triangles when one has
-fallen behind, crossed eyes when one is failing, a flat expression when you
-have paused it, and a plus when nothing is set up yet.
-
-The outline is identical in every state, so the icon never shifts position in
-the bar when something changes.
-
-A LABEL IN FRONT OF COPIED TITLES
-
-Set a prefix such as "[Work]" and every copy carries it. It applies to hidden
-titles too, so a busy-only pair can still say where a block came from:
-"[Work] Busy".
-
-CARRY THE MEETING LINK
-
-A pair can now copy the source event's link into the copy's notes, so a
-mirrored meeting is not a dead end you can see but cannot join. It is off by
-default, and it is never added to an event you marked #private.
-
-THE IN-CALENDAR NOTE IS NOW A WARNING
-
-Previously a pair could write an all-day "last synced" note into the
-destination on every successful run. It no longer does. A healthy pair writes
-nothing at all, and a note appears only when a pair actually stops syncing.
-
-Destination calendars are usually ones you share with other people, and a daily
-"still working" marker was an artefact all of them could see that told nobody
-anything they would act on. Old notes are removed automatically on the first
-sync after updating.
-
-FIXED
-
-• Copies were rewritten on every run when a source calendar reissued its
-  identifier for an event that had not otherwise changed. Nothing was lost, but
-  the copies churned needlessly — and on a shared destination, that churn was
-  visible to everyone.
-
-Event filters are covered thoroughly by the test suite, but they have had less
-exercise against real declined and cancelled invitations than the rest of the
-app. If a filter drops something it should not, or keeps something it should
-not, please open an issue on GitHub — the source is public.
+It reports what actually changed rather than just "done" — "3 added, 1 updated",
+or which pair failed and why. Siri understands "Sync my calendars with Calendar
+Mirror" without you building anything first.
 """
-
 
 def unwrap(t):
     """Join hard-wrapped prose into real paragraphs, keeping bullets and blank
@@ -384,9 +272,9 @@ def unwrap(t):
 
 
 FIELDS = {
-    "ios": dict(name=NAME, subtitle=SUBTITLE_LIVE, promotional_text=PROMO, keywords=KEYWORDS,
+    "ios": dict(name=NAME, subtitle=SUBTITLE, promotional_text=PROMO, keywords=KEYWORDS,
                 description=unwrap(DESC_IOS), whats_new=unwrap(NEW_IOS)),
-    "mac": dict(name=NAME, subtitle=SUBTITLE_LIVE, promotional_text=PROMO, keywords=KEYWORDS,
+    "mac": dict(name=NAME, subtitle=SUBTITLE, promotional_text=PROMO, keywords=KEYWORDS,
                 description=unwrap(DESC_MAC), whats_new=unwrap(NEW_MAC)),
 }
 
@@ -434,22 +322,5 @@ for plat, fields in FIELDS.items():
             print("  !! %s/%s mentions %s — not in the App Store build" % (plat, name, hits))
         open(os.path.join(d, name + ".txt"), "w").write(val)
         print("%-4s %-18s %5d / %-4d %s" % (plat, name, n, lim, flag))
-    # The staged subtitle, under a filename that is its own reminder.
-    open(os.path.join(d, "subtitle-NEXT-RELEASE.txt"), "w").write(SUBTITLE_NEXT)
-
-# What changes when SUBTITLE_NEXT is adopted. Printed every run so the decision
-# is never rediscovered from scratch.
-_next = tokens(NAME) | tokens(SUBTITLE_NEXT)
-_kw = [k.strip() for k in KEYWORDS.split(",") if k.strip()]
-_clash = [k for k in _kw if k.lower() in _next]
-print()
-print("PENDING: App Store Connect still has the old subtitle.")
-print("  live:  %s" % SUBTITLE_LIVE)
-print("  next:  %s   <- apply with the next version" % SUBTITLE_NEXT)
-if _clash:
-    print("  when you do, drop these keywords (the new subtitle covers them): %s"
-          % ", ".join(_clash))
-    _free = sum(len(k) + 1 for k in _clash)
-    print("  that frees %d characters for new terms." % _free)
 
 sys.exit(1 if fail else 0)

@@ -30,12 +30,17 @@ targets:
     dependencies:
       - package: CalMirrorKit
         product: CalMirrorKit
+      # Linked explicitly. Without it the build still compiles SyncIntent.swift,
+      # but appintentsmetadataprocessor skips extraction ("No AppIntents.framework
+      # dependency found") and the Shortcuts action never appears — a silent
+      # no-op that looks like a successful build.
+      - sdk: AppIntents.framework
     settings:
       base:
         PRODUCT_NAME: cal-mirror
         PRODUCT_BUNDLE_IDENTIFIER: io.github.mattbaylor.cal-mirror
-        MARKETING_VERSION: "1.4.0"
-        CURRENT_PROJECT_VERSION: "8"
+        MARKETING_VERSION: "1.4.1"
+        CURRENT_PROJECT_VERSION: "9"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: CalMirrorMac/Info.plist
         CODE_SIGN_ENTITLEMENTS: CalMirrorMac/CalMirrorMac.entitlements
