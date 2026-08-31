@@ -93,6 +93,7 @@ final class Store: ObservableObject {
     func delete(id: String) { config.mirrors.removeAll { $0.id == id }; save() }
     func delete(_ id: String) { delete(id: id) }
     func togglePause() { config.paused.toggle(); save() }
+    func toggleDedupe() { config.dedupeDestinations.toggle(); save() }
     func setInterval(_ seconds: Int) { config.intervalSeconds = seconds; save() }
     func toggleEnabled(_ id: String) {
         if let i = config.mirrors.firstIndex(where: { $0.id == id }) { config.mirrors[i].enabled.toggle(); save() }
