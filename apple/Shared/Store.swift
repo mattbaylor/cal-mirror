@@ -5,9 +5,9 @@ import ServiceManagement
 #endif
 
 /// Shared view-model for both apps. Cross-platform logic lives here; the only
-/// platform-specific bits are the macOS timer + login item (`#if os(macOS)`).
+/// platform-specific bits are the macOS sync loop + login item (`#if os(macOS)`).
 /// iOS drives syncs on-open / pull-to-refresh and schedules `BGAppRefreshTask`
-/// from the app scene, so it needs no timer here.
+/// from the app scene, so it needs no loop here.
 @MainActor
 final class Store: ObservableObject {
     @Published var config = Config.empty
@@ -18,7 +18,13 @@ final class Store: ObservableObject {
     @Published var syncing = false
     #if os(macOS)
     @Published var launchAtLogin = false
-    private var timer: Timer?
+    /// Whether the change observer is actually up, so the UI can tell a working
+    /// realtime setup from one that merely has the switch on.
+    @Published var observing = false
+    private var loop: Task<Void, Never>?
+    private var sleeper: Task<Void, Never>?
+    private var scheduler = SyncScheduler()
+    private var observerToken: NSObjectProtocol?
     #endif
 
     private let engine = MirrorEngine()
@@ -140,15 +146,86 @@ final class Store: ObservableObject {
         return "checkmark.circle.fill"
     }
 
-    // MARK: macOS-only (timer + login item)
+    // MARK: macOS-only (sync loop + login item)
 
     #if os(macOS)
+    /// The same three-way decision the standalone daemon makes — debounced
+    /// calendar changes, a minimum gap between change-driven runs, and the
+    /// scheduled floor — rather than a fixed repeating Timer.
+    ///
+    /// The floor never goes away. EKEventStoreChanged is best-effort: subscribed
+    /// ICS feeds refresh without announcing it and sleep drops notifications
+    /// outright, so without a backstop a missed notification means a mirror
+    /// stale forever with nothing to notice. With realtime on, the floor is
+    /// pinned to five minutes and the configured interval steps aside.
     func scheduleTimer() {
-        timer?.invalidate(); timer = nil
-        guard !config.paused, config.intervalSeconds > 0 else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: TimeInterval(config.intervalSeconds), repeats: true) { [weak self] _ in
-            Task { await self?.syncNow() }
+        loop?.cancel()
+        applyObserver()
+        guard !config.paused else { return }
+        loop = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                let wait = await self.step()
+                guard wait > 0 else { continue }
+                await self.nap(wait)
+            }
         }
+    }
+
+    /// One pass: decide, and either sync or report how long to wait.
+    private func step() async -> TimeInterval {
+        switch scheduler.decide(now: Date(), intervalSeconds: config.effectiveIntervalSeconds) {
+        case .sync:
+            await syncNow()
+            let done = Date()
+            // Order matters: open the self-write window BEFORE clearing the
+            // pending burst, so an echo of our own writes landing in between is
+            // suppressed rather than scheduling the cycle that just finished all
+            // over again.
+            scheduler.noteWrite(at: done)
+            scheduler.noteSyncFinished(at: done)
+            return 0
+        case .wait(let seconds):
+            return seconds
+        }
+    }
+
+    /// Sleep, but let a calendar change cut it short.
+    private func nap(_ seconds: TimeInterval) async {
+        // Explicitly Task<Void, Never>: `try?` would make the closure return
+        // Void? and the type would not match `sleeper`.
+        let t = Task<Void, Never> {
+            do { try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000)) } catch { }
+        }
+        sleeper = t
+        await t.value          // returns immediately once cancelled
+        sleeper = nil
+    }
+
+    /// Follow the config: realtime can be switched on or off at any time.
+    private func applyObserver() {
+        let wanted = config.realtime && !config.paused
+        if wanted, observerToken == nil {
+            observerToken = engine.observeChanges { [weak self] in
+                Task { @MainActor in self?.noteCalendarChange() }
+            }
+            observing = true
+        } else if !wanted, let token = observerToken {
+            engine.stopObserving(token)
+            observerToken = nil
+            observing = false
+        }
+    }
+
+    private func noteCalendarChange() {
+        // Only interrupt the wait for a change we actually intend to act on —
+        // our own write echoing back should not even wake us.
+        if scheduler.noteChange(at: Date()) { sleeper?.cancel() }
+    }
+
+    func toggleRealtime() {
+        config.realtime.toggle()
+        save()
     }
     func setLaunchAtLogin(_ on: Bool) {
         do {

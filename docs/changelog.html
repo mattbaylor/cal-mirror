@@ -45,6 +45,20 @@
   <p class="sub">What changed in each release, including the fixes.</p>
 
   <div class="rel">
+    <div class="relhead"><h2>1.4.2</h2><span class="tag">Build from source</span></div>
+
+    <h3>New</h3>
+    <ul>
+      <li><b>Realtime syncing in the Mac App Store app.</b> Until now, syncing within seconds of a
+        calendar change was only in the version you build yourself; the App Store app kept to a
+        fixed schedule. It now runs the same three-way decision the standalone daemon does &mdash;
+        debounced calendar changes, a minimum gap between change-driven runs, and a five-minute
+        floor underneath as the backstop. Turn it on from the menu bar. iPhone and iPad still keep
+        to their background schedules, because iOS decides when an app may run at all.</li>
+    </ul>
+  </div>
+
+  <div class="rel">
     <div class="relhead"><h2>1.4.1</h2><span class="tag">In review</span><span class="date">submitted 31 August 2026</span></div>
 
     <!--UNRELEASED:1.4.1-->
