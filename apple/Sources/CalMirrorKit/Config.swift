@@ -340,6 +340,10 @@ public struct Config: Codable, Equatable, Sendable {
     /// the API can't keep. The UI still presents it per mirror — turning it on
     /// anywhere turns it on everywhere — and says so.
     public var realtime: Bool
+    /// Write one copy when two mirrors would put an identical block into the
+    /// same destination. Off by default: it changes what lands in a calendar,
+    /// and nobody's existing setup should shift under them on upgrade.
+    public var dedupeDestinations: Bool
     public var mirrors: [Mirror]
 
     /// The floor realtime pins the schedule to. Once changes drive the cycles,
@@ -352,9 +356,11 @@ public struct Config: Codable, Equatable, Sendable {
     /// config decoded from a file that predates the key keeps it OFF. Upgrading
     /// never silently changes how an existing setup syncs.
     public init(paused: Bool = false, intervalSeconds: Int = 900,
-                realtime: Bool = true, mirrors: [Mirror] = []) {
+                realtime: Bool = true, dedupeDestinations: Bool = false,
+                mirrors: [Mirror] = []) {
         self.paused = paused; self.intervalSeconds = intervalSeconds
-        self.realtime = realtime; self.mirrors = mirrors
+        self.realtime = realtime; self.dedupeDestinations = dedupeDestinations
+        self.mirrors = mirrors
     }
 
     public init(from decoder: Decoder) throws {
@@ -362,6 +368,9 @@ public struct Config: Codable, Equatable, Sendable {
         paused = try c.decodeIfPresent(Bool.self, forKey: .paused) ?? false
         intervalSeconds = try c.decodeIfPresent(Int.self, forKey: .intervalSeconds) ?? 900
         realtime = try c.decodeIfPresent(Bool.self, forKey: .realtime) ?? false
+        // Absent means off, on a fresh config as well as an upgraded one: unlike
+        // realtime, this changes what a calendar ends up containing.
+        dedupeDestinations = try c.decodeIfPresent(Bool.self, forKey: .dedupeDestinations) ?? false
         mirrors = try c.decodeIfPresent([Mirror].self, forKey: .mirrors) ?? []
     }
 

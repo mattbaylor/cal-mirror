@@ -367,6 +367,32 @@ event would make all your mirrors pay full price.
 New installs get realtime on; upgrading an existing `config.json` leaves it off
 until you turn it on, so nothing about your sync changes underneath you.
 
+## 👯 Duplicate blocks in a shared destination
+
+Two mirrors can share one destination — that is the point of per-mirror marker
+tags. But if the *same* event reaches both (a work feed and an on-call feed that
+overlap), you get two identical blocks stacked on a calendar you probably share,
+and neither mirror cleans the other's up because each only ever touches its own
+copies.
+
+```jsonc
+{ "dedupeDestinations": true }     // top level, off by default
+```
+
+With it on, the first mirror in config order writes the block and the rest skip
+it. Config order decides, so the result doesn't depend on which mirror ran first
+and doesn't flap between cycles. If the owning mirror is disabled or deleted, the
+next one claims it on the following cycle.
+
+**Mirrors that redact differently never collapse.** The claim is keyed on the
+*projected* title, so a busy-only copy ("Busy") and a full copy ("Standup") are
+different blocks and both survive. Only genuinely identical blocks collapse —
+including two different meetings that both project to "Busy" at the same time,
+which is what you want on a shared availability calendar.
+
+Off by default: it changes what ends up in a calendar, and upgrading should never
+do that on its own. The log says `deduped×N` when it skips anything.
+
 ## 🖥️ Menu bar
 
 ```

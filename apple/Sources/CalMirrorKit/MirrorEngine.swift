@@ -18,6 +18,9 @@ public struct MirrorResult: Identifiable, Sendable {
     public var ok: Bool
     /// A real failure — something the user has to fix. Drives the ✗ health icon.
     public var error: String?
+    /// How many events this mirror skipped because an earlier mirror already
+    /// writes an identical block into the same destination.
+    public var deduped = 0
     /// A benign explanation for a cycle that did nothing: disabled, paused,
     /// deferred, or skipped because the source hadn't moved. Kept apart from
     /// `error` because these used to share a field, which made a healthy skip
@@ -111,6 +114,10 @@ public final class MirrorEngine: @unchecked Sendable {
                         trigger: SyncScheduler.Reason = .floor,
                         log: ((String) -> Void)? = nil) -> [MirrorResult] {
         let reversed = reversedMirrorIds(in: config)
+        // Shared across the cycle so a later mirror can see that an earlier one
+        // already put an identical block in the same destination. Config order
+        // decides the winner, which keeps the outcome stable between runs.
+        var claims = DestinationClaims()
         return config.mirrors.map { m in
             if !m.enabled { return MirrorResult(id: m.id, name: m.name, ok: true, note: "disabled") }
             if reversed.contains(m.id) {
@@ -118,7 +125,8 @@ public final class MirrorEngine: @unchecked Sendable {
                 return MirrorResult(id: m.id, name: m.name, ok: false,
                                     error: "Reverse of another mirror — refused to avoid a loop")
             }
-            return syncMirror(m, allMirrors: config.mirrors, now: now, trigger: trigger, log: log)
+            return syncMirror(m, allMirrors: config.mirrors, now: now, trigger: trigger,
+                              dedupe: config.dedupeDestinations, claims: &claims, log: log)
         }
     }
 
@@ -361,6 +369,8 @@ public final class MirrorEngine: @unchecked Sendable {
 
     private func syncMirror(_ m: Mirror, allMirrors: [Mirror], now: Date,
                             trigger: SyncScheduler.Reason = .floor,
+                            dedupe: Bool = false,
+                            claims: inout DestinationClaims,
                             log: ((String) -> Void)?) -> MirrorResult {
         var r = MirrorResult(id: m.id, name: m.name, ok: true)
         // Destination first: the banner lives there, so a failure we can't write
@@ -393,6 +403,7 @@ public final class MirrorEngine: @unchecked Sendable {
         var srcList: [EKEvent] = []
         var snaps: [Snap] = []                 // parallel to srcList; built once per event
         var desiredList: [Reconciler.Desired] = []
+        var deduped = 0
         for ev in srcEvents {
             if isMirrorArtifact(ev, mirrors: allMirrors) { continue }   // don't re-mirror a copy/heartbeat
             let nt = scanNoteTags(ev.notes)
@@ -408,10 +419,19 @@ public final class MirrorEngine: @unchecked Sendable {
             snaps.append(snap)
             // Fingerprint uses the PROJECTED title so a redacted copy still
             // fuzzy-matches its source (the copy carries the projected title).
-            desiredList.append(.init(
-                key: keyFor(ev, now: now),
-                fingerprint: fingerprintOf(title: snap.title, start: ev.startDate,
-                                           end: ev.endDate, allDay: ev.isAllDay, now: now)))
+            let fp = fingerprintOf(title: snap.title, start: ev.startDate,
+                                   end: ev.endDate, allDay: ev.isAllDay, now: now)
+            // An earlier mirror already writing this exact block here means a
+            // second copy would be a visible duplicate on a calendar the user
+            // very likely shares. Because the fingerprint carries the PROJECTED
+            // title, mirrors that redact differently never collide — only
+            // genuinely identical blocks collapse.
+            if dedupe && !claims.claim(dest: dest.calendarIdentifier, fingerprint: fp) {
+                srcList.removeLast(); snaps.removeLast()
+                deduped += 1
+                continue
+            }
+            desiredList.append(.init(key: keyFor(ev, now: now), fingerprint: fp))
         }
 
 
@@ -587,6 +607,9 @@ public final class MirrorEngine: @unchecked Sendable {
         // regenerates its event identifiers, which is worth knowing about even
         // though it now costs nothing.
         if staleKeys > 0 { why += " · stale keys×\(staleKeys) (source re-issues ids)" }
+        // Say so rather than leaving a mirror looking like it found nothing.
+        r.deduped = deduped
+        if deduped > 0 { why += " · deduped×\(deduped) (already written by an earlier mirror)" }
         log?("[\(m.id)] +\(r.created) ~\(r.updated) =\(r.unchanged) -\(r.deleted)\(why)")
         return r
     }

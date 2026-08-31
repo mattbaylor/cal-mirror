@@ -42,6 +42,9 @@ struct MenuContent: View {
             }
         }
         .disabled(model.config.realtime)
+        Toggle("Skip duplicates in shared destinations",
+               isOn: Binding(get: { model.config.dedupeDestinations },
+                             set: { _ in model.toggleDedupe() }))
         Toggle("Launch at login", isOn: Binding(get: { model.launchAtLogin }, set: { model.setLaunchAtLogin($0) }))
         Divider()
         Button("Manage mirrors…") {

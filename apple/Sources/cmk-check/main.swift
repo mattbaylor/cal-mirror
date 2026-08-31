@@ -484,6 +484,51 @@ do {
     check(HP.dayLabel(now) == HP.dayLabel(now), "dayLabel is stable")
 }
 
+print("Destination dedupe:")
+do {
+    var c = DestinationClaims()
+    // First mirror to ask for a block gets it; a second asking for the same
+    // block in the same destination is told no.
+    check(c.claim(dest: "DEST", fingerprint: "Busy|9|10|0"), "first claim wins")
+    check(!c.claim(dest: "DEST", fingerprint: "Busy|9|10|0"), "an identical block is refused")
+
+    // THE safety property: mirrors that redact differently fingerprint
+    // differently, so a busy-only mirror can never suppress a full-detail copy.
+    check(c.claim(dest: "DEST", fingerprint: "Standup|9|10|0"),
+          "a differently projected copy of the same slot still gets written")
+
+    // Same block, different destination, is a different question entirely.
+    check(c.claim(dest: "OTHER", fingerprint: "Busy|9|10|0"),
+          "the same block in another destination is unaffected")
+
+    // Two blocks that only differ by time do not collide.
+    check(c.claim(dest: "DEST", fingerprint: "Busy|11|12|0"), "a different slot is its own claim")
+
+    // Reading must not take.
+    var d = DestinationClaims()
+    check(!d.isClaimed(dest: "D", fingerprint: "F"), "nothing is claimed to begin with")
+    check(d.claim(dest: "D", fingerprint: "F"), "claiming works after a peek")
+    check(d.isClaimed(dest: "D", fingerprint: "F"), "and the peek then sees it")
+
+    // The switch has to survive a save/load round trip, and must default off so
+    // an existing setup never changes what it writes on upgrade.
+    let enc = JSONEncoder(), dec = JSONDecoder()
+    let on = Config(dedupeDestinations: true, mirrors: [])
+    if let d = try? enc.encode(on), let back = try? dec.decode(Config.self, from: d) {
+        check(back.dedupeDestinations, "dedupeDestinations round-trips")
+    } else { check(false, "dedupeDestinations round-trips") }
+    if let d = "{\"mirrors\":[]}".data(using: .utf8),
+       let old = try? dec.decode(Config.self, from: d) {
+        check(!old.dedupeDestinations, "absent → off (an upgrade changes nothing)")
+    } else { check(false, "absent → off (an upgrade changes nothing)") }
+
+    // The separator must not let two halves run together into a false match.
+    var e = DestinationClaims()
+    _ = e.claim(dest: "a", fingerprint: "bc")
+    check(e.claim(dest: "ab", fingerprint: "c"),
+          "dest and fingerprint cannot be confused for one another")
+}
+
 print("Source link:")
 do {
     let https = URL(string: "https://zoom.us/j/12345")!
