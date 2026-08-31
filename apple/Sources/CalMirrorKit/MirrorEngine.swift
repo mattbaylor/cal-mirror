@@ -12,6 +12,19 @@ public struct CalendarInfo: Identifiable, Hashable, Sendable {
 }
 
 /// The result of syncing one mirror.
+/// One copy a mirror put in its destination, for showing back to the user.
+public struct CopyInfo: Identifiable, Sendable, Equatable {
+    public let id: String
+    public let title: String
+    public let start: Date?
+    public let end: Date?
+    public let isAllDay: Bool
+    public init(id: String, title: String, start: Date?, end: Date?, isAllDay: Bool) {
+        self.id = id; self.title = title; self.start = start
+        self.end = end; self.isAllDay = isAllDay
+    }
+}
+
 public struct MirrorResult: Identifiable, Sendable {
     public let id: String
     public let name: String
@@ -128,6 +141,37 @@ public final class MirrorEngine: @unchecked Sendable {
             return syncMirror(m, allMirrors: config.mirrors, now: now, trigger: trigger,
                               dedupe: config.dedupeDestinations, claims: &claims, log: log)
         }
+    }
+
+    /// The copies a mirror currently has in its destination, soonest first.
+    ///
+    /// The app could only ever show a count before, which answers "is it
+    /// working" but not "what did it put in my shared calendar" — and on a
+    /// busy-only mirror that is exactly the question, because the copies say
+    /// nothing about themselves once they are written.
+    ///
+    /// Reads the marker rather than re-deriving from the source, so it shows
+    /// what is actually in the calendar right now, including copies left behind
+    /// by a mirror whose source has since changed.
+    public func copies(of m: Mirror, allMirrors: [Mirror], now: Date = Date(),
+                       limit: Int = 200) -> [CopyInfo] {
+        guard let dest = findCalendar(m.dest) else { return [] }
+        let start = now.addingTimeInterval(-m.windowPastDays * 86400)
+        let end = now.addingTimeInterval(m.windowFutureDays * 86400)
+        let evs = store.events(matching:
+            store.predicateForEvents(withStart: start, end: end, calendars: [dest]))
+        return evs.compactMap { ev -> CopyInfo? in
+            guard let owner = Markers.owner(of: ev.url, mirrors: allMirrors),
+                  owner.id == m.id else { return nil }
+            return CopyInfo(id: ev.calendarItemIdentifier,
+                            title: ev.title ?? "",
+                            start: ev.startDate,
+                            end: ev.endDate,
+                            isAllDay: ev.isAllDay)
+        }
+        .sorted { ($0.start ?? .distantPast) < ($1.start ?? .distantPast) }
+        .prefix(limit)
+        .map { $0 }
     }
 
     /// Mirror ids that form an A->B / B->A reverse pair — both sides are refused.
