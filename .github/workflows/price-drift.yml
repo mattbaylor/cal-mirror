@@ -1,0 +1,23 @@
+# Re-check the App Store prices the comparison pages assert.
+#
+# Those pages carry dated prices, and a stale one turns an honest comparison
+# into a false claim without anyone touching the file. This notices.
+#
+# Deliberately does not edit anything: a price change often wants new wording,
+# not just a new number, and that is a judgement rather than a substitution.
+name: Competitor price drift
+
+on:
+  schedule:
+    - cron: "41 7 * * 1"   # Monday mornings, off the hour
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 .github/scripts/check_prices.py

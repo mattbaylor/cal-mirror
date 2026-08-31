@@ -1,0 +1,13 @@
+{
+  "_comment": "Prices the comparison pages assert, for the competitors that are App Store apps. check_prices.py compares these against the live iTunes lookup and fails on drift. Update the page wording first, then the number here, then the checked date.",
+  "checked": "31 August 2026",
+  "apps": [
+    { "id": "718043190",  "name": "Fantastical",        "page": "fantastical.html",       "price": "Free" },
+    { "id": "6478960914", "name": "Local Calendar Sync", "page": "localcalendarsync.html", "price": "$6.99" },
+    { "id": "6786875117", "name": "ReciproCal Sync",     "page": "reciprocal.html",        "price": "Free" },
+    { "id": "6777328427", "name": "Calends",             "page": "calends.html",           "price": "Free" },
+    { "id": "6762634278", "name": "Calendar Busy Sync",  "page": "calendarbusysync.html",  "price": "Free" },
+    { "id": "6759219374", "name": "CalMirror",           "page": "calmirror.html",         "price": "Free" },
+    { "id": "6792364535", "name": "SyncThemCalendars",   "page": "syncthemcalendars.html", "price": "Free" }
+  ]
+}
