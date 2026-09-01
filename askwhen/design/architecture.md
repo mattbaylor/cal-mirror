@@ -3,8 +3,8 @@
 The system end to end, with every decision I could not make for you collected at
 the bottom.
 
-Companion documents: `booking-service.md` (why it is shaped this way),
-`serverless-availability.md` (what turned out to be impossible).
+Companion documents: `rationale.md` (why it is shaped this way), `findings.md`
+(what turned out to be impossible), `decisions.md` (what is still open).
 
 ---
 
@@ -309,64 +309,6 @@ only thing standing between the page and a search result.
 6. **Custom domains** last; they are support burden, not product.
 
 ---
-
 ## 12. Decisions
 
-Answer inline — "1a, 2b, agree" is enough.
-
-**1. Poll or push?**
- (a) Poll only — no device token ever, most private, minutes of latency.
- (b) APNs push — instant, but the service holds a routing handle for a device.
- *Recommend (a).* Latency is invisible when the human is asleep anyway, and (b)
- weakens the central claim for a convenience nobody asked for.
-
-**2. Slot holds when two people ask?**
- (a) No hold — both queue, owner picks.
- (b) Soft-hold on confirm, 24h expiry, greyed on the page.
- *Recommend (a) to start.* (b) adds state and a timer to solve a problem that
- needs traffic to exist.
-
-**3. Is a display name required?**
- It is the only identifying field. Optional means pages titled "Book a meeting"
- with no idea whose. *Recommend required, and say plainly it will be public.*
-
-**4. What is the service called, and on what domain?**
- Branding, not architecture — but the custom-subdomain tier is `you.<this>.app`,
- so it wants deciding early. Also: Calendar Mirror branding, or its own?
-
-**5. Keep resolved requests for 30 days?**
- (a) 30 days, so the owner can see what they agreed to.
- (b) Purge on resolve; the event is in their calendar anyway.
- *Recommend (b).* It is the stronger claim and the calendar is the record.
-
-**6. Lapse behaviour?**
- *Recommend 7-day grace showing "not currently taking requests", then delete.*
-
-**7. Multiple pages per subscription?**
- "Intro call" and "office hours" are different lengths and rules. One page is
- simpler; several is obviously wanted later. *Recommend one at $20, several at
- the subdomain tier* — it gives the middle tier a reason to exist beyond vanity.
-
-**8. Indexable?**
- *Recommend `noindex` by default*, with an opt-in for people who want to be found.
-
-**9. Email provider?**
- The service must send mail, so somebody sees requester addresses. Postmark, SES,
- Resend, or self-hosted. **Not Google.** This is the one remaining third party in
- the design and deserves a deliberate choice rather than a default.
-
-**10. Which calendars count as busy?**
- (a) Pick calendars explicitly.
- (b) Reuse an existing mirror's source set.
- *Recommend (a)* — (b) couples two features and surprises people when they edit a
- mirror.
-
-**11. Where does it run?**
- Cloudflare Workers + R2/KV fits (edge, cheap, custom domains and certs handled).
- Fly/Render are fine too. Decide before the service, not before the components.
-
-**12. Does the owner set the meeting title, or the requester?**
- (a) Owner fixes it — "Intro call" — requester adds a note.
- (b) Requester names it, which lands stranger-supplied text in the owner's
- calendar.
- *Recommend (a)*, with the note in the event body rather than the title.
+Moved to `decisions.md`, so answers land beside the questions.

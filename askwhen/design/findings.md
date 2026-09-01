@@ -2,7 +2,7 @@
 
 > **Superseded in part.** The conclusion below ("no server, therefore a request
 > page") was the wrong frame: the thing worth avoiding is a standing *credential*,
-> not a server. See `booking-service.md` for the design actually being built.
+> not a server. See `rationale.md` for the design actually being built.
 > The findings here still hold and are why that design looks the way it does.
 
 **Question.** Publish a publicly reachable availability page, with a link that
@@ -90,7 +90,7 @@ file you can open in a text editor. That is a far stronger claim than "trust our
 server", and it means "preview exactly what strangers will see" is a feature
 rather than a promise.
 
-A working prototype is in `design/prototype/` — 9 KB, and `grep` for `http`
+A working prototype is in `../prototype/` — 9 KB, and `grep` for `http`
 finds no external URL of any kind. There is no
 application server and no third party sees anything beyond what the owner chose
 to publish, but there *is* a static host. GitHub Pages already serves this
@@ -171,7 +171,7 @@ is on-device, rather than harder.
 0. **Already answered:** the page can be generated with no external requests and
    the browser can build a valid `METHOD:REQUEST` with the requester as
    `ORGANIZER` and the owner as a `NEEDS-ACTION` attendee. Verified against the
-   prototype; `design/prototype/test-invite.ics` is a ready-made one.
+   prototype; `../prototype/test-invite.ics` is a ready-made one.
 1. **Does the requester's client actually send the invitation?** Apple Calendar
    and Outlook send iTIP when you add an attendee to an event you organise. What
    they do with a *downloaded* `METHOD:REQUEST` file is more variable — some

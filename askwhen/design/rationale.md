@@ -5,7 +5,7 @@ never learns who you are, never holds a credential to your calendar, and never
 sees anything you did not choose to publish.
 
 Decided 31 August 2026. Findings that shaped it — including what turned out to be
-impossible — are in `serverless-availability.md`.
+impossible — are in `findings.md`.
 
 ---
 
@@ -75,7 +75,7 @@ One tap is the right shape anyway. A notification saying *"Alex asked for Tuesda
 and it means the invitation genuinely comes from them rather than from software
 acting as them.
 
-`design/prototype/make_shipback.py` emits a real `.eml` so the one assumption
+`../prototype/make_shipback.py` emits a real `.eml` so the one assumption
 underneath all of this can be tested by opening a file. Verified structurally:
 `multipart/alternative`, a `text/plain` part, and a `text/calendar;
 method=REQUEST` part whose VEVENT carries `METHOD:REQUEST`, the owner as

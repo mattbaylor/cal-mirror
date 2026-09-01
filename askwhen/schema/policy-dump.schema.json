@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.invalid/policy-dump.schema.json",
   "title": "Booking policy dump",
-  "description": "The ONLY artifact that leaves the owner's device. Anything absent here is absent by design, not by omission — see design/booking-architecture.md section 2.",
+  "description": "The ONLY artifact that leaves the owner's device. Anything absent here is absent by design, not by omission — see ../design/architecture.md section 2.",
   "type": "object",
   "additionalProperties": false,
   "required": ["v", "slug", "generated", "display", "meeting", "slots"],
