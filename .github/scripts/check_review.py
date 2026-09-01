@@ -111,6 +111,25 @@ def main():
         open(HOME, "w").write(stripped)
         print(f"removed {version} notes from {HOME}")
 
+    # Move the "On the App Store" tag onto the version that is now current.
+    # It answers "which one do I get if I tap Download", so leaving it on the
+    # previous release tells every visitor something false — and nothing else
+    # in the pipeline moves it.
+    page = open(PAGE).read()
+    TAG = '<span class="tag">On the App Store</span>'
+    holder = re.search(r'<h2>([0-9][0-9.]*)</h2>(?:(?!</div>).)*?'
+                       + re.escape(TAG), page, re.S)
+    if holder and holder.group(1) != version:
+        page = page.replace("\n      " + TAG, "", 1)
+        anchor = re.compile(r'(<h2>' + re.escape(version) + r'</h2>'
+                            r'<span class="date">[^<]*</span>)')
+        page, moved = anchor.subn(r'\1\n      ' + TAG, page, count=1)
+        if moved != 1:
+            print("::error::could not move the App Store tag onto %s" % version)
+            return 1
+        open(PAGE, "w").write(page)
+        print(f"moved the App Store tag from {holder.group(1)} to {version}")
+
     print(f"stamped {version} as released on {today}")
     with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
         fh.write("released=true\n")
