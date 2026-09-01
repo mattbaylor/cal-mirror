@@ -12,6 +12,8 @@ things get collected, and it never knows who lives there.
 a server holding your calendar, and that is the trade this exists to refuse. The
 name says so out loud, which is the point of it.
 
+Picking this up after a break? Start at [`../HANDOFF.md`](../HANDOFF.md).
+
 ## Layout
 
 ```
