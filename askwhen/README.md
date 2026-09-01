@@ -57,7 +57,9 @@ slot after the change.
 *Why first:* the privacy claim is made here, and only here. Everything downstream
 just moves this file around.
 
-**Needs:** decision 10 (which calendars count as busy), 12 (who titles the event).
+**Settled and assumed here:** blocking/request calendars come from the two
+checkboxes in Manage Mirrors; the owner sets the event title and the requester's
+note goes in the body; horizon is 2–45 days, default 14.
 
 ### 2 · Web app — `web/`
 
@@ -86,7 +88,10 @@ Storage, endpoints, entitlement. Endpoints and stored state are in
 and resolved — and the stored record contains no owner email, name beyond the
 public display label, calendar, or credential.
 
-**Needs:** decisions 6 (lapse), 9 (email provider), 11 (host).
+**Settled and assumed here:** hosted on `rehosted.us`, mail via
+`dlvr.rehosted.us`. SPF, DKIM and DMARC on the sending domain **before** the
+first confirmation email — get this wrong and every request silently dies in
+spam, which looks exactly like nobody wanting to meet you.
 
 ### 4 · Device client — publish, poll, resolve
 
@@ -95,7 +100,9 @@ Publish on change, piggybacking the existing sync loop. Poll slowly. On accept,
 snapshot and the device holds truth. A hosted competitor cannot do this; it is
 the one place the architecture is more accurate rather than less.
 
-**Needs:** decision 1 (poll or push).
+**Settled and assumed here:** collection is paced from the sync settings the
+owner already chose — minutes on macOS, the background-refresh interval on iOS.
+One nominated publisher per owner; the others still collect and answer.
 
 ### 5 · Email, double opt-in, proof of work
 
@@ -112,6 +119,10 @@ Last. It is ACME issuance, renewal, and the standing cost of helping people whos
 CNAME is wrong — support burden, not product.
 
 ---
+
+**No step is blocked on a decision.** `design/decisions.md` has an answer and a
+reason for every question this design needs. New ones will arrive from building;
+they belong there too.
 
 ## Standing constraints
 

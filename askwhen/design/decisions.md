@@ -88,29 +88,35 @@ requests* during the grace, in the same slot and voice as the freshness
 stoplight, then the dump is removed and the slug 404s into the invitation page.
 Never keep serving silently. *(was 6)*
 
+**Display name — required, any label the owner chooses.** *(1 Sept 2026)* The
+page always shows something. A stranger arriving cold from a link needs to know
+they reached the person they meant, and an unnamed page asking for an email
+address looks like a phishing form. Free text rather than a verified name keeps
+it a *label*: "Matt Baylor", "Matt B" or "The Referee Guy" are all valid, so the
+owner decides how much they are disclosing. It remains the only identifying field
+in the dump.
+
+**Resolved requests — purged once delivery confirms, 48-hour ceiling.**
+Deleting the instant the owner accepts sounds like the stronger claim, but a
+bounced `.ics` would then be unrecoverable: no address left to resend to, and the
+requester never learns they were accepted. Forty-eight hours is the smallest
+window that keeps delivery honest. After that the calendar is the only record,
+which is where it belongs.
+
+**Pages per subscription — one at $20, several from $35.** This gives the middle
+tier a reason to exist beyond a nicer URL, which was otherwise a weak upsell.
+Most people need one page; "a 15-minute chat" and "an hour-long review" is the
+obvious second, and the people who want it are the people willing to pay for it.
+
+**Indexing — `noindex` by default, opt-in to be listed.** The slug is the only
+thing between a page and a search result, so invisible is the safe default. But
+an outright ban would foreclose a legitimate use — a consultant who *wants* to be
+found — and push them to a competitor. Opting in has to be a deliberate act, with
+the consequence stated plainly at the moment of choosing.
+
 ## Still open
 
+Nothing. Every decision this design needs has an answer and a reason above.
 
-
-**3. Is a display name required?**
- It is the only identifying field. Optional means pages titled "Book a meeting"
- with no idea whose. *Recommend required, and say plainly it will be public.*
-
-
-**5. Keep resolved requests for 30 days?**
- (a) 30 days, so the owner can see what they agreed to.
- (b) Purge on resolve; the event is in their calendar anyway.
- *Recommend (b).* It is the stronger claim and the calendar is the record.
-
-
-**7. Multiple pages per subscription?**
- "Intro call" and "office hours" are different lengths and rules. One page is
- simpler; several is obviously wanted later. *Recommend one at $20, several at
- the subdomain tier* — it gives the middle tier a reason to exist beyond vanity.
-
-**8. Indexable?**
- *Recommend `noindex` by default*, with an opt-in for people who want to be found.
-
-
-
-
+New questions will arrive from building — that is expected, and they belong here
+with their reasoning rather than in a commit message nobody reads twice.
