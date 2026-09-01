@@ -51,6 +51,37 @@ the mirrors do.
 Nothing here says who you are, what your meetings are called, which calendars
 they came from, or when you are busy.
 
+### The ship-back cannot use EventKit
+
+**EventKit can read attendees but cannot set them.** The product already
+documents this in six places — "attendees can't be replicated" — and it is the
+constraint that decides the return path.
+
+So the device cannot create an event with the requester attached and let Calendar
+send the invitation. There is no such API. The only way an Apple device can
+originate a genuine invitation is to **send a mail message whose body carries
+`text/calendar; method=REQUEST`**. That MIME type is what makes a client render
+Accept / Decline rather than showing a file attachment.
+
+Which also means the ship-back is **not silent**, and should not try to be:
+
+- **iOS** — `MFMailComposeViewController` requires the user to press send.
+- **macOS** — sending without interaction means scripting Mail through Apple
+  Events, which the App Store sandbox forbids without a temporary-exception
+  entitlement Apple grants reluctantly.
+
+One tap is the right shape anyway. A notification saying *"Alex asked for Tuesday
+3pm — send the invitation?"* is a confirmation step the owner wanted regardless,
+and it means the invitation genuinely comes from them rather than from software
+acting as them.
+
+`design/prototype/make_shipback.py` emits a real `.eml` so the one assumption
+underneath all of this can be tested by opening a file. Verified structurally:
+`multipart/alternative`, a `text/plain` part, and a `text/calendar;
+method=REQUEST` part whose VEVENT carries `METHOD:REQUEST`, the owner as
+`ORGANIZER` and the requester as `NEEDS-ACTION`. What is **not** yet verified is
+how Apple Mail, Gmail and Outlook actually render it.
+
 ### The dead-drop
 
 ```
@@ -81,6 +112,37 @@ property**, and that is worth saying in the marketing because it is true and
 nobody says it. It is also required: a hosted service consumed in-app falls under
 App Store guideline 3.1.1, so this cannot be a Stripe checkout linked from the
 app.
+
+---
+
+## The web app: Lit 3 components, one codebase, N pages
+
+Every booking page is the **same application** served with a different policy
+dump. Nothing about a page is bespoke — the slug selects a JSON document, and
+that document is the only thing that differs.
+
+```
+<availability-calendar>   renders offerable slots from the policy dump
+  <slot-picker>           choosing a time
+  <booking-form>          who is asking, and what for
+<request-sent>            the confirmation state
+```
+
+Lit is a good fit for a reason beyond taste: these compile to standard custom
+elements, so the same components can later be embedded in someone's own site
+without dragging a framework along. That is a plausible future for a booking
+widget and a bad one to design yourself out of.
+
+**This supersedes the baked-in prototype.** `make_availability.py` generates a
+self-contained page with the availability inlined, which existed only because
+the no-server design could not fetch anything — iCloud's feeds send no CORS
+header. With a service of our own, the page fetches its policy dump from its
+**own origin**, so CORS never arises and the DRY version is simply available.
+The prototype keeps its value as the reference for invitation generation.
+
+One thing to keep separate: `docs/` is hand-written HTML with no build step, on
+purpose. The booking app is a bundled Lit application and will have one. They
+should not meet.
 
 ---
 
@@ -170,5 +232,18 @@ rather than with features.
 
 ## Status
 
-Prototype of the page and the invitation generation is in `design/prototype/`
-and works with no external requests at all. Nothing about the service exists yet.
+- `make_availability.py` — availability page prototype, no external requests.
+  Superseded as an architecture, still the reference for slot rendering.
+- `make_shipback.py` — the ship-back invitation as a real `.eml`. Structure
+  verified; client rendering is the open test.
+- Nothing about the service exists yet.
+
+## Next, in order
+
+1. **Open `shipback-test.eml` in Apple Mail, Gmail and Outlook.** Accept /
+   Decline, or an attachment? Everything else waits on this, because it decides
+   whether the ship-back is a feature or a dead end.
+2. Slot derivation and the policy-dump format — the privacy claim is made or
+   lost here, so it is worth getting right before anything renders it.
+3. The Lit component set against a static policy dump, no service.
+4. The service last: it is the least interesting part and the easiest to change.
