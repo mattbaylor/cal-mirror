@@ -99,17 +99,45 @@ Inputs: one or more calendars treated as *busy sources*, plus a policy.
 
 ```jsonc
 {
-  "sources": ["<calendar ids>"],       // what counts as busy
-  "horizonDays": 14,
-  "minNoticeHours": 12,                // never offer the next two hours
-  "hours": { "mon": [["09:00","12:00"],["13:30","17:00"]], "tue": [...] },
+  "blockingCalendars": ["<ids>"],   // marked in Manage Mirrors
+  "requestCalendar": "<id>",        // where accepted requests are written
+  "horizonDays": 14,                // bounds below
+  "minNoticeHours": 12,
+  "day":  { "starts": "09:00", "ends": "17:00" },   // the owner's own day
+  "lunch": { "from": "12:00", "to": "13:30" },      // optional
+  "weekdays": ["mon","tue","wed","thu","fri"],
   "slotMinutes": 30,
-  "align": 30,                          // start on :00/:30, not :07
-  "bufferMinutes": 15,                  // keep clear either side of real events
-  "maxPerDay": 4,                       // do not offer an entire empty week
+  "align": 30,                      // start on :00/:30, never :07
+  "bufferMinutes": 15,              // keep clear either side of real events
+  "maxPerDay": 4,
   "blackout": ["2026-09-10", "2026-09-11"]
 }
 ```
+
+### Horizon bounds
+
+| | |
+|---|---|
+| Minimum | **2 days** — below this the page is empty more often than not, and a request needs time to be collected and answered. |
+| Maximum | **45 days** — beyond it slots are fiction. Calendars fill, and offering March in January produces requests you will decline. |
+| Default | **14 days** |
+
+Owner-configurable **within** those bounds; the bounds themselves are not.
+A longer horizon also means more of the owner's future shape is visible at once,
+so the cap is a privacy control as much as an accuracy one.
+
+### Asking the owner the question properly
+
+Do not ask for "not before" and "not after" — that phrasing forces the owner to
+think in negatives and hides which timezone is meant. Ask for their day:
+
+> **My day** starts at `9:00 AM` and ends at `5:00 PM` · **America/Denver**
+> Keep `12:00 – 1:30 PM` clear
+> Offer on `M T W T F`
+> Give me `12 hours` notice, and no more than `4` requests a day
+
+The timezone is stated on the line, not inferred, and the preview underneath
+shows real dates so a mistake is visible before anyone else sees it.
 
 Derivation: walk the horizon; for each weekday take the hour ranges; cut into
 aligned slots; drop any slot that overlaps a busy event ± buffer; drop anything
@@ -119,21 +147,66 @@ than front-loaded.
 **`maxPerDay` matters more than it looks.** Publishing every free half-hour tells
 a stranger your week is empty. Offering four says nothing about the other twelve.
 
-### Timezones — the trap
+### Timezones
 
-Three zones are in play and conflating them offers people 3am.
+**Everything on the wire is UTC, and the browser localises.** No zone is ever
+negotiated between service and page, and the requester sees their own time
+because their browser knows it. That removes the whole class of bug from the
+service and the web app.
 
-- **Policy** is in the owner's zone. "09:00" means 9am where they live.
-- **Publication** is UTC instants. No ambiguity on the wire.
-- **Rendering** is the requester's zone, with the owner's zone shown alongside.
+It does **not** remove it from derivation, and it is worth being exact about why.
+The owner's policy is inherently local — "my day starts at 9" means 9am where
+they live — so the device still has to walk **local** days and convert each slot
+at its own UTC offset. The week a clock changes, one local day is 23 or 25 hours;
+adding 86400 to a UTC instant silently shifts every slot after it.
 
-DST: derive by walking *local* days and converting each slot at its own offset —
-never by adding 86400 to a UTC instant. The week a clock changes, one day has 23
-or 25 hours, and a naive loop silently shifts every subsequent slot by an hour.
+So the trap is real but it is now confined to one pure function on the device,
+where it can be tested exhaustively.
 
-**Test this against a real DST boundary before shipping anything.**
+**`cmk-check` must cover a real DST boundary in both directions.**
 
 ---
+
+## 3a. Three devices, one publisher
+
+An owner with a Mac, an iPhone and an iPad has three copies of the app watching
+the same iCloud calendars. All three would derive the same dump and all three
+would try to publish it — a write storm producing no new information.
+
+**One device publishes.** The owner picks it; the Mac is offered by default,
+because it is the one that is awake, has the sync loop, and reacts to calendar
+changes in seconds. The others still *collect* requests and can accept or
+decline — being the publisher is only about writing the dump.
+
+Three cheap guards behind that:
+
+1. **Content hash.** Publish only when the derived dump differs from the last one
+   published. A calendar that has not moved produces no traffic at all.
+2. **Publisher id in the dump.** If the service sees a write from a device that
+   is not the publisher, it rejects it. A second device cannot fight the first
+   even by accident.
+3. **Freshness surfaces failure.** If the publisher goes quiet — laptop shut for a
+   week — the page says so (§6a) and the dump expires. That is better than a
+   silent handover to a device that might be showing stale calendars.
+
+Handover is explicit: the owner nominates a different publisher. Automatic
+failover was considered and rejected — two devices disagreeing about
+availability is worse than one device honestly out of date.
+
+### Where the settings live
+
+In **Manage Mirrors**, beside the calendars they describe, rather than in a
+separate screen that has to re-explain what a calendar is. Each calendar gets two
+checkboxes:
+
+| | Means |
+|---|---|
+| **Block for requests** | Events here make the owner unavailable. Usually every real calendar. |
+| **Use for requests** | Accepted requests are written here. Exactly one calendar. |
+
+This is why decision 10 resolves to explicit selection: the owner is already
+looking at a list of their calendars in this window, and "which of these count"
+is a question they can answer there without learning a new concept.
 
 ## 4. The service
 
@@ -181,16 +254,71 @@ having reached the owner.
 
 ---
 
+## 4a. Freshness, shown honestly
+
+The dump is a snapshot, so the page should say how fresh it is. A requester
+deciding whether to bother asking deserves to know whether they are looking at
+this morning or last week.
+
+| | Age | Page says |
+|---|---|---|
+| 🟢 | under 6 hours | *Updated this morning* |
+| 🟡 | 6–24 hours | *Updated yesterday — some times may have gone* |
+| 🔴 | over 24 hours | *Not updated recently. Times shown may be out of date.* |
+
+It leaks only "the owner's device has been online", which the presence of a live
+page already implies. Nothing about the calendar.
+
+Red is not a failure state to hide — it is the page being straight, and it makes
+the alternative (silently showing week-old availability) look as bad as it is.
+It also gives lapse behaviour somewhere to live: an expired subscription shows
+*not currently taking requests* in the same slot, in the same voice.
+
+## 4b. Holds — a slot may only be asked for once
+
+Two people asking for the same time is a bad experience for everyone: one of them
+is going to be declined for a reason that had nothing to do with them.
+
+A slot is held the moment it is requested:
+
+| Event | Hold |
+|---|---|
+| Request submitted | Held **15 minutes** — long enough to click a confirmation link |
+| Email confirmed | Extended to **24 hours** |
+| Owner accepts | Slot is gone; it is a real event now |
+| Owner declines, or it expires | Released immediately, and the page shows it again |
+| Confirmation never clicked | Released at 15 minutes |
+
+The short initial hold is deliberate: holding on submission alone would let
+anyone paper over a week without ever proving an email address. Fifteen minutes
+of exposure costs nothing and closes that.
+
+Held slots render as *just asked for* rather than vanishing, so a requester
+watching the page understands why it went away.
+
+## 4c. When there is no page there
+
+A 404 on `askwhen.me/<slug>` means more things than "wrong URL": never existed,
+subscription lapsed, owner deleted it, or the dump expired because the publisher
+went quiet.
+
+Rather than a dead end, it is the only page a stranger will ever see cold — so
+it should explain what askwhen is, in a sentence, and offer the app. It is the
+one piece of organic distribution the product gets, and a default 404 wastes it.
+
+Never distinguish the reasons. "Lapsed subscription" tells a stranger something
+about the owner that is none of their business.
+
 ## 5. The web app (Lit)
 
 One application, N pages; a slug selects a dump and the dump is the only
 difference.
 
 ```
-<booking-page>            routing + fetches /p/{slug}.json
+<request-page>            routing + fetches /p/{slug}.json
   <availability-week>     week grid, requester's timezone
     <slot-button>
-  <booking-form>          name, email, note, honeypot, proof of work
+  <request-form>          name, email, note, honeypot, proof of work
   <request-state>         submitted / confirm-your-email / accepted / declined
 ```
 
@@ -200,6 +328,28 @@ killed the earlier design never arises.
 
 Static, cacheable, no cookies, no analytics, no third-party requests — the page
 should be as auditable as the prototype was.
+
+### How it should feel
+
+The requester arrives cold, from a link, with no idea what this is. Everything
+below follows from that.
+
+- **Generous space.** One question on screen at a time. This is a page someone
+  uses once; density serves nobody.
+- **Obvious state.** They should always know what has happened and what happens
+  next — *pick a time → tell me who you are → check your email → Matt will
+  confirm*. Show the whole path and where they are on it, from the first screen.
+- **Guided, not clever.** No hidden gestures, no reveals. The next thing to do is
+  the most prominent thing on screen, always.
+- **Honest about what this is.** It says *request*, never *book*. The page should
+  make plain that the owner confirms — before they invest effort, not after.
+- **Beautiful and quiet.** Typography and whitespace, not chrome. It should feel
+  like a personal note, not a SaaS funnel — the product's whole argument is that
+  it is not one.
+- **Fast and small.** No fonts to fetch, no framework to boot. It should render
+  before anyone notices it loading.
+- **Fully usable at 320px, by keyboard, and with a screen reader.** Half the
+  people who open this are on a phone in a corridor.
 
 **Keep it away from `docs/`.** That is hand-written, build-step-free, on purpose;
 this is a bundled app.
@@ -213,8 +363,18 @@ A module inside `CalMirrorKit`, so a future split stays cheap.
 **Publish** — derive slots, diff against last upload, `PUT` only on change.
 Piggybacks the existing sync loop; realtime already means "the calendar moved."
 
-**Poll** — `GET /queue` on a slow cadence. Empty ~100% of the time, so it should
-be cheap and back off.
+**Collect** — `GET /queue`, at a pace the platform can actually sustain, and
+inferred from settings the owner has already given rather than asking again:
+
+| | Pace | Why |
+|---|---|---|
+| **macOS** | Every few minutes while running; immediately after any sync | Trivial — the loop already exists, and the app is running anyway. |
+| **iOS / iPadOS** | The configured background-refresh interval, plus on open and on pull-to-refresh | iOS decides when an app may run. Promising better would be a promise the platform will not keep. |
+
+So the answer to "how fast will I hear about a request" is the answer the owner
+already chose for syncing, which keeps one concept instead of two. A Mac that is
+usually on will collect within minutes; a phone-only owner should be told plainly
+that it may be hours, because that is true.
 
 **Resolve** — the owner sees a notification, taps Accept, and the device:
 
@@ -252,15 +412,24 @@ deleted and the slug 404s. Never silently keep serving.
 
 ## 8. Abuse, and what an attacker actually gains
 
-Three layers, no third party:
+**MVP — three things, all cheap:**
 
-1. **Double opt-in** — the real defence, and free, because the address was needed
-   for delivery anyway.
-2. **Proof of work** — Altcha-shaped: open source, self-hosted, no cookies, no
-   puzzle. Explicitly **not reCAPTCHA**; routing every visitor through Google
-   would contradict the product outright.
-3. **Edge limits** — per-IP rate limit, honeypot field, cap on pending requests
-   per slot so one actor cannot paper over a week.
+1. **Double opt-in.** The real defence, and free, because the address was needed
+   to deliver the `.ics` anyway. Nothing reaches the owner until a human clicks a
+   link in a mailbox they control.
+2. **Honeypot field.** Ten lines, catches naive bots, costs a real user nothing.
+3. **Rate limit per IP, and holds cap the rest.** A slot can only be asked for
+   once (§4b), so the surface is bounded by how many slots exist — not by how
+   many requests an attacker can send.
+
+**Deferred until there is traffic to justify it:** proof of work (Altcha-shaped,
+self-hosted, no cookies), per-slug throttles, and reputation on repeat requester
+addresses. All are additive and none change the data model, so deferring costs
+nothing later.
+
+Explicitly **never reCAPTCHA** — routing every visitor through Google would
+contradict the product outright, and would be the only third party on a page that
+otherwise makes no external request at all.
 
 Worth noting the payoff is poor: nothing to inject, no outbound link to place,
 and the worst outcome is a meeting request declined in one tap.

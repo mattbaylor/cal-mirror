@@ -1,7 +1,7 @@
 # askwhen.me — web app
 
 The Lit application. One codebase, N pages: a slug selects a policy dump, and the
-dump is the only thing that differs between two booking pages.
+dump is the only thing that differs between two request pages.
 
 Components and acceptance criteria: `../README.md` step 2.
 

@@ -1,6 +1,6 @@
 # askwhen.me
 
-A booking page whose server never learns who you are.
+A request page whose server never learns who you are.
 
 Availability is derived on your device, published as a list of offerable slots —
 never your calendar, never your busy times, never a credential. Someone picks a
@@ -29,9 +29,11 @@ and a future split stays cheap.
 
 ## Read in this order
 
-1. `design/architecture.md` — the system, end to end, and the open decisions
+0. `design/glossary.md` — the vocabulary, including the word we do not use
+1. `design/architecture.md` — the system, end to end
 2. `design/rationale.md` — why a dead drop, why no invitations, why annual-only
-3. `design/findings.md` — what was ruled out, with evidence, so nobody re-derives it
+3. `design/decisions.md` — what is settled, with reasons, and what is still open
+4. `design/findings.md` — what was ruled out, with evidence, so nobody re-derives it
 4. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
    claim is actually made
 
@@ -62,10 +64,10 @@ just moves this file around.
 Lit components against a **static dump on disk**. No service, no network.
 
 ```
-<booking-page>          routing, loads the dump
+<request-page>          routing, loads the dump
   <availability-week>   week grid in the requester's zone, owner's shown beside
     <slot-button>
-  <booking-form>        name, email, note, honeypot, proof of work
+  <request-form>        name, email, note, honeypot, proof of work
   <request-state>       submitted · confirm-your-email · accepted · declined
 ```
 
@@ -115,7 +117,7 @@ CNAME is wrong — support burden, not product.
 
 - **Nothing but the policy dump leaves the device.** If a change would put
   anything else on the wire, it is wrong.
-- **No third-party scripts on the booking page.** No fonts, no analytics, no
+- **No third-party scripts on the request page.** No fonts, no analytics, no
   captcha service. The page should be as auditable as the prototype: one file,
   greppable, no external URLs.
 - **The server must never be able to email the owner.** It holds no address for

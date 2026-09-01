@@ -105,7 +105,7 @@ place rather than duplicating. Cancellation is the same trick with
 `METHOD:CANCEL`. That is the useful part of iTIP without the transport problem.
 
 Worst case on a client that ignores `SEQUENCE`: the requester ends up with a
-stale copy alongside the new one. For a booking that rarely moves, that is a far
+stale copy alongside the new one. For a request that rarely moves, that is a far
 smaller failure than an invitation that never renders.
 
 **The service emailing the requester is not a disclosure.** It only ever uses the
@@ -171,7 +171,7 @@ That is categorically different from handing a third party OAuth, and it is the
 one place a credential would be acceptable.
 
 Hold it in reserve. It is worse setup (a trip to appleid.apple.com) for a
-capability the examination above says a booking flow does not need.
+capability the examination above says a request flow does not need.
 
 ### The dead-drop
 
@@ -208,20 +208,20 @@ app.
 
 ## The web app: Lit 3 components, one codebase, N pages
 
-Every booking page is the **same application** served with a different policy
+Every request page is the **same application** served with a different policy
 dump. Nothing about a page is bespoke — the slug selects a JSON document, and
 that document is the only thing that differs.
 
 ```
 <availability-calendar>   renders offerable slots from the policy dump
   <slot-picker>           choosing a time
-  <booking-form>          who is asking, and what for
+  <request-form>          who is asking, and what for
 <request-sent>            the confirmation state
 ```
 
 Lit is a good fit for a reason beyond taste: these compile to standard custom
 elements, so the same components can later be embedded in someone's own site
-without dragging a framework along. That is a plausible future for a booking
+without dragging a framework along. That is a plausible future for a request
 widget and a bad one to design yourself out of.
 
 **This supersedes the baked-in prototype.** `make_availability.py` generates a
@@ -232,7 +232,7 @@ header. With a service of our own, the page fetches its policy dump from its
 The prototype keeps its value as the reference for invitation generation.
 
 One thing to keep separate: `docs/` is hand-written HTML with no build step, on
-purpose. The booking app is a bundled Lit application and will have one. They
+purpose. The request app is a bundled Lit application and will have one. They
 should not meet.
 
 ---
@@ -247,7 +247,7 @@ contain the feature. Shipping *both* buys the complicated policy anyway and adds
 a second listing, a second review cycle, and a real risk of a **guideline 4.3
 duplicate-app rejection**, which shared code makes more likely rather than less.
 
-Build the booking client as its own module inside `CalMirrorKit` regardless. That
+Build the request client as its own module inside `CalMirrorKit` regardless. That
 keeps a future split cheap without paying for it now. Splitting later is easy;
 un-splitting after people have bought the second app is not.
 
@@ -255,7 +255,7 @@ un-splitting after people have bought the second app is not.
 
 Conditional rather than absolute, and still ahead of everyone:
 
-> Calendar Mirror collects nothing. If you turn on a hosted booking page — off by
+> Calendar Mirror collects nothing. If you turn on a hosted request page — off by
 > default, and paid — it uploads only the free slots you chose to offer. Nothing
 > else ever leaves your device, and the server never learns who you are.
 
@@ -313,7 +313,7 @@ rather than with features.
    the device. Lose every device and the page is orphaned, because there is no
    identity to recover against. Syncing it reopens the iCloud entitlement
    question already parked elsewhere.
-4. **Abuse.** A public booking URL will be found. Rate limiting at minimum; the
+4. **Abuse.** A public request URL will be found. Rate limiting at minimum; the
    queue is a spam surface that reaches a human.
 5. **Timezones.** Slots are published in UTC and rendered locally, but the
    *offer policy* ("not before 10am") is in the owner's zone. Get this wrong and
