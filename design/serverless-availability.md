@@ -1,4 +1,9 @@
-# Serverless availability & booking — feasibility
+# Availability & booking — what is impossible, and why
+
+> **Superseded in part.** The conclusion below ("no server, therefore a request
+> page") was the wrong frame: the thing worth avoiding is a standing *credential*,
+> not a server. See `booking-service.md` for the design actually being built.
+> The findings here still hold and are why that design looks the way it does.
 
 **Question.** Publish a publicly reachable availability page, with a link that
 creates a calendar appointment for both the requester and the owner, using
