@@ -1,0 +1,18 @@
+{
+  "v": 1,
+  "slug": "x7f2k9",
+  "generated": "2026-09-01T15:00:00Z",
+  "expires": "2026-09-02T15:00:00Z",
+  "display": {
+    "name": "Matt Baylor",
+    "blurb": "30 minutes, usually about refereeing or calendars.",
+    "tz": "America/Denver"
+  },
+  "meeting": { "minutes": 30, "title": "Intro call", "location": null },
+  "slots": [
+    { "s": "2026-09-02T16:00:00Z", "e": "2026-09-02T16:30:00Z" },
+    { "s": "2026-09-02T16:30:00Z", "e": "2026-09-02T17:00:00Z" },
+    { "s": "2026-09-02T20:00:00Z", "e": "2026-09-02T20:30:00Z" },
+    { "s": "2026-09-03T16:00:00Z", "e": "2026-09-03T16:30:00Z" }
+  ]
+}
