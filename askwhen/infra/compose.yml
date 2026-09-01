@@ -1,0 +1,157 @@
+# askwhen.me — the whole deployment.
+#
+# Two containers on one host (64.111.22.172). Mail is not here: it is submitted
+# to dlvr.rehosted.us over the network, so the DKIM private key never exists on
+# this machine. See mail.md for why that separation is worth a network hop.
+#
+#   docker compose -f infra/compose.yml build
+#   docker compose -f infra/compose.yml up -d
+#
+# but read README.md first — there are DNS records and a DKIM key that have to
+# exist before the first confirmation email is sent, and no way to un-send the
+# ones that go out before they do.
+
+name: askwhen
+
+services:
+  app:
+    build:
+      # The context is askwhen/, so the image can see web/, service/ and
+      # schema/. Keeping the Dockerfile in infra/ keeps every deployable
+      # artifact in one reviewable directory.
+      context: ..
+      dockerfile: infra/Dockerfile
+    restart: unless-stopped
+
+    environment:
+      AW_LISTEN: ":8080"
+      AW_DB: "/data/askwhen.db"
+
+      # Public origin. Used to build confirmation links, which are the single
+      # most fragile thing in the product: a link built against the wrong host
+      # is a request nobody can confirm.
+      AW_ORIGIN: "https://askwhen.me"
+
+      # Mail. Submission to dlvr, not direct-to-MX from this host — 64.111.22.172
+      # has no reverse DNS as a sender and would be greylisted on sight.
+      AW_SMTP_HOST: "dlvr.rehosted.us"
+      AW_SMTP_PORT: "587"
+      AW_SMTP_USER: "askwhen@dlvr.rehosted.us"
+      AW_SMTP_PASSWORD_FILE: "/run/secrets/smtp_password"
+      AW_MAIL_FROM: "askwhen.me <no-reply@askwhen.me>"
+      # The envelope sender, which is what SPF actually checks — not the From:
+      # header. Bounces land here and the service needs them to know a .ics was
+      # never delivered.
+      AW_MAIL_RETURN_PATH: "bounces@askwhen.me"
+
+      # Pepper for the write-token, confirm-token and rate-limit-key hashes
+      # (schema.sql). Rotating it invalidates every write token in existence,
+      # and there is no account to recover one from. Treat it as permanent.
+      AW_PEPPER_FILE: "/run/secrets/pepper"
+
+      # Retention, from architecture §10. Here rather than compiled in, because
+      # these are the numbers a regulator or a customer will ask about and they
+      # should be readable without a Go toolchain. The 48h ceiling is *also*
+      # enforced by a trigger in schema.sql; this value cannot exceed it.
+      AW_TTL_UNCONFIRMED: "1h"
+      AW_TTL_CONFIRMED: "336h"   # 14 days
+      AW_TTL_RESOLVED: "48h"     # ceiling, not target — purged on delivery confirm
+      AW_HOLD_INITIAL: "15m"
+      AW_HOLD_CONFIRMED: "24h"
+      AW_SWEEP_INTERVAL: "60s"
+
+      # Abuse, §8. Double opt-in and the honeypot are not switchable: they are
+      # the design. This is the per-IP limit and the deferred proof-of-work
+      # seam, which stays off until there is traffic to justify it.
+      AW_RATE_PER_IP: "10/1h"
+      AW_POW: "off"
+
+    secrets:
+      - smtp_password
+      - pepper
+
+    volumes:
+      - aw-data:/data
+
+    # Not published. Caddy is the only route in, which is what makes the
+    # /internal/* refusal in the Caddyfile meaningful rather than decorative.
+    expose:
+      - "8080"
+
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    healthcheck:
+      # The binary answers its own health check; distroless has no shell and no
+      # curl, and adding either to get a health check would undo the reason for
+      # choosing it.
+      test: ["CMD", "/askwhen", "-healthcheck"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    restart: unless-stopped
+    depends_on:
+      - app
+
+    environment:
+      AW_ACME_EMAIL: "${AW_ACME_EMAIL:?set AW_ACME_EMAIL in infra/.env}"
+      # Scoped to Zone:DNS:Edit on askwhen.me and nothing else. It exists for
+      # one job — writing the _acme-challenge TXT for the *.askwhen.me wildcard
+      # — and it is the only credential in this deployment that can change DNS.
+      #
+      # An env var rather than a mounted secret because the Cloudflare DNS
+      # module reads the environment and has no file form. That means it is
+      # visible in `docker inspect`, which is a real if small downgrade; the
+      # mitigation is the scope, not the storage.
+      CF_API_TOKEN: "${CF_API_TOKEN:?set CF_API_TOKEN in infra/.env}"
+
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Issued certificates and the ACME account key. Losing this volume is not
+      # fatal but it is expensive: every certificate is re-issued from scratch,
+      # against Let's Encrypt's weekly limits, and the $70 customers are the
+      # ones who feel it. Back it up.
+      - caddy-data:/data
+      - caddy-config:/config
+
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+secrets:
+  smtp_password:
+    file: ./secrets/smtp_password
+  pepper:
+    file: ./secrets/pepper
+
+volumes:
+  aw-data:
+  caddy-data:
+  caddy-config:

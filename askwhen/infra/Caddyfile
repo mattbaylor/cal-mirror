@@ -1,0 +1,158 @@
+# askwhen.me — reverse proxy and TLS.
+#
+# Three certificate stories in one file, because the three tiers need three:
+#
+#   askwhen.me           $20 — HTTP-01 / TLS-ALPN, ordinary
+#   *.askwhen.me         $35 — DNS-01, because wildcards have no other option
+#   ask.example.com      $70 — on-demand, gated by the service
+#
+# Caddy rather than nginx. nginx would mean certbot, a renewal timer, a reload
+# hook, and — for the $70 tier — writing the thing Caddy's on-demand TLS already
+# is: a hook that issues a certificate the first time an unknown SNI appears.
+# That is the only genuinely hard part of this file and it is one directive.
+# nginx would win if we needed its request-routing depth. We need a proxy.
+#
+# Validate before reloading. `deploy.py reload` does this for you:
+#   docker compose -f infra/compose.yml exec caddy caddy validate --config /etc/caddy/Caddyfile
+{
+	# ACME account contact. Let's Encrypt mails here about expiry failures and
+	# about deprecations, and that mail is the only warning you get before
+	# certificates stop renewing.
+	email {$AW_ACME_EMAIL}
+
+	# THE OPEN MINT PROBLEM.
+	#
+	# On-demand TLS means: a stranger points example.net at our IP, sends one
+	# TLS handshake, and we ask Let's Encrypt for a certificate. Without a gate
+	# that is a public certificate-minting service running on our rate limit —
+	# 50 certificates per registered domain per week, and 5 duplicate-order
+	# failures per hour. An attacker with a wordlist exhausts the failure budget
+	# in minutes and every real customer's onboarding stops working, which looks
+	# from the inside like "custom domains are broken today".
+	#
+	# So every handshake for an unknown name asks the service first. The service
+	# answers from the `domain` table (schema.sql) — 200 if a paying owner has
+	# claimed that host and their CNAME has been observed pointing here, 404
+	# otherwise. Issuance is therefore bounded by the number of $70 customers,
+	# not by the number of people who can edit a DNS zone.
+	#
+	# This endpoint is on the compose network only; the site blocks below refuse
+	# /internal/* from the outside.
+	on_demand_tls {
+		ask http://app:8080/internal/tls-authorize
+	}
+
+	servers {
+		# The service does per-IP rate limiting (§8) and behind a proxy every
+		# request appears to come from the proxy. Caddy will only populate the
+		# client IP from X-Forwarded-For for sources listed here, so the header
+		# cannot be spoofed by the client.
+		trusted_proxies static private_ranges
+	}
+}
+
+# A page that makes no external request should not be told it may make one.
+# The build already greps the bundle for external URLs (Dockerfile); this is the
+# same rule enforced at runtime, where it also covers anything the service
+# renders server-side. `default-src 'none'` means a third-party script added by
+# accident fails visibly in the console rather than working.
+(site) {
+	header {
+		Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		# Deliberately NOT X-Robots-Tag. Indexing is noindex-by-default with a
+		# per-page opt-in (§8), and the proxy has no idea which pages opted in.
+		# The service sets that header per slug. Setting a blanket one here
+		# would silently break the tier feature a consultant paid for.
+		-Server
+	}
+
+	request_body {
+		# A request is a name, an email, a note and a slot. Anything larger is
+		# not a request.
+		max_size 64KB
+	}
+
+	# `handle` blocks rather than a matcher plus `respond`, because handle
+	# blocks are mutually exclusive and run in written order. Caddy sorts bare
+	# directives into its own fixed order, and whether `respond` sorts before
+	# or after `reverse_proxy` is not something this file should depend on
+	# being remembered correctly — get it wrong and /internal/* is proxied
+	# straight to the authorisation endpoint from the public internet.
+
+	# The TLS authorisation endpoint, and anything else the proxy asks the
+	# service privately. Caddy reaches it over the compose network, never
+	# through a site block. 404 rather than 403: a 403 confirms it exists.
+	handle /internal/* {
+		respond 404
+	}
+
+	handle {
+		# No header_up here. Caddy already forwards Host, X-Forwarded-For,
+		# X-Forwarded-Proto and X-Forwarded-Host, and setting them by hand
+		# earns a warning rather than a behaviour change. The service reads the
+		# host to map a custom domain to a slug, and the client IP for the
+		# per-IP limit; both arrive without help.
+		reverse_proxy app:8080
+	}
+}
+
+# ------------------------------------------------------------- the apex ($20)
+#
+# Every random-slug page lives here: askwhen.me/x7f2k9. Also the invitation page
+# a cold stranger gets on a 404 (§4c), which is the only organic distribution
+# this product has, so it is served by the app and not by Caddy's error page.
+askwhen.me, www.askwhen.me {
+	import site
+}
+
+# ------------------------------------------------- custom subdomains ($35)
+#
+# matt.askwhen.me, and several pages under it. DNS-01 because a wildcard
+# certificate cannot be issued any other way — which is the whole reason this
+# deployment needs a Cloudflare API token at all, and the reason that token is
+# scoped to this one zone (README.md, "Secrets").
+#
+# One certificate covers every customer subdomain, so a new $35 customer needs
+# no issuance and no wait: they exist the moment the service knows their slug.
+*.askwhen.me {
+	tls {
+		dns cloudflare {$CF_API_TOKEN}
+		# The wildcard does not cover the apex, and the apex block above gets
+		# its own certificate by the ordinary challenge. That is not
+		# duplication; it is how wildcards work.
+	}
+	import site
+}
+
+# --------------------------------------------------- custom domains ($70)
+#
+# ask.example.com and anything else a customer CNAMEs at edge.askwhen.me. This
+# block matches any host not matched above, so it is last on purpose.
+#
+# The customer's own zone can still defeat us in one way we cannot fix: a CAA
+# record on example.com that does not permit letsencrypt.org will refuse
+# issuance no matter what we do. That failure reads as "the certificate never
+# appeared" and it is worth checking first when a customer is stuck.
+https:// {
+	tls {
+		on_demand
+	}
+	import site
+}
+
+# Someone will type http://ask.example.com. Without this they get a bare 404
+# from Caddy, because auto-HTTPS only redirects hosts Caddy already knows.
+#
+# Defining this block makes `caddy validate` say the server listens only on the
+# HTTP port and gets no automatic HTTPS, which is correct and is the point. It
+# does mean this block sits in front of port 80 where the http-01 challenge
+# would otherwise be answered — so treat tls-alpn-01 on 443 as the issuance path
+# that actually matters here, and check the first apex renewal rather than
+# assuming. If http-01 turns out to be shadowed, the fix is to drop this block
+# and accept the bare 404, not to weaken anything above.
+http:// {
+	redir https://{host}{uri} permanent
+}

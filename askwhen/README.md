@@ -21,6 +21,7 @@ askwhen/
   prototype/   POCs: availability page, ship-back invitation
   web/         the Lit application (one app, N pages)
   service/     the dead drop
+  infra/       containers, proxy, TLS, DNS, mail — inert until someone applies it
 ```
 
 The device client is **not** here — it belongs in
