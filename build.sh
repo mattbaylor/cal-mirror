@@ -9,7 +9,13 @@ APP="$DIR/cal-mirror.app"
 echo "==> Compiling engine"
 # Compile the thin CLI entry point together with the CalMirrorKit sources into
 # one module, so the launchd engine runs the SAME code as the App Store apps.
-swiftc -O -o /tmp/cal-mirror.bin "$DIR/main.swift" "$DIR"/apple/Sources/CalMirrorKit/*.swift
+# Recursive: the kit has subdirectories (Booking/), and a non-recursive glob
+# compiled a package that built fine under SPM into an app silently missing half
+# of it. Nothing referenced it yet, so it would have surfaced as a link error
+# later rather than here.
+KIT=()
+while IFS= read -r f; do KIT+=("$f"); done < <(find "$DIR/apple/Sources/CalMirrorKit" -name '*.swift')
+swiftc -O -o /tmp/cal-mirror.bin "$DIR/main.swift" "${KIT[@]}"
 
 echo "==> Assembling app bundle"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS"

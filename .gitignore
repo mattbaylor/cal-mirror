@@ -30,3 +30,6 @@ DerivedData/
 
 # macOS
 .DS_Store
+
+# Agent worktrees — transient, and embedded git repos besides
+.claude/worktrees/

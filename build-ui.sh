@@ -13,9 +13,11 @@ echo "==> Compiling menu app"
 # this app free of EventKit, which it deliberately never touches (it reads
 # calendars.json instead).
 KIT=("$DIR/apple/Shared/MenuBarIcon.swift")
-for f in "$DIR"/apple/Sources/CalMirrorKit/*.swift; do
+while IFS= read -r f; do
   [ "$(basename "$f")" = "MirrorEngine.swift" ] || KIT+=("$f")
-done
+# Recursive for the same reason build.sh is: Booking/ is pure and belongs in the
+# UI target too, and a non-recursive glob would drop it without saying so.
+done < <(find "$DIR/apple/Sources/CalMirrorKit" -name '*.swift')
 swiftc -O -parse-as-library -o /tmp/CalMirrorMenu.bin "$DIR/menu.swift" "${KIT[@]}"
 
 echo "==> Assembling app bundle"
