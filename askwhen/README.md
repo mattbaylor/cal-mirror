@@ -61,6 +61,15 @@ just moves this file around.
 checkboxes in Manage Mirrors; the owner sets the event title and the requester's
 note goes in the body; horizon is 2–45 days, default 14.
 
+**Carried forward from step 1:**
+- `align` is only meaningful for divisors of 60 — the settings picker must offer
+  divisors only, or the grid walks through the hour.
+- `policy.slotMinutes` and `dump.meeting.minutes` are the same number written
+  twice and a caller can set them inconsistently. Derive the second from the
+  first at the publish site (step 4) rather than trusting them to agree.
+- `meeting.location` encodes as an absent key when nil, though the schema also
+  permits explicit `null`. The web app must tolerate both.
+
 ### 2 · Web app — `web/`
 
 Lit components against a **static dump on disk**. No service, no network.

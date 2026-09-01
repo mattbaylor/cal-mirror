@@ -750,5 +750,263 @@ check(isSkip(SnapshotGuard.decide(stabilized: true,  count: 50,  lastKnown: 441)
 check(SnapshotGuard.decide(stabilized: true, count: 430, lastKnown: 441) == .proceed, "minor drop (deletions) → proceed")
 check(SnapshotGuard.decide(stabilized: true, count: 1, lastKnown: 3) == .proceed, "tiny baseline not treated as collapse")
 
+print("RequestPolicy:")
+// The horizon bounds are product decisions, not preferences, so nothing may get
+// past them — not the initializer, not a later assignment, not a hand-edited file.
+check(RequestPolicy().horizonDays == 14, "the default horizon is a fortnight")
+check(RequestPolicy(horizonDays: 0).horizonDays == 2, "a horizon below two days clamps up")
+check(RequestPolicy(horizonDays: 400).horizonDays == 45, "a horizon beyond 45 days clamps down")
+do {
+    var stretched = RequestPolicy()
+    stretched.horizonDays = 90
+    check(stretched.horizonDays == 45, "assigning past the ceiling clamps too")
+}
+do {
+    let junk = """
+    { "horizonDays": 90, "weekdays": ["mon", "funday"], "minNoticeHours": -4,
+      "align": 900, "slotMinutes": 0 }
+    """.data(using: .utf8)!
+    let p = try JSONDecoder().decode(RequestPolicy.self, from: junk)
+    check(p.horizonDays == 45, "an out-of-range horizon in JSON clamps on decode")
+    check(p.weekdays == [.mon], "an unknown weekday name is dropped, the rest survive")
+    check(p.minNoticeHours == 0, "negative notice clamps to none")
+    check(p.align == 60, "an absurd alignment clamps to the hour")
+    check(p.slotMinutes == 1, "a zero-length slot clamps to something offerable")
+    check(p.maxPerDay == 4, "an absent field takes its default rather than throwing")
+}
+do {
+    let p = RequestPolicy(lunch: .init(), blackout: ["2026-09-10"], timeZone: "America/Denver")
+    let data = try JSONEncoder().encode(p)
+    check(try JSONDecoder().decode(RequestPolicy.self, from: data) == p, "a policy round-trips through encode/decode")
+    check(String(data: data, encoding: .utf8)!.contains("\"mon\""), "weekdays are written as names, not Calendar numbers")
+    check(RequestPolicy.Weekday.mon.calendarWeekday == 2, "mon is Calendar's 2 (Sunday is 1)")
+    check(RequestPolicy(timeZone: "Mars/Olympus").resolvedTimeZone == nil, "an unknown zone resolves to nil, not to the device's own")
+}
+
+print("SlotDeriver:")
+// Everything below is America/Denver, because the DST checks further down need a
+// real zone with a real transition and mixing zones would only hide mistakes.
+let denver = TimeZone(identifier: "America/Denver")!
+var mtnCal = Calendar(identifier: .gregorian)
+mtnCal.timeZone = denver
+func mtn(_ y: Int, _ mo: Int, _ d: Int, _ h: Int = 0, _ mi: Int = 0) -> Date {
+    mtnCal.date(from: DateComponents(year: y, month: mo, day: d, hour: h, minute: mi))!
+}
+let utcISO: ISO8601DateFormatter = {
+    let f = ISO8601DateFormatter()
+    f.formatOptions = [.withInternetDateTime]
+    f.timeZone = TimeZone(identifier: "UTC")
+    return f
+}()
+func iso(_ d: Date) -> String { utcISO.string(from: d) }
+func localHours(_ slots: [Slot]) -> [Int] { slots.map { mtnCal.component(.hour, from: $0.start) } }
+func onDay(_ slots: [Slot], _ mo: Int, _ d: Int) -> [Slot] {
+    slots.filter { mtnCal.component(.month, from: $0.start) == mo && mtnCal.component(.day, from: $0.start) == d }
+}
+// Hourly 9–5, every rule switched off, so each check below turns exactly one on.
+// `weekdays` narrows to a single day where a test only cares about one; the
+// horizon floor is two days and clamping is not negotiable.
+func reqPolicy(horizonDays: Int = 2, minNoticeHours: Int = 0, slotMinutes: Int = 60,
+               align: Int = 60, bufferMinutes: Int = 0, maxPerDay: Int = 24,
+               starts: String = "09:00", ends: String = "17:00",
+               lunch: RequestPolicy.Lunch? = nil,
+               weekdays: [RequestPolicy.Weekday] = RequestPolicy.Weekday.allCases,
+               blackout: [String] = []) -> RequestPolicy {
+    RequestPolicy(horizonDays: horizonDays, minNoticeHours: minNoticeHours,
+                  slotMinutes: slotMinutes, align: align, bufferMinutes: bufferMinutes,
+                  maxPerDay: maxPerDay, day: .init(starts: starts, ends: ends),
+                  lunch: lunch, weekdays: weekdays, blackout: blackout,
+                  timeZone: "America/Denver")
+}
+let wed = mtn(2026, 9, 2)   // Wednesday, local midnight
+
+do {
+    let plain = SlotDeriver.derive(policy: reqPolicy(weekdays: [.wed]), busy: [], now: wed)
+    check(localHours(plain) == [9, 10, 11, 12, 13, 14, 15, 16], "a 9–5 day at hourly slots runs 9am to 4pm local")
+    check(plain.last?.end == mtn(2026, 9, 2, 17), "the last slot ends exactly when the day does")
+    check(SlotDeriver.derive(policy: reqPolicy(slotMinutes: 45, align: 30, starts: "09:15",
+                                               ends: "11:00", weekdays: [.wed]),
+                             busy: [], now: wed).first?.start == mtn(2026, 9, 2, 9, 30),
+          "a 9:15 start still lands on the :00/:30 grid, never on :15")
+    var badZone = reqPolicy(weekdays: [.wed]); badZone.timeZone = "Mars/Olympus"
+    check(SlotDeriver.derive(policy: badZone, busy: [], now: wed).isEmpty,
+          "an unknown zone offers nothing rather than guessing at the device's own")
+}
+
+// Buffers. A 10–11 meeting with 15 minutes either side eats the half-hours that
+// butt up against it, and leaves the ones clear of it alone.
+do {
+    let p = reqPolicy(slotMinutes: 30, align: 30, bufferMinutes: 15, ends: "12:00", weekdays: [.wed])
+    let meeting = [BusyInterval(start: mtn(2026, 9, 2, 10), end: mtn(2026, 9, 2, 11))]
+    let got = Set(SlotDeriver.derive(policy: p, busy: meeting, now: wed).map(\.start))
+    check(!got.contains(mtn(2026, 9, 2, 9, 30)), "buffer excludes the slot butting up against a meeting")
+    check(!got.contains(mtn(2026, 9, 2, 11)), "buffer excludes the slot right after it too")
+    check(got.contains(mtn(2026, 9, 2, 9)), "a slot clear of the buffer survives")
+    check(got.contains(mtn(2026, 9, 2, 11, 30)), "and so does the one on the far side")
+}
+// With no buffer, a gap exactly one slot wide is offered — the boundary is
+// half-open, so touching a busy interval is not overlapping it.
+do {
+    let p = reqPolicy(slotMinutes: 30, align: 30, ends: "12:00", weekdays: [.wed])
+    let busy = [BusyInterval(start: mtn(2026, 9, 2, 9), end: mtn(2026, 9, 2, 9, 30)),
+                BusyInterval(start: mtn(2026, 9, 2, 10), end: mtn(2026, 9, 2, 12))]
+    check(SlotDeriver.derive(policy: p, busy: busy, now: wed).map(\.start) == [mtn(2026, 9, 2, 9, 30)],
+          "a gap exactly one slot wide is offered, and nothing else is")
+}
+
+// Minimum notice.
+do {
+    let p = reqPolicy(minNoticeHours: 12, weekdays: [.wed])
+    check(localHours(SlotDeriver.derive(policy: p, busy: [], now: mtn(2026, 9, 2))) == [12, 13, 14, 15, 16],
+          "notice drops the imminent slots and keeps the rest")
+    check(SlotDeriver.derive(policy: p, busy: [], now: mtn(2026, 9, 2, 8)).isEmpty,
+          "twelve hours' notice asked at 8am empties the whole day")
+}
+
+// maxPerDay. Four consecutive morning slots would say "and then the afternoon
+// filled up"; four spread across the day say nothing about the twenty behind them.
+do {
+    let four = SlotDeriver.derive(policy: reqPolicy(maxPerDay: 4, weekdays: [.wed]), busy: [], now: wed)
+    check(four.count == 4, "maxPerDay caps the day")
+    check(localHours(four) == [9, 11, 14, 16], "the cap is spread across the day, not taken off the front")
+    check(localHours(SlotDeriver.derive(policy: reqPolicy(maxPerDay: 1, weekdays: [.wed]), busy: [], now: wed)) == [9],
+          "a cap of one still offers something")
+    check(SlotDeriver.derive(policy: reqPolicy(maxPerDay: 0, weekdays: [.wed]), busy: [], now: wed).isEmpty,
+          "a cap of zero offers nothing at all")
+}
+
+// Blackout dates and the weekday filter.
+do {
+    let p = reqPolicy(horizonDays: 3, weekdays: [.wed, .thu], blackout: ["2026-09-03"])
+    let days = Set(SlotDeriver.derive(policy: p, busy: [], now: wed).map { mtnCal.component(.day, from: $0.start) })
+    check(days == [2], "a blackout date is removed entirely")
+}
+do {
+    let week = SlotDeriver.derive(policy: reqPolicy(horizonDays: 7, weekdays: [.mon, .tue, .wed, .thu, .fri]),
+                                  busy: [], now: wed)
+    let offered = Set(week.map { mtnCal.component(.weekday, from: $0.start) })
+    check(offered == [2, 3, 4, 5, 6], "only the listed weekdays are offered")
+    check(!offered.contains(1) && !offered.contains(7), "the weekend is not offered")
+}
+
+// Lunch.
+do {
+    let p = reqPolicy(slotMinutes: 30, align: 30, lunch: .init(from: "12:00", to: "13:30"), weekdays: [.wed])
+    let got = Set(SlotDeriver.derive(policy: p, busy: [], now: wed).map(\.start))
+    check(!got.contains(where: { $0 >= mtn(2026, 9, 2, 12) && $0 < mtn(2026, 9, 2, 13, 30) }),
+          "nothing is offered inside lunch")
+    check(got.contains(mtn(2026, 9, 2, 11, 30)), "the slot ending as lunch begins survives")
+    check(got.contains(mtn(2026, 9, 2, 13, 30)), "and the one starting as it ends")
+}
+
+// All-day events. EventKit is inconsistent about whether one ends at 23:59:59 or
+// at the following midnight, so both spellings must block the same single day.
+do {
+    let p = reqPolicy(horizonDays: 3, weekdays: [.wed, .thu, .fri])
+    func daysOffered(_ busy: [BusyInterval]) -> Set<Int> {
+        Set(SlotDeriver.derive(policy: p, busy: busy, now: wed).map { mtnCal.component(.day, from: $0.start) })
+    }
+    check(daysOffered([BusyInterval(start: mtn(2026, 9, 3), end: mtn(2026, 9, 4), isAllDay: true)]) == [2, 4],
+          "an all-day event blocks its whole day and only its day")
+    check(daysOffered([BusyInterval(start: mtn(2026, 9, 3), end: mtn(2026, 9, 3, 23, 59), isAllDay: true)]) == [2, 4],
+          "an all-day event that ends at 23:59 blocks the same one day")
+    check(daysOffered([BusyInterval(start: mtn(2026, 9, 3, 2), end: mtn(2026, 9, 3, 3))]) == [2, 3, 4],
+          "the same span NOT marked all-day only blocks the hours it covers")
+}
+
+// Derivation walks the clamped horizon, not the number it was handed.
+check(SlotDeriver.derive(policy: reqPolicy(horizonDays: 400, maxPerDay: 1), busy: [], now: wed).count == 45,
+      "derivation walks exactly the clamped horizon")
+
+print("SlotDeriver — DST:")
+// The whole module exists to pass these. On 8 March 2026 Denver's clocks jump
+// 2am → 3am and the local day is 23 hours; on 1 November they fall back and it is
+// 25. Deriving by adding 86400 to a UTC instant shifts every slot after the
+// change by an hour — silently, plausibly, and only for the people reading the
+// page. Each check below states the UTC instant the correct local time maps to.
+do {
+    let spring = SlotDeriver.derive(policy: reqPolicy(horizonDays: 4), busy: [], now: mtn(2026, 3, 6))
+    check(spring.count == 32, "four days of eight slots survive the spring-forward week")
+    check(spring.allSatisfy { (9...16).contains(mtnCal.component(.hour, from: $0.start)) },
+          "every slot lands inside 9–5 local, on both sides of the change")
+    check(localHours(onDay(spring, 3, 8)) == [9, 10, 11, 12, 13, 14, 15, 16],
+          "the 23-hour day itself is a full, ordinary working day")
+    check(iso(onDay(spring, 3, 7).first!.start) == "2026-03-07T16:00:00Z", "7 March: 9am MST is 16:00Z")
+    check(iso(onDay(spring, 3, 8).first!.start) == "2026-03-08T15:00:00Z", "8 March: 9am MDT is 15:00Z")
+    check(iso(onDay(spring, 3, 9).first!.start) == "2026-03-09T15:00:00Z", "9 March: the day after is unshifted")
+    check(onDay(spring, 3, 8).first!.start.timeIntervalSince(onDay(spring, 3, 7).first!.start) == 82_800,
+          "9am to 9am across the jump is 23 hours — a naive +86400 would offer 10am")
+}
+do {
+    let fall = SlotDeriver.derive(policy: reqPolicy(horizonDays: 4), busy: [], now: mtn(2026, 10, 30))
+    check(fall.count == 32, "four days of eight slots survive the fall-back week")
+    check(fall.allSatisfy { (9...16).contains(mtnCal.component(.hour, from: $0.start)) },
+          "every slot lands inside 9–5 local, on both sides of the change")
+    check(localHours(onDay(fall, 11, 1)) == [9, 10, 11, 12, 13, 14, 15, 16],
+          "the 25-hour day itself is a full, ordinary working day")
+    check(iso(onDay(fall, 10, 31).first!.start) == "2026-10-31T15:00:00Z", "31 October: 9am MDT is 15:00Z")
+    check(iso(onDay(fall, 11, 1).first!.start) == "2026-11-01T16:00:00Z", "1 November: 9am MST is 16:00Z")
+    check(iso(onDay(fall, 11, 2).first!.start) == "2026-11-02T16:00:00Z", "2 November: the day after is unshifted")
+    check(onDay(fall, 11, 1).first!.start.timeIntervalSince(onDay(fall, 10, 31).first!.start) == 90_000,
+          "9am to 9am across the fall back is 25 hours — a naive +86400 would offer 8am")
+}
+// A busy event stated in UTC still lands on the local day it belongs to.
+do {
+    let p = reqPolicy(horizonDays: 4, weekdays: [.sun])
+    let busy = [BusyInterval(start: utcISO.date(from: "2026-11-01T17:00:00Z")!,
+                             end: utcISO.date(from: "2026-11-01T19:00:00Z")!)]
+    check(localHours(SlotDeriver.derive(policy: p, busy: busy, now: mtn(2026, 10, 30))) == [9, 12, 13, 14, 15, 16],
+          "17:00–19:00Z on the fall-back day removes 10am and 11am local, and nothing either side")
+}
+
+print("PolicyDump:")
+// The schema forbids extra properties on purpose: the dump is the only artifact
+// that leaves the device, so a field added here in passing is a disclosure. These
+// checks mirror askwhen/schema/policy-dump.schema.json key for key.
+do {
+    let slots = SlotDeriver.derive(policy: reqPolicy(maxPerDay: 3, weekdays: [.wed]), busy: [], now: wed)
+    let dump = PolicyDump(slug: "x7f2k9",
+                          generated: mtn(2026, 9, 1, 9), expires: mtn(2026, 9, 2, 9),
+                          display: .init(name: "Matt Baylor", blurb: "30 minutes.", tz: "America/Denver"),
+                          meeting: .init(minutes: 60, title: "Intro call"),
+                          slots: slots)
+    let data = try dump.encoded()
+    let obj = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+    check(Set(obj.keys) == ["v", "slug", "generated", "expires", "display", "meeting", "slots"],
+          "the dump has exactly the seven keys the schema allows, and no eighth")
+    check(obj["v"] as? Int == 1, "v is the constant 1")
+    check(Set((obj["display"] as! [String: Any]).keys) == ["name", "blurb", "tz"],
+          "display carries a name, a blurb and a zone — nothing that identifies a calendar")
+    check(Set((obj["meeting"] as! [String: Any]).keys) == ["minutes", "title"],
+          "a nil location is omitted rather than written")
+    let slotObjs = obj["slots"] as! [[String: Any]]
+    check(slotObjs.allSatisfy { Set($0.keys) == ["s", "e"] }, "every slot is exactly {s, e}")
+    check(slotObjs.allSatisfy { ($0["s"] as? String)?.hasSuffix("Z") == true }, "slot times are Z-terminated UTC")
+    check(slotObjs.first?["s"] as? String == "2026-09-02T15:00:00Z", "the first slot is 9am Denver, published as UTC")
+    check(obj["generated"] as? String == "2026-09-01T15:00:00Z", "generated is ISO-8601 UTC too")
+    check(dump.isSchemaValid, "the dump satisfies the schema's patterns and ranges")
+    check(try JSONDecoder().decode(PolicyDump.self, from: data) == dump, "the dump round-trips through encode/decode")
+
+    // Dates are formatted by the type, not by whoever configured the encoder —
+    // the page reading this has never heard of a DateEncodingStrategy.
+    check(String(data: try JSONEncoder().encode(dump), encoding: .utf8)!.contains("2026-09-02T15:00:00Z"),
+          "an unconfigured encoder still produces ISO-8601, not a unix timestamp")
+
+    // Caught on the device, so the owner hears about it rather than the page
+    // quietly going dark when the service rejects the write.
+    var bad = dump; bad.slug = "NOPE"
+    check(bad.validationProblems.contains { $0.contains("slug") }, "a slug that breaks the pattern is caught before publishing")
+    bad = dump; bad.display.name = ""
+    check(!bad.isSchemaValid, "an empty display name is invalid — the page always shows a label")
+    bad = dump; bad.meeting.minutes = 1
+    check(!bad.isSchemaValid, "a meeting shorter than five minutes is out of range")
+
+    let many = (0..<600).map { Slot(start: wed.addingTimeInterval(Double($0) * 3600),
+                                    end: wed.addingTimeInterval(Double($0) * 3600 + 1800)) }
+    check(PolicyDump(slug: "x7f2k9", generated: wed, expires: wed,
+                     display: dump.display, meeting: dump.meeting, slots: many).slots.count == 500,
+          "slots truncate to the schema's ceiling rather than publishing an invalid document")
+}
+
 print(failures == 0 ? "\nALL CHECKS PASSED" : "\n\(failures) CHECK(S) FAILED")
 exit(failures == 0 ? 0 : 1)
