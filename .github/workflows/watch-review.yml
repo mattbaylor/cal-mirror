@@ -84,10 +84,27 @@ jobs:
           git add docs/changelog.html docs/index.html
           git commit -m "Site: ${{ steps.check.outputs.version }} cleared review on ${{ steps.check.outputs.date }}"
           git push origin "$BR"
-          gh pr create --base main --head "$BR" \
-            --title "Site: ${{ steps.check.outputs.version }} cleared review" \
-            --body "App Store Connect reports ${{ steps.check.outputs.version }} live on every platform, so the release notes should no longer say *In review* and the build-from-source notes should be gone from the home page.
+          if ! gh pr create --base main --head "$BR" \
+              --title "Site: ${{ steps.check.outputs.version }} cleared review" \
+              --body "App Store Connect reports ${{ steps.check.outputs.version }} live on every platform, so the release notes should no longer say *In review* and the build-from-source notes should be gone from the home page.
 
-          Opened automatically by \`watch-review.yml\`. Merging publishes the site.
+            Opened automatically by \`watch-review.yml\`. Merging publishes the site.
 
-          Note: PRs opened with \`GITHUB_TOKEN\` do not trigger \`cmk-check\`, so this needs a manual merge. Add a \`CM_RELEASE_TOKEN\` secret to have the watcher commit straight to main instead."
+            Note: PRs opened with \`GITHUB_TOKEN\` do not trigger \`cmk-check\`, so this needs a manual merge. Add a \`CM_RELEASE_TOKEN\` secret to have the watcher commit straight to main instead."
+          then
+            REPO="${{ github.repository }}"
+            {
+              echo "## ${{ steps.check.outputs.version }} is live, and the site does not say so yet"
+              echo
+              echo "The branch \`$BR\` is pushed and correct. Creating the pull request"
+              echo "was refused, which happens when **Settings -> Actions -> General ->**"
+              echo "**Allow GitHub Actions to create and approve pull requests** is off."
+              echo
+              echo "Open it by hand: https://github.com/$REPO/compare/main...$BR?expand=1"
+              echo
+              echo "To stop this recurring, either turn that setting on, or add a"
+              echo "\`CM_RELEASE_TOKEN\` secret and the watcher commits straight to main."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::${{ steps.check.outputs.version }} is live but the PR could not be created — see the run summary for the one-click link."
+            exit 1
+          fi

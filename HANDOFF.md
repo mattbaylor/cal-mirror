@@ -24,13 +24,20 @@ changelog pill from *In review* to *On the App Store* and strips the
 `<!--UNRELEASED:1.4.1-->` blocks from the site. If you find that PR sitting open,
 that is the system working, not a task you forgot.
 
-**That PR will not merge cleanly, and this is expected.** PRs opened with the
-default `GITHUB_TOKEN` do not trigger workflows, so `cmk-check` never runs — and
-`cmk-check` is a required check on `main`. The PR sits there looking blocked.
-Push an empty commit to it (`git commit --allow-empty -m "Trigger CI" && git
-push`) and CI runs, then merge normally. The permanent fix is a
+**The watcher cannot open that PR yet, and this is a setting, not a bug.**
+*Settings → Actions → General → Allow GitHub Actions to create and approve pull
+requests* is off, so `gh pr create` is refused. The branch still gets pushed and
+is still correct; only the PR is missing. The workflow now says so in its run
+summary with a one-click compare link rather than failing mutely.
+
+Two permanent fixes, both yours to choose: turn that setting on, or add a
 `CM_RELEASE_TOKEN` secret, which switches the watcher to committing straight to
-`main`; the code for that path is already written and dormant.
+`main` — that path is already written and dormant.
+
+One more thing if you take the PR route: PRs opened with the default
+`GITHUB_TOKEN` do not trigger workflows, so `cmk-check` never runs and the
+required check leaves the PR looking blocked. An empty commit
+(`git commit --allow-empty -m "Trigger CI" && git push`) unsticks it.
 
 `1.4.2` is on `main` unreleased (Mac realtime sync, shared-destination dedupe).
 It is *not* submitted. Releasing it means running the `release.yml` workflow —
