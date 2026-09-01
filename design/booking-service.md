@@ -82,6 +82,97 @@ method=REQUEST` part whose VEVENT carries `METHOD:REQUEST`, the owner as
 `ORGANIZER` and the requester as `NEEDS-ACTION`. What is **not** yet verified is
 how Apple Mail, Gmail and Outlook actually render it.
 
+### The settled ship-back: nobody sends an invitation
+
+Assume the `.eml` fails. The answer is not a better MIME type — it is that
+**the invitation was never the goal**. The goal is both calendars holding the
+meeting, and iTIP is merely one route there, the only one with a blocker in it.
+
+On accept:
+
+- **Owner's side.** The device writes the event into the owner's calendar.
+  EventKit creates events perfectly well; it only cannot attach other people, and
+  there is nobody to attach — it is the owner's own event.
+- **Requester's side.** The service emails them the `.ics` at the address they
+  typed, and the page offers the same file as a download.
+
+Neither party ever needed an ORGANIZER/ATTENDEE relationship. That machinery
+exists to negotiate a time, and the negotiation already happened on the page.
+
+**Updates still work.** Issue both sides the same `UID` at `SEQUENCE:0`. If the
+meeting moves, re-issue with the same UID at `SEQUENCE:1`; most clients update in
+place rather than duplicating. Cancellation is the same trick with
+`METHOD:CANCEL`. That is the useful part of iTIP without the transport problem.
+
+Worst case on a client that ignores `SEQUENCE`: the requester ends up with a
+stale copy alongside the new one. For a booking that rarely moves, that is a far
+smaller failure than an invitation that never renders.
+
+**The service emailing the requester is not a disclosure.** It only ever uses the
+address they typed, sends from its own domain, and names the owner using the
+display name already printed on a public page. The owner's address appears
+nowhere.
+
+### Does RSVP matter? Examined, and no
+
+What iTIP would buy, taken one at a time:
+
+| | Worth it here? |
+|---|---|
+| **Attendee status** — "Alex accepted" | **No.** They asked for it. Nobody declines the meeting they requested. This is meaningful when you invite people who may not come; here it is noise. |
+| **Automatic updates** when it moves | **Yes** — and solved by same-UID re-issue over email, which we can do because we have their address. |
+| **Cancellation** propagating | **Yes** — same mechanism, `METHOD:CANCEL`. |
+| **A visible guest list** on the event | Cosmetic. The owner knows who it is with; it is in the title. |
+| Free/busy accuracy | Unaffected either way — both calendars hold the event. |
+
+So the only parts that matter are update and cancel, and neither needs iTIP.
+
+And the part that seemed to need RSVP most — *did this person actually confirm?*
+— is answered **earlier and more reliably** by the double opt-in below. The
+confirmation click is the RSVP, and it happens before the owner is ever
+disturbed.
+
+### Keeping it from becoming a spam engine
+
+A public URL that reaches a human is a target. Three layers, **none of them a
+third party**, which matters for a product whose entire pitch is that it does not
+phone anyone.
+
+**1. Double opt-in, which is the real defence.** The requester enters an email
+and gets a "confirm this request" link. Only a confirmed request enters the
+owner's queue. Spam now requires a working mailbox and a deliberate click, which
+kills essentially all of it.
+
+The elegance is that this costs nothing extra: **we needed their address anyway**
+to send the `.ics`. One mechanism does the anti-spam and the delivery, and
+doubles as the confirmation signal that replaces RSVP.
+
+**2. Proof of work.** Something like Altcha — open source, self-hostable, no
+cookies, no tracking, no puzzle for the user to solve. The client burns a little
+CPU; a bulk submitter burns a lot. Explicitly **not** reCAPTCHA: sending every
+visitor to Google would contradict the product outright.
+
+**3. Cheap edge limits.** Per-IP rate limiting, a honeypot field, and a cap on
+pending requests per slot so one actor cannot paper over an entire week.
+
+Notably there is nothing here for a spammer to gain: the page has no content to
+inject, no outbound link to place, and the only message that reaches the owner is
+a meeting request they can decline in one tap.
+
+### The escape hatch, if RSVP ever does matter
+
+CalDAV has scheduling built in (RFC 6638): write an event with attendees to
+iCloud over CalDAV and the *server* sends the invitation, routing around
+EventKit entirely.
+
+It costs an app-specific password — but note where that password lives, **on the
+owner's own device, talking to their own iCloud**. It never reaches our service.
+That is categorically different from handing a third party OAuth, and it is the
+one place a credential would be acceptable.
+
+Hold it in reserve. It is worse setup (a trip to appleid.apple.com) for a
+capability the examination above says a booking flow does not need.
+
 ### The dead-drop
 
 ```
