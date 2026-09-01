@@ -398,9 +398,9 @@ but note it also *buys* the privacy property, which is worth saying in the copy.
 
 | Tier | /yr | Adds |
 |---|---|---|
-| Booking page | $20 | Random slug |
-| Custom subdomain | $35 | `matt.<service>.app` |
-| Custom domain | $70 | `book.mattbaylor.com` — ACME issuance + renewal |
+| Request page | $20 | One page, random slug |
+| Custom subdomain | $35 | `matt.askwhen.me`, **and several pages** |
+| Custom domain | $70 | `ask.mattbaylor.com` — ACME issuance + renewal |
 
 14-day trial, annual only.
 
@@ -434,8 +434,10 @@ otherwise makes no external request at all.
 Worth noting the payoff is poor: nothing to inject, no outbound link to place,
 and the worst outcome is a meeting request declined in one tap.
 
-`robots.txt` should disallow indexing by default (decision 8) — the slug is the
-only thing standing between the page and a search result.
+Pages carry `noindex` by default — the slug is the only thing standing between a
+page and a search result. Being listed is an opt-in, and the consequence
+(availability shape and display name become searchable) must be stated at the
+moment of choosing, not buried in settings.
 
 ---
 
@@ -461,8 +463,8 @@ only thing standing between the page and a search result.
 | Policy dump | Until replaced or the page is deleted |
 | Unconfirmed request | 1 hour |
 | Confirmed, unresolved | 14 days |
-| Resolved request | 30 days, then only an anonymous count (decision 5) |
-| Requester email | Until the request resolves + delivery, then purged with the request |
+| Resolved request | Until the `.ics` delivery confirms, **48 hours maximum**, then purged |
+| Requester email | Purged with the request — it exists only to deliver the `.ics` and to retry once if that bounces |
 | Entitlement id | While the subscription lives |
 
 ---
