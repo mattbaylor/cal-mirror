@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/policy-dump.schema.json",
+  "title": "Booking policy dump",
+  "description": "The ONLY artifact that leaves the owner's device. Anything absent here is absent by design, not by omission — see ../design/architecture.md section 2.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "slug", "generated", "display", "meeting", "slots"],
+  "properties": {
+    "v": { "const": 1 },
+    "slug": { "type": "string", "pattern": "^[a-z0-9]{6,32}$" },
+    "generated": { "type": "string", "format": "date-time" },
+    "expires": {
+      "type": "string", "format": "date-time",
+      "description": "After this the service stops serving the dump, so a device that goes quiet cannot leave stale availability up forever."
+    },
+    "display": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "tz"],
+      "properties": {
+        "name": {
+          "type": "string", "minLength": 1, "maxLength": 60,
+          "description": "The single identifying field in the whole document, chosen by the owner in the knowledge that it is public."
+        },
+        "blurb": { "type": "string", "maxLength": 200 },
+        "tz": { "type": "string", "description": "IANA zone, for showing the owner's local time beside the requester's." }
+      }
+    },
+    "meeting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minutes", "title"],
+      "properties": {
+        "minutes": { "type": "integer", "minimum": 5, "maximum": 480 },
+        "title": {
+          "type": "string", "minLength": 1, "maxLength": 80,
+          "description": "Set by the owner, never by the requester — stranger-supplied text does not belong in someone's calendar title."
+        },
+        "location": { "type": ["string", "null"], "maxLength": 200 }
+      }
+    },
+    "slots": {
+      "type": "array", "maxItems": 500,
+      "description": "Offerable slots as UTC instants. NOT free/busy: the absence of a slot may be a meeting or may be policy, and the page cannot tell which.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["s", "e"],
+        "properties": {
+          "s": { "type": "string", "format": "date-time" },
+          "e": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

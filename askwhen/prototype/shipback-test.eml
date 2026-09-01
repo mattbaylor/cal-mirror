@@ -1,0 +1,41 @@
+From: Matt Baylor <x9f2k7@icloud.com>
+To: Alex Fisher <alex@example.com>
+Subject: Invitation: Intro call
+Date: Mon, 31 Aug 2026 20:19:26 -0600
+Message-ID: <178822916698.83586.16538317518042923821@cal-mirror.invalid>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="==cal-mirror-4f03c7c6a6c44a13"
+
+--==cal-mirror-4f03c7c6a6c44a13
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+Alex Fisher — you asked for this time and I've accepted.
+
+Wednesday 2 September, 2:00 AM UTC (30 minutes)
+
+This invitation was created on my device. The booking page never had access to my calendar, and never learned my address.
+
+--==cal-mirror-4f03c7c6a6c44a13
+Content-Type: text/calendar; charset="utf-8"; method=REQUEST
+Content-Transfer-Encoding: 8bit
+
+BEGIN:VCALENDAR
+PRODID:-//cal-mirror//booking//EN
+VERSION:2.0
+METHOD:REQUEST
+BEGIN:VEVENT
+UID:6afedf7e-3ad0-455d-b1f1-4cb12f5794ea@cal-mirror
+DTSTAMP:20260901T021926Z
+DTSTART:20260902T020000Z
+DTEND:20260902T023000Z
+SUMMARY:Intro call
+SEQUENCE:0
+STATUS:CONFIRMED
+ORGANIZER;CN=Matt Baylor:mailto:x9f2k7@icloud.com
+ATTENDEE;CN=Matt Baylor;ROLE=CHAIR;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:x9f2k7@icloud.com
+ATTENDEE;CN=Alex Fisher;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:alex@example.com
+END:VEVENT
+END:VCALENDAR
+
+--==cal-mirror-4f03c7c6a6c44a13--

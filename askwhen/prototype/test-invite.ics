@@ -1,0 +1,16 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//cal-mirror//availability prototype//EN
+METHOD:REQUEST
+BEGIN:VEVENT
+UID:prototype-test@cal-mirror
+DTSTAMP:20260831T210700Z
+DTSTART:20260901T160000Z
+DTEND:20260901T163000Z
+SUMMARY:Prototype test - does your client SEND this?
+DESCRIPTION:If your calendar app emails this to the attendee below, the serverless design works. If it only adds the event locally, the mailto fallback is the answer instead.
+ORGANIZER;CN=Requester:mailto:requester@example.com
+ATTENDEE;CN=Requester;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:requester@example.com
+ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:owner@example.com
+END:VEVENT
+END:VCALENDAR
