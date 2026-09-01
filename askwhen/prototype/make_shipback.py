@@ -81,7 +81,12 @@ def eml(owner, requester, req_email, start, end, summary, body_text, cal):
         f"--{b}--",
         "",
     ]
-    return "\r\n".join(hdrs + [""] + parts)
+    msg = "\r\n".join(hdrs + [""] + parts)
+    # MIME is CRLF throughout. Any bare LF that slipped in from prose (the
+    # human-readable part is written with \n) is a defect a strict parser is
+    # entitled to choke on, so normalise the whole message rather than trusting
+    # every caller to remember.
+    return msg.replace("\r\n", "\n").replace("\n", "\r\n")
 
 
 def main():
