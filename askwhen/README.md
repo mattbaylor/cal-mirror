@@ -77,6 +77,15 @@ note goes in the body; horizon is 2–45 days, default 14.
   first at the publish site (step 4) rather than trusting them to agree.
 - `meeting.location` encodes as an absent key when nil, though the schema also
   permits explicit `null`. The web app must tolerate both.
+- **`SlotDeriver` should record why each candidate was dropped, not only which
+  survived.** *(added 2 Sept 2026)* `derive` returns `[Slot]` and discards the
+  rejections, but "why is nothing showing on Thursday?" is the question owners
+  actually have, and it is answerable from counts by reason — blocked, inside
+  minimum notice, outside hours, capped, blackout — without naming a single
+  event. It serves the settings screen as much as `design/mcp.md`, and it is a
+  contained change to a 180-line pure function with 289 tests around it today.
+  It gets more expensive with every later step that builds on the current
+  signature, so do it before step 3.
 
 ### 2 · Web app — `web/`
 

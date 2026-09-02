@@ -160,13 +160,22 @@ review queue, and answers the same underlying question. Overlay if you have the
 app; negotiate if you don't. Nobody is shown a broken feature, and both paths
 want the same week-grid UI.
 
-**A local MCP server, after step 3 — policy only.** *(2 Sept 2026)* Full note in
-`mcp.md`. Configuring by conversation is not the answer to hard configuration —
-fewer settings is, and that is decided above — but it buys a line nobody else in
-this market can say: everyone else's scheduling AI needs your calendar on their
-server, ours needs your config on your laptop. stdio, no port, standalone Dev ID
-track. The constraint that shapes it: tools expose the **policy**, never the
-calendar and never the queue. The queue is other people's names and emails, given
+**A local agent surface — diagnosis first, policy only.** *(2 Sept 2026,
+revised same day)* Full note in `mcp.md`. The case is **not** configuration; it
+is **diagnosis**. *"Why is nothing showing on Thursday?"* is the question owners
+actually have, and no settings screen can answer it, because the answer is an
+interaction between the policy and the contents of a calendar. That is a
+capability a screen structurally lacks, not a screen designed badly — so this
+does not contradict the fewer-settings decision above, it answers a different
+question. It also buys a line nobody else in this market can say: everyone else's scheduling AI needs your calendar on their
+server, ours needs your config on your laptop. stdio and no port on macOS, **App Intents on
+iOS** — which the app already ships, and which is the only shape iOS offers,
+since apps cannot spawn subprocesses for other apps to drive. The constraint that
+shapes it: tools expose the **policy**, never the calendar and never the queue.
+Diagnosis obeys the same rule by returning *why* a candidate was dropped and
+never *what* dropped it — counts by reason name no event, no title, no attendee.
+That requires `SlotDeriver` to record rejections, which is a note now carried
+forward on step 1. The queue is other people's names and emails, given
 to the owner for one purpose, and passing them to an AI vendor discloses a third
 party's data that the third party never agreed to. Writes propose a draft the
 owner approves in the app, because the owner already approves everything else a

@@ -133,19 +133,79 @@ can ship and iterate without an App Store review cycle.
 
 ---
 
-## What it is not
+## Diagnosis is the case, not configuration
 
-**It is not the fix for configuration.** That is fewer settings, and it is
-already decided. If the honest answer to *"how do I set this up?"* becomes *"ask
-Claude"*, the settings screen has failed and the MCP server is covering for it.
-Judge the settings screen on its own.
+The first draft of this file said an MCP server is not the fix for hard
+configuration — that fewer settings is, and if the honest answer to *"how do I
+set this up?"* becomes *"ask Claude"*, the settings screen has failed.
 
-**It is not a feature for the target market.** It is a feature for developers,
-and for whoever is running this repo — which right now means it is dogfooding
-before it is a product. That is a fine reason to build it and a bad reason to put
-it on the marketing site.
+**That was answering the wrong question, and half of it was wrong.** Fewer
+settings is still right, and it is not in tension with this. Six settings that
+interact still produce confusion, because the confusion was never about the
+count.
 
----
+The question people actually have is not *"which control do I change?"* It is:
+
+> **Why is nothing showing on Thursday?**
+
+No settings screen answers that, and not because it is badly designed. The answer
+is an interaction between the policy and the contents of a calendar — a blocking
+all-day event, or `minNoticeHours` reaching past Thursday, or `maxPerDay` already
+satisfied earlier in the day, or a blackout date, or the horizon simply ending on
+Wednesday. A screen can show you five settings. It cannot tell you which one is
+doing it, because the answer depends on data the screen is not looking at.
+
+**A tool that can read the policy and the derivation can just say it.** That is
+not covering for a bad settings screen. It is a capability a settings screen
+structurally cannot have, and it is the strongest argument for building this at
+all — stronger than configuration, which was the framing I had wrong.
+
+### What diagnosis requires, and the trap in it
+
+The naive implementation leaks exactly what this product refuses. *"You have a
+client meeting 09:00–17:00 on Thursday"* is calendar content, and it must never
+be what a tool returns.
+
+It does not have to be. The derivation already knows **why** each candidate was
+dropped; it simply throws that away. Expose the reason, never the event:
+
+```
+Thursday 4 Sept — 16 candidates considered
+  12  blocked by an event on a blocking calendar
+   2  inside minimum notice
+   2  outside offered hours
+   0  offered
+```
+
+That answers the question completely. It names no event, no title, no attendee,
+no calendar. It does disclose that the owner is busy on Thursday — which is the
+owner's own data, which they already know, and which sits in the same category as
+`preview_offers`: theirs to disclose, and worth flagging when they do.
+
+**This lands on already-merged code.** `SlotDeriver.derive` returns `[Slot]` and
+discards everything it rejected. It should record a reason per dropped candidate
+— an enum, counted per day, nothing more. It is a contained change to a 180-line
+pure function with 289 tests already around it, and it is far cheaper now than
+after steps 3–6 have built on the current signature. See the note carried forward
+in `../README.md` step 1.
+
+## macOS and iOS are different problems
+
+MCP is stdio: a subprocess the client launches. That is a desktop shape, and on
+macOS it is the right one — no port, nothing listening, nothing reachable from a
+network.
+
+**iOS does not have that shape and is not going to.** Apps cannot spawn
+subprocesses for other apps to drive, and a background server would be both
+disallowed and pointless. The iOS answer is **App Intents**, which the app
+already ships — 1.4.1 added `SyncNowIntent`, so the infrastructure and the review
+precedent both exist. Intents for reading the policy, describing what is
+currently offered, and explaining an empty day give the same "ask it, don't hunt
+for it" surface through Shortcuts and the system assistant, with the OS mediating
+rather than a socket.
+
+Same capability, two transports, and the diagnosis work is shared: both need the
+derivation to say why, and neither needs it to say what.
 
 ## Recommendation
 
@@ -153,10 +213,15 @@ Worth building, after step 3. Not before — there is no policy worth configurin
 until the service exists to publish it to, and the tool surface should be
 designed against a real policy rather than a guessed one.
 
-Build order when it comes: read-only tools first (`get_policy`,
-`explain_policy`, `preview_offers`, `queue_status`), which are useful on their
-own and carry none of the write risk. `propose_policy` after, with the diff-and-
-approve flow built at the same time and not deferred.
+Build order when it comes: **diagnosis first** — `explain_policy` and the
+rejection-reason work behind it, which is the whole case and carries none of the
+write risk. Then the rest of the read-only surface. `propose_policy` last, with
+the diff-and-approve flow built alongside it and not deferred.
+
+The rejection reasons themselves are worth adding to `SlotDeriver` **now**,
+before step 3, independent of whether any of this gets built. They are useful to
+the settings screen too, and they get more expensive to retrofit with every step
+that depends on the current signature.
 
 Queue tools: not unless someone asks twice, and then only with the blunt version
 of the warning.
