@@ -212,10 +212,22 @@ rather than a privacy one.
 
 **Siri is a surface to design for, not just an iOS fallback.** *(2 Sept 2026)*
 Matt: *"we should see what the new Siri does and how we work with it because
-that's the likely surface we will need to support."* Investigation queued;
-`mcp.md` currently argues App Intents is the only shape iOS offers, which was
-reasoned from the absence of subprocesses rather than from what Apple has
-actually shipped. Check before building.
+that's the likely surface we will need to support."* Researched — `siri.md`.
+`mcp.md`'s guess holds: App Intents is the shape, and there **is a primary
+Calendar domain**, so calendar-shaped actions can get Siri's natural language for
+free. MCP and App Intents serve different consumers — Siri will not speak MCP and
+Claude Code will not invoke an App Intent — so both, sharing one implementation
+in `CalMirrorKit` with two thin adapters. Configuration and diagnosis fit no
+domain and stay custom intents; whether `System and in-app search` covers the Q&A
+shape is the thing to check rather than assume.
+
+**Infrastructure goes behind the existing edge.** *(2 Sept 2026)* Matt: use
+`caddy-dc` at `172.16.1.4`, grow to a second edge only if needed. `askwhen.me`
+points at `.170`, not at `.172` — which disposes of the collision with reHosted's
+own website as a side effect and keeps the spare IPs spare. Consequences in
+`../infra/verified.md`: on-demand TLS moves into a proxy already load-bearing for
+customer sites, and the per-IP limit has to read a forwarded header. **`dlvr` is
+Postal, confirmed**, so `mail.md`'s postfix procedure is a rewrite.
 
 **A local agent surface, and diagnosis is the case for it.** *(2 Sept 2026)*
 Matt's, both halves. An MCP server on the desktop so the tool can be configured
