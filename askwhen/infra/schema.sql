@@ -20,6 +20,35 @@
 --                      (`entitlement_hash`) so the database cannot be joined
 --                      back to an Apple account even by whoever holds it.
 --
+-- ---------------------------------------------------------------------------
+-- QUERIES THAT MUST NEVER EXIST IN THIS FILE
+--
+-- Every query here is keyed by an owner (`entitlement_hash`), or by a slug that
+-- belongs to exactly one owner, or is one of two deliberate routing lookups on
+-- an opaque key: a confirm token, and a custom hostname. That is not tidiness.
+-- It is what makes this data partition cleanly along owner boundaries, so it can
+-- be split across machines later without a rewrite — and it is a consequence of
+-- the privacy design rather than a discipline anyone is maintaining. The server
+-- was never given enough to join two owners together, so it cannot.
+--
+--   *** DO NOT ADD GROUP SCHEDULING. ***
+--
+-- "When are Matt and Alex and Sam all free?" is a query across owners by
+-- definition and there is no clever way to make it not one. Adding it ends the
+-- partitioning property, and it makes the service hold a relationship between
+-- two people who never agreed to be associated. The fix afterwards is a rewrite,
+-- not a migration.
+--
+-- It WILL be tempting. Meeting polls are free in SavvyCal, free in Rallly, and
+-- in the free tier of Doodle (design/competitors.md), so eventually the
+-- comparison table has a gap in it and a customer asks. It will look like a
+-- small feature because the UI is small. The UI is small; the query is not.
+--
+-- If it is ever genuinely worth it, decide that in daylight knowing the cost.
+-- Do not arrive at it because a ticket said "add polls". Full reasoning in
+-- design/scale.md.
+-- ---------------------------------------------------------------------------
+--
 -- SQLite. Justification for that, and for storing the dump as a blob rather
 -- than as parsed slots, is in README.md ("Why SQLite").
 --
@@ -182,6 +211,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS request_one_live_hold_per_slot
   ON request (slug, slot_start)
   WHERE hold_released_at IS NULL
     AND state IN ('unconfirmed', 'confirmed', 'accepted');
+
+-- `GET /c/{confirm_token}` — the endpoint the entire double opt-in defence
+-- hangs on, and without this a full table scan. It degrades quietly rather than
+-- failing, which is the worst way for the spam defence to get slow.
+--
+-- UNIQUE because two live requests sharing a confirm token would let one token
+-- confirm the other's request. A 256-bit random token will not collide, and a
+-- constraint turns "will not" into "cannot".
+--
+-- Partial, because the token is cleared once a request resolves and the index
+-- should only carry rows that can still be confirmed. NULLs are distinct in
+-- SQLite anyway; the WHERE clause is about size, not correctness.
+CREATE UNIQUE INDEX IF NOT EXISTS request_confirm_token
+  ON request (confirm_token_hash)
+  WHERE confirm_token_hash IS NOT NULL;
 
 -- The sweeper's only index. Kept narrow because it is scanned every minute.
 CREATE INDEX IF NOT EXISTS request_purge_after ON request (purge_after);

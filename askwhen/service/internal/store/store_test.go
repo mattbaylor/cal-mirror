@@ -2,8 +2,10 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -176,5 +178,91 @@ func TestDomainHostMustBeLowercase(t *testing.T) {
 		VALUES ('ASK.example.com', 'x7f2k9', 'custom', NULL, '2026-09-01T00:00:00Z')`)
 	if err == nil {
 		t.Fatal("inserting a mixed-case host succeeded, want the CHECK constraint to refuse it")
+	}
+}
+
+// slotStart varies per request: request_one_live_hold_per_slot refuses two live
+// holds on the same slot, which is §4b working and not something to route around.
+func addRequest(t *testing.T, s *Store, id, slug, slotStart string, token []byte) error {
+	t.Helper()
+	_, err := s.DB().Exec(`
+		INSERT INTO request (id, slug, slot_start, slot_end, state,
+		                     confirm_token_hash, created_at, hold_until, purge_after)
+		VALUES (?, ?, ?, '2026-09-02T23:30:00Z', 'unconfirmed',
+		        ?, '2026-09-02T15:00:00Z', '2026-09-02T15:15:00Z', '2026-09-02T16:00:00Z')`,
+		id, slug, slotStart, token)
+	return err
+}
+
+func TestConfirmTokenLookupUsesAnIndex(t *testing.T) {
+	// GET /c/{confirm_token} is the endpoint the entire double opt-in defence
+	// hangs on. Without an index it is a full table scan, which degrades quietly
+	// instead of failing — the worst way for the spam defence to get slow.
+	//
+	// The index is partial (WHERE confirm_token_hash IS NOT NULL). A planner has
+	// to work out that `= ?` cannot match NULL before it will use one, so this
+	// asserts the plan rather than merely asserting the index exists.
+	s := openTestStore(t)
+
+	rows, err := s.DB().Query(
+		`EXPLAIN QUERY PLAN SELECT id FROM request WHERE confirm_token_hash = ?`, []byte("x"))
+	if err != nil {
+		t.Fatalf("explain: %v", err)
+	}
+	defer rows.Close()
+
+	var plan string
+	for rows.Next() {
+		var id, parent, notUsed int
+		var detail string
+		if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
+			t.Fatalf("scan plan: %v", err)
+		}
+		plan += detail + "\n"
+	}
+	if !strings.Contains(plan, "request_confirm_token") {
+		t.Fatalf("confirm-token lookup does not use its index. Plan was:\n%s", plan)
+	}
+	if strings.Contains(plan, "SCAN request") {
+		t.Fatalf("confirm-token lookup scans the table. Plan was:\n%s", plan)
+	}
+}
+
+func TestTwoLiveRequestsCannotShareAConfirmToken(t *testing.T) {
+	// A 256-bit random token will not collide. The constraint turns "will not"
+	// into "cannot", because a shared token would let one confirmation land on
+	// somebody else's request.
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+
+	token := []byte("the-same-token")
+	if err := addRequest(t, s, "req-1", "x7f2k9", "2026-09-02T16:00:00Z", token); err != nil {
+		t.Fatalf("first request: %v", err)
+	}
+	// A different slot, so the only thing that can refuse this is the confirm
+	// token index.
+	err := addRequest(t, s, "req-2", "x7f2k9", "2026-09-02T17:00:00Z", token)
+	if err == nil {
+		t.Fatal("a second request reused a live confirm token, want the unique index to refuse it")
+	}
+	if !strings.Contains(err.Error(), "request_confirm_token") &&
+		!strings.Contains(err.Error(), "confirm_token_hash") {
+		t.Fatalf("refused for the wrong reason: %v", err)
+	}
+}
+
+func TestResolvedRequestsDoNotCrowdTheConfirmTokenIndex(t *testing.T) {
+	// The index is partial so it only carries rows that can still be confirmed.
+	// Several resolved rows with a cleared token must not collide with each
+	// other — NULLs are distinct in SQLite, and the WHERE clause keeps them out
+	// of the index entirely.
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+
+	for i, id := range []string{"req-1", "req-2", "req-3"} {
+		slot := fmt.Sprintf("2026-09-02T1%d:00:00Z", i+4)
+		if err := addRequest(t, s, id, "x7f2k9", slot, nil); err != nil {
+			t.Fatalf("%s with a NULL token: %v", id, err)
+		}
 	}
 }
