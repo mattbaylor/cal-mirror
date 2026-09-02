@@ -36,6 +36,17 @@ made in a place people do not expect it.
 
 ## The constraint that decides the whole design
 
+> **Superseded 2 Sept 2026.** Matt overruled the policy-only scoping below: the
+> agent surface gets the whole tool. *"Most people treat the onboard AI as
+> trusted."* The privacy claim is about the **service** never learning anything,
+> not about the owner's own tooling, and conflating the two makes the product
+> worse for no gain. `decisions.md` carries the reasoning. What survives from
+> this section is the **injection rule**, which is a security constraint rather
+> than a privacy one, and the observation that requester data reaching an AI
+> vendor deserves one plain sentence where the owner can see it. The argument
+> below is left in place because it is what was overruled, and a decision without
+> the thing it rejected is half a record.
+
 **Tools expose the policy. They do not expose the calendar, and they do not
 expose the queue.**
 

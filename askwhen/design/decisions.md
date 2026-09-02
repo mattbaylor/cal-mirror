@@ -158,6 +158,18 @@ site gets shared, and nobody would have noticed because the page itself looks
 fine. Fixing it needs the final domain, which is one more reason the two are the
 same job.
 
+**The app offer cannot be dismissed during the trial.** *(2 Sept 2026)* Matt.
+The goal is stated plainly — *"I want to convert the requestor into a user"* — so
+the offer is not decoration on the request page, it is a purpose of it. During
+the 90-day trial the owner cannot turn it off. Afterwards, possibly, and if so
+**likely as a higher-tier feature**: "my page, without the advert" is exactly the
+kind of thing the $35 and $70 tiers exist to sell, and it gives those tiers
+another reason to exist beyond a nicer URL.
+
+The constraint I would still hold: it must never stand *between* a requester and
+asking for a time. Not dismissible is not the same as blocking, and the
+difference is the whole thing.
+
 **askwhen ships as Calendar Mirror 2.0.** *(2 Sept 2026)* Not a separate app and
 not a point release — the major version is the announcement. Follows from the
 packaging decision above: one app, opt-in, off by default. Consequences worth
@@ -177,6 +189,33 @@ $20/year owner.
 
 Two things inside it are not settled and are asked in *Still open*: how much
 setup the requester has to do, and who pays for the nag.
+
+**The local agent surface gets the whole tool, not a policy-only subset.**
+*(2 Sept 2026 — Matt, overruling a proposal of mine)* I had argued for tools that
+expose the policy and never the calendar or the request queue, on the grounds
+that the queue is other people's names and emails. Overruled: *"I don't think it
+violates privacy to create an MCP that lets your onboard agent work with the tool
+in total. Most people treat the onboard AI as trusted."*
+
+That is right about the thing that matters. The server is still the party that
+never learns anything; an agent the owner runs on their own machine, in a session
+they started, is not a third party in the sense the architecture is defending
+against — it is the owner using their own data, which they already hold
+legitimately. **The privacy claim is about the service, not about the owner's
+own tooling**, and conflating the two would make the product worse for no gain.
+
+One residual, noted and not blocking: requester data reaching an AI vendor is
+still a disclosure the requester did not make, so it is worth a plain sentence
+somewhere the owner sees it — not a gate, not a scary modal, just honesty. And
+the injection rule below is unaffected, because it is a security constraint
+rather than a privacy one.
+
+**Siri is a surface to design for, not just an iOS fallback.** *(2 Sept 2026)*
+Matt: *"we should see what the new Siri does and how we work with it because
+that's the likely surface we will need to support."* Investigation queued;
+`mcp.md` currently argues App Intents is the only shape iOS offers, which was
+reasoned from the absence of subprocesses rather than from what Apple has
+actually shipped. Check before building.
 
 **A local agent surface, and diagnosis is the case for it.** *(2 Sept 2026)*
 Matt's, both halves. An MCP server on the desktop so the tool can be configured
@@ -220,16 +259,6 @@ that answers "why is it doing this", which is a different question from "which
 control do I change". **Against it:** an opinionated tool is wrong for somebody,
 and they are the somebody who writes the review.
 
-**Tools expose the policy, never the calendar, and never the queue.** The policy —
-hours, horizon, buffers, caps, blackouts — contains no events and nobody else, so
-sending it is the owner disclosing their own preferences. The queue is other
-people's names, emails and notes, given to the owner for one purpose; passing
-them to an AI vendor discloses a third party's data that the third party never
-agreed to. Diagnosis obeys the same rule by returning *why* a candidate was
-dropped and never *what* dropped it. **This is the constraint with the most
-product consequence in this file** — it is what rules out *"accept the Tuesday
-one"*, which is the sentence people will most want to say.
-
 **Agent writes propose a draft the owner approves against a diff.** The owner
 already approves everything else a stranger can see, and clamping is not review:
 a model can widen hours, clear blackouts and lift `maxPerDay` entirely within the
@@ -258,14 +287,6 @@ grant, come back. Every setup step between a stranger and the thing they wanted
 is a step most of them will not take, and the app can ask for the rest later, on
 its own terms, once it is installed and useful. If there is a reason the overlay
 needs real configuration I have not seen it, but I have not built it either.
-
-**Who pays for the nag?** *(2 Sept 2026)* The owner shared that link to get a
-meeting. If the page pushes their contact to buy software, that reflects on the
-owner, not on us — and the owner is the one paying $20 a year. So: never block,
-never repeat, offer once, dismissible, and it must never stand between the
-requester and asking for a time. Whether the owner can turn it off is the real
-question — it is the polite answer and it is also another setting, which cuts
-against keeping the surface small.
 
 New questions will arrive from building — that is expected, and they belong here
 with their reasoning rather than in a commit message nobody reads twice.
