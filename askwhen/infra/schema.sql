@@ -91,6 +91,25 @@ CREATE TABLE IF NOT EXISTS page (
   -- was rejected at the door and never reached this column.
   dump              TEXT NOT NULL,
 
+  -- The dump's ETag, so a conditional GET can be answered without reading the
+  -- blob. A version counter would have done, but a content hash means a device
+  -- that republishes byte-identical content does not invalidate every
+  -- requester's cache — and §3a already has the device publishing only on
+  -- change, so the two agree in the common case and the hash is stricter in the
+  -- uncommon one.
+  --
+  -- Written by the same code path that writes `dump`, and a store test asserts
+  -- the two agree. SQLite has no sha256(), so this cannot be a generated column.
+  dump_etag         TEXT NOT NULL,
+
+  -- Bumped by trigger whenever any request row for this page changes.
+  --
+  -- This is what makes the owner's poll cheap. Device polling is O(owners) and
+  -- mostly returns nothing (design/scale.md), so the common case must not touch
+  -- the request table at all: read this integer, compare, answer 304. Without it
+  -- every empty poll is an index scan.
+  queue_version     INTEGER NOT NULL DEFAULT 0,
+
   -- §3a: three devices watching the same calendars would race to publish. A
   -- write from a device that is not the nominated publisher is rejected.
   publisher_id      TEXT,
@@ -226,6 +245,35 @@ CREATE UNIQUE INDEX IF NOT EXISTS request_one_live_hold_per_slot
 CREATE UNIQUE INDEX IF NOT EXISTS request_confirm_token
   ON request (confirm_token_hash)
   WHERE confirm_token_hash IS NOT NULL;
+
+-- Queue versioning. Three triggers rather than three code paths remembering,
+-- because the failure mode of forgetting one is a device that never learns a
+-- request arrived — silent, and indistinguishable from nobody wanting to meet
+-- you, which is the failure this whole design is most afraid of.
+--
+-- Deliberately imprecise: any change to any request row bumps the page, even
+-- changes to rows that were never in the queue. Narrowing it with
+-- `UPDATE OF state, confirmed_at, ...` would cut some wasted refetches and add a
+-- way to miss one. An extra refetch costs one indexed query returning a handful
+-- of rows; a missed bump costs a request. The safe direction is obvious.
+
+CREATE TRIGGER IF NOT EXISTS request_bump_queue_insert
+AFTER INSERT ON request
+BEGIN
+  UPDATE page SET queue_version = queue_version + 1 WHERE slug = NEW.slug;
+END;
+
+CREATE TRIGGER IF NOT EXISTS request_bump_queue_update
+AFTER UPDATE ON request
+BEGIN
+  UPDATE page SET queue_version = queue_version + 1 WHERE slug = NEW.slug;
+END;
+
+CREATE TRIGGER IF NOT EXISTS request_bump_queue_delete
+AFTER DELETE ON request
+BEGIN
+  UPDATE page SET queue_version = queue_version + 1 WHERE slug = OLD.slug;
+END;
 
 -- The sweeper's only index. Kept narrow because it is scanned every minute.
 CREATE INDEX IF NOT EXISTS request_purge_after ON request (purge_after);

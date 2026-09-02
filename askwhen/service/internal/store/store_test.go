@@ -2,11 +2,14 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
 )
 
 // The schema under test is infra/schema.sql itself, not a copy. The Dockerfile
@@ -37,11 +40,13 @@ func openTestStore(t *testing.T) *Store {
 
 func addPage(t *testing.T, s *Store, slug string) {
 	t.Helper()
+	const dump = `{"v":1,"slots":[]}`
 	_, err := s.DB().Exec(`
 		INSERT INTO page (slug, entitlement_hash, write_token_hash, display_name,
-		                  tz, dump, updated_at, expires_at)
-		VALUES (?, X'00', X'01', 'Matt Baylor', 'America/Denver', '{}',
-		        '2026-09-02T00:00:00Z', '2026-09-03T00:00:00Z')`, slug)
+		                  tz, dump, dump_etag, updated_at, expires_at)
+		VALUES (?, X'00', X'01', 'Matt Baylor', 'America/Denver', ?, ?,
+		        '2026-09-02T00:00:00Z', '2026-09-03T00:00:00Z')`,
+		slug, dump, httpcache.StrongETag([]byte(dump)))
 	if err != nil {
 		t.Fatalf("insert page %q: %v", slug, err)
 	}
@@ -264,5 +269,167 @@ func TestResolvedRequestsDoNotCrowdTheConfirmTokenIndex(t *testing.T) {
 		if err := addRequest(t, s, id, "x7f2k9", slot, nil); err != nil {
 			t.Fatalf("%s with a NULL token: %v", id, err)
 		}
+	}
+}
+
+// ------------------------------------------------------------- versioning
+
+func TestSetDumpKeepsTheETagInStep(t *testing.T) {
+	// The one invariant that matters here. A stale dump_etag would tell every
+	// requester nothing had changed while they went on seeing availability the
+	// owner had already replaced — silently, for as long as their browser kept
+	// the copy.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+
+	const published = `{"v":1,"slots":[{"s":"2026-09-02T16:00:00Z","e":"2026-09-02T16:30:00Z"}]}`
+	if err := s.SetDump(ctx, "x7f2k9", published); err != nil {
+		t.Fatalf("set dump: %v", err)
+	}
+
+	dump, etag, err := s.Dump(ctx, "x7f2k9")
+	if err != nil {
+		t.Fatalf("dump: %v", err)
+	}
+	if dump != published {
+		t.Fatalf("dump = %q, want %q", dump, published)
+	}
+	if want := httpcache.StrongETag([]byte(published)); etag != want {
+		t.Fatalf("etag = %q, does not describe the stored dump (want %q)", etag, want)
+	}
+
+	// The cheap path must agree with the expensive one, or a 304 would be
+	// answered against a different document than a 200 would return.
+	cheap, err := s.DumpETag(ctx, "x7f2k9")
+	if err != nil {
+		t.Fatalf("dump etag: %v", err)
+	}
+	if cheap != etag {
+		t.Fatalf("DumpETag = %q but Dump reported %q", cheap, etag)
+	}
+}
+
+func TestRepublishingIdenticalContentKeepsTheETag(t *testing.T) {
+	// §3a already has the device publishing only when content changed, so this
+	// is belt and braces — but it is why the dump's validator is a content hash
+	// rather than a counter. A republish after a restart should not invalidate
+	// every requester's cache.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+
+	const same = `{"v":1,"slots":[]}`
+	if err := s.SetDump(ctx, "x7f2k9", same); err != nil {
+		t.Fatal(err)
+	}
+	first, _ := s.DumpETag(ctx, "x7f2k9")
+	if err := s.SetDump(ctx, "x7f2k9", same); err != nil {
+		t.Fatal(err)
+	}
+	second, _ := s.DumpETag(ctx, "x7f2k9")
+
+	if first != second {
+		t.Fatalf("republishing identical content changed the etag: %q -> %q", first, second)
+	}
+
+	if err := s.SetDump(ctx, "x7f2k9", `{"v":1,"slots":[{"s":"x","e":"y"}]}`); err != nil {
+		t.Fatal(err)
+	}
+	third, _ := s.DumpETag(ctx, "x7f2k9")
+	if third == second {
+		t.Fatal("publishing different content did not change the etag")
+	}
+}
+
+func TestMissingPageIsIndistinguishable(t *testing.T) {
+	// §4c: never distinguish never-existed from lapsed, deleted or expired.
+	ctx := context.Background()
+	s := openTestStore(t)
+
+	if _, err := s.DumpETag(ctx, "nosuch"); !errors.Is(err, ErrNoPage) {
+		t.Fatalf("DumpETag error = %v, want ErrNoPage", err)
+	}
+	if _, _, err := s.Dump(ctx, "nosuch"); !errors.Is(err, ErrNoPage) {
+		t.Fatalf("Dump error = %v, want ErrNoPage", err)
+	}
+	if _, err := s.QueueVersion(ctx, "nosuch"); !errors.Is(err, ErrNoPage) {
+		t.Fatalf("QueueVersion error = %v, want ErrNoPage", err)
+	}
+	if err := s.SetDump(ctx, "nosuch", "{}"); !errors.Is(err, ErrNoPage) {
+		t.Fatalf("SetDump error = %v, want ErrNoPage", err)
+	}
+}
+
+func TestQueueVersionMovesWheneverTheQueueCould(t *testing.T) {
+	// The triggers exist because the failure mode of forgetting to bump is a
+	// device that never learns a request arrived — silent, and indistinguishable
+	// from nobody wanting to meet you.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+
+	at := func(step string) int64 {
+		t.Helper()
+		v, err := s.QueueVersion(ctx, "x7f2k9")
+		if err != nil {
+			t.Fatalf("%s: queue version: %v", step, err)
+		}
+		return v
+	}
+
+	start := at("start")
+
+	if err := addRequest(t, s, "req-1", "x7f2k9", "2026-09-02T16:00:00Z", []byte("tok-1")); err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+	afterInsert := at("after insert")
+	if afterInsert <= start {
+		t.Fatalf("insert did not bump the queue version (%d -> %d)", start, afterInsert)
+	}
+
+	if _, err := s.DB().Exec(`UPDATE request SET state = 'confirmed' WHERE id = 'req-1'`); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	afterUpdate := at("after update")
+	if afterUpdate <= afterInsert {
+		t.Fatalf("update did not bump the queue version (%d -> %d)", afterInsert, afterUpdate)
+	}
+
+	if _, err := s.DB().Exec(`DELETE FROM request WHERE id = 'req-1'`); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if afterDelete := at("after delete"); afterDelete <= afterUpdate {
+		t.Fatalf("delete did not bump the queue version (%d -> %d)", afterUpdate, afterDelete)
+	}
+}
+
+func TestQueueVersionsDoNotLeakBetweenOwners(t *testing.T) {
+	// A request for one page must not make another page's device refetch. This
+	// is also the partitioning property in miniature: nothing about one owner
+	// may be reachable from another.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+	addPage(t, s, "y8g3m2")
+
+	before, err := s.QueueVersion(ctx, "y8g3m2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i, id := range []string{"req-1", "req-2", "req-3"} {
+		slot := fmt.Sprintf("2026-09-02T1%d:00:00Z", i+4)
+		if err := addRequest(t, s, id, "x7f2k9", slot, []byte(id)); err != nil {
+			t.Fatalf("%s: %v", id, err)
+		}
+	}
+
+	after, err := s.QueueVersion(ctx, "y8g3m2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after != before {
+		t.Fatalf("another page's requests moved this page's queue version (%d -> %d)", before, after)
 	}
 }
