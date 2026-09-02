@@ -38,8 +38,20 @@
 	#
 	# This endpoint is on the compose network only; the site blocks below refuse
 	# /internal/* from the outside.
+	# NOTE (2 Sept 2026): this block belongs on `caddy-dc`, not here. The
+	# deployment now sits behind the existing edge at 172.16.1.4, which is what
+	# terminates TLS and therefore what has to ask. `edge.md` carries the block
+	# to paste there. It is kept in this file because this file is still the
+	# reviewable record of the TLS story, and because a local Caddy in front of
+	# the app would need the identical directive if we ever grow a second edge.
+	#
+	# The `key` is how the endpoint authenticates the caller, and it is in the
+	# query string because that is the only channel Caddy offers: the ask
+	# request is a plain GET that sets no headers. Caddy preserves the query
+	# parameters already on this URL and adds `domain` beside them, so the
+	# service receives `?domain=…&key=…`.
 	on_demand_tls {
-		ask http://app:8080/internal/tls-authorize
+		ask http://app:8080/internal/tls-authorize?key={$AW_TLS_AUTH_SECRET}
 	}
 
 	servers {

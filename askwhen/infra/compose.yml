@@ -49,6 +49,13 @@ services:
       # and there is no account to recover one from. Treat it as permanent.
       AW_PEPPER_FILE: "/run/secrets/pepper"
 
+      # The credential the edge presents when asking whether a hostname may
+      # have a certificate issued. Not the pepper: this one is shared with
+      # another host's configuration and can be rotated without invalidating
+      # every write token in existence.
+      AW_TLS_AUTH_SECRET_FILE: "/run/secrets/tls_auth_secret"
+      AW_ZONE: "askwhen.me"
+
       # Retention, from architecture §10. Here rather than compiled in, because
       # these are the numbers a regulator or a customer will ask about and they
       # should be readable without a Go toolchain. The 48h ceiling is *also*
@@ -69,6 +76,7 @@ services:
     secrets:
       - smtp_password
       - pepper
+      - tls_auth_secret
 
     volumes:
       - aw-data:/data
@@ -150,6 +158,10 @@ secrets:
     file: ./secrets/smtp_password
   pepper:
     file: ./secrets/pepper
+  # openssl rand -hex 32 > infra/secrets/tls_auth_secret
+  # The same value goes into caddy-dc's Caddyfile — see edge.md.
+  tls_auth_secret:
+    file: ./secrets/tls_auth_secret
 
 volumes:
   aw-data:
