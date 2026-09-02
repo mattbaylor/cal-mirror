@@ -9,7 +9,22 @@ Everything here is a public DNS lookup. Re-run any of it in a shell.
 
 ---
 
-## Topology — `172.16.1.10` and `64.111.22.172` are the same machine
+## First: what `rehosted.us` actually is
+
+I designed against this branch for a long session while treating `rehosted.us` as
+an opaque hostname. It is not. **It is Matt's own hosting business** — Schedule C,
+customers, a datacenter — and its public pitch is *"Deplatforming is real. We can
+help."*: digital sovereignty, private email, private virtual servers, custom
+email domains.
+
+Which means askwhen's thesis is **already in market under Matt's own brand, to a
+customer base that self-selected for exactly it.** That is a distribution fact
+before it is a hosting fact, and this branch was written without it.
+
+The hosting shape matters just as much, and three things below contradict what
+this branch assumes.
+
+## Topology — and `172.16.1.10` is a hypervisor, not an app host
 
 Matt gives the infrastructure host as `rehosted.us: 172.16.1.10`, which is
 RFC 1918 private and not routable. It is the **inside** address. The outside is
@@ -21,7 +36,15 @@ dlvr.rehosted.us  A  64.111.22.174     ← mail host, as mail.md says
 ```
 
 So the addresses in `dns.md` and `mail.md` are **correct and real**, not
-placeholders. Three consequences:
+placeholders.
+
+But `172.16.1.10` is **`pve01`, a Proxmox node** — one half of a two-node
+`dc-cluster`, with `pve02` at `.11`. It is a hypervisor. *"Run it on
+172.16.1.10"* means **provision a guest there**, not run `docker compose` on the
+cluster node. `deploy.py`'s "runs ON the deployment host" is still right; the
+host is a VM or LXC that does not exist yet.
+
+Consequences:
 
 - **`deploy.py` needs no change.** It runs *on* the host against the local
   Docker daemon and holds no address at all. Reaching the box to run it is an
@@ -119,16 +142,82 @@ include later without checking that the macro has been fixed first.
 
 ---
 
-## One thing to establish before building
+---
 
-`dlvr.rehosted.us` has its own SPF macro, its own PTR, and sits behind a domain
-publishing DMARC at `p=quarantine`. That is not a bare host — **it looks like an
-existing sending platform**.
+## Three corrections to this branch
 
-`mail.md` describes standing up postfix and opendkim there by hand. If dlvr is
-already a working sender, the real task is *adding `askwhen.me` as a signing
-domain to something that exists*, which is smaller and safer than building a
-second mail server beside the first.
+### 1. `askwhen.me` must not point at `64.111.22.172`
 
-Worth ten minutes on the box before writing any of it. `mail.md` is a good plan
-for an empty host and possibly the wrong plan for this one.
+`dns.md` puts the apex, the `*` wildcard **and** `edge` all at
+`64.111.22.172`. That address is **reHosted's own website** — `rehosted.us` and
+`www.rehosted.us` both resolve there, and its PTR says so.
+
+Pointing askwhen at it means one of two bad things: askwhen's Caddy also has to
+serve the hosting business's public site, or the business's site breaks. It also
+puts **on-demand TLS for arbitrary customer domains** on the same address as the
+company website, and shares the per-IP rate limit between askwhen requesters and
+rehosted.us visitors.
+
+**There are three spare public IPs in the /29** — `.168`, `.169` and `.175` all
+have generic `*.static.hvvc.us` rDNS and nothing forward-resolving to them.
+Giving askwhen its own address isolates the blast radius, keeps on-demand
+issuance away from the business site, and makes the wildcard and `edge` records
+honest. That is the change I would make to `dns.md`, and it is Matt's call.
+
+### 2. There is already a public edge, and this branch ships a second one
+
+`172.16.1.4` (`rtr`, SSH alias `caddy-dc`) is **already a Caddy reverse proxy**,
+fronting `*.thebaylors.org`, `*.mattbaylor.dev`, `rehosted.us` and
+`passmaker.io`, public via `fw.rehosted.us` at `.170`.
+
+This branch ships its own `Caddyfile` and `Dockerfile.caddy` on the assumption
+that it is *the* edge. Two coherent answers and one incoherent one:
+
+- **Own IP, own Caddy** (with correction 1) — clean separation, on-demand TLS
+  contained, and nothing about the existing edge changes. My preference.
+- **Behind the existing edge** — one Caddy to reason about, but the on-demand TLS
+  and per-IP rate limiting from this branch have to move into a proxy that is
+  already load-bearing for customer sites, and `dns.md`'s grey-cloud reasoning
+  needs rechecking against it.
+- **Both, unexamined** — two Caddys with overlapping certificate scopes on one
+  /29. This is what happens if nobody decides.
+
+### 3. `dlvr` is Postal, so `mail.md` is building the wrong thing
+
+`mail.md` describes standing up **postfix and opendkim by hand** on
+`dlvr.rehosted.us`, including a section on generating a DKIM key with `openssl`.
+
+`dlvr` is a **Postal** server. It is already the outbound relay for
+`mail.thebaylors.org` (Mailcow, `64.111.27.241`), it already has correct rDNS,
+and Postal manages per-domain DKIM keys itself through its own UI and API.
+
+So the task is **adding `askwhen.me` to Postal as a sending domain** and taking
+the DKIM public key Postal generates. That is smaller, safer, and keeps
+`askwhen.me` on a relay whose sending reputation already exists — which is worth
+more than anything a fresh postfix could have.
+
+`mail.md`'s *reasoning* survives intact: the SPF/DKIM/DMARC alignment table, why
+`From:` is `no-reply@askwhen.me` rather than the relay's domain, and why the
+signing key belongs on the mail host rather than the app host are all still
+right. It is the **procedure** that is wrong, and the procedure is most of the
+document.
+
+
+## The /29, for reference
+
+| IP | rDNS | What |
+|---|---|---|
+| `.168` `.169` `.175` | generic `*.static.hvvc.us` | **spare — candidates for askwhen** |
+| `.170` | `fw.rehosted.us` | firewall / edge |
+| `.171` | `mail.rehosted.us` | `vft.rehosted.us` forward-resolves here |
+| `.172` | `rehosted.us` | **the hosting business's own website** |
+| `.173` | `vft.rehosted.us` | PTR only; nothing forward-resolves here |
+| `.174` | `dlvr.rehosted.us` | Postal, the outbound relay |
+
+Internal is `172.16.1.0/24`, reachable from Matt's home network over Twingate
+subnet-router relays. `pve01` `.10` and `pve02` `.11` are the Proxmox cluster;
+`rtr` `.4` is the existing Caddy edge.
+
+Read off live DNS on 2 September 2026. `.171` and `.173` disagree between PTR and
+forward records, which is cosmetic here but worth knowing before anyone reasons
+from rDNS alone.
