@@ -72,9 +72,26 @@ care enough about calendars to be looking at somebody's availability. The 404
 page (§4c) was already reaching for that organic distribution; this is the same
 move on the page that works.
 
-The app is $2.99. Nobody will buy it to answer one meeting request, and the page
-must never imply they should. It is a perk for people who already have it, not a
-gate — which means Tier 0 has to be genuinely good on its own.
+**The page should actively offer this to Apple visitors, not wait for them to
+already have it.** *(Matt's direction, 2 Sept 2026.)* Detect the platform; if it
+is a Mac, iPhone or iPad, offer Calendar Mirror right there, because the overlay
+is a benefit in the moment they need it rather than an abstract promise. The
+audience is self-selected — they are, by definition, looking at a calendar right
+now — which makes a request page the best shop window the app will ever get.
+
+My earlier line here said nobody would buy a $2.99 app to answer one meeting
+request and the page must never imply they should. Half of that is still true and
+the other half was too cautious. What holds is that **it must never be a gate**:
+the offer comes once, dismissible, and never stands between a requester and
+asking for a time. The owner shared that link to get a meeting, and it is the
+owner's manners the page is spending.
+
+What I would argue for, and have not built, is **zero configuration on the
+requester's path** — the overlay needs EventKit permission and nothing else, not
+mirrors, not sources, not a policy. Install, grant, come back. Every setup step
+between a stranger and the thing they wanted is a step most of them will not
+take, and the app can ask for the rest later, once it is installed and useful.
+Recorded as an open question in `decisions.md`.
 
 ### Tier 2 — anyone, one-time chore: drop an `.ics`
 
@@ -127,10 +144,11 @@ another, and it needs nothing from them at all: no file, no app, no OAuth, no
 network. It is a longer `slots` array in a payload we already have, reviewed by
 an owner who is already reviewing things by hand.
 
-**This is the answer for non-users, and it is better than chasing a degraded
-overlay for them.** Overlay if you have the app; negotiate if you don't. Nobody
-is left looking at a broken feature, and the two paths want the same UI — a week
-grid you can mark on.
+**This is the answer for whoever is left**, which after the app offer above means
+non-Apple visitors and Apple visitors who would rather not install anything —
+still most people. Overlay if you have the app; negotiate if you don't. Nobody is
+left looking at a broken feature, and the two paths want the same UI: a week grid
+you can mark on.
 
 **b. Let them subscribe to the offers as a calendar.**
 
