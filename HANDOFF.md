@@ -21,17 +21,30 @@ The release watcher (`.github/workflows/watch-review.yml`) runs every three hour
 and is now a no-op until something else is marked *In review* — that is by
 design, not something to turn off.
 
-**One thing may still be pending when you read this.** The watcher lands its edit
-by committing straight to `main` using a `CM_RELEASE_TOKEN` secret. If that
-secret was never added, it falls back to opening a PR — and *Settings → Actions →
-General → Allow GitHub Actions to create and approve pull requests* is off, so
-that fallback fails. It fails loudly now, with a compare link in the run summary,
-but it does not land the change. Check whether the secret exists before trusting
-the watcher on the next release:
+**The watcher can land its own edits now.** It commits straight to `main` using
+the `CM_RELEASE_TOKEN` secret, added 1 September 2026 — a fine-grained PAT owned
+by `mattbaylor` with admin rights, expiring **1 September 2027**. Admin is the
+load-bearing part, not the scope: the push works by bypassing the required
+`cmk-check`, which `enforce_admins: false` permits for admins only. A
+correctly-scoped token on a non-admin account would authenticate and then fail at
+push time.
+
+**That push has not actually been exercised yet.** Identity, permissions and
+expiry were all verified against the API; the push itself was not, because there
+was no release in flight to trigger it and faking one is worse than leaving it.
+The next release will prove it. To prove it sooner, from a branch:
 
 ```
-gh secret list --repo mattbaylor/cal-mirror | grep CM_RELEASE_TOKEN
+git commit --allow-empty -m "Prove the release token reaches main"
+GH_TOKEN=<the token> gh api repos/mattbaylor/cal-mirror/git/refs/heads/main \
+  -X PATCH -f sha="$(git rev-parse HEAD)"
 ```
+
+**When that token expires**, the watcher silently falls back to opening a PR —
+and *Settings → Actions → General → Allow GitHub Actions to create and approve
+pull requests* is off, so that fallback is refused. It fails loudly with a
+compare link rather than mutely, but it does not land the change. Renew before
+September 2027, or turn that setting on as a standing backstop.
 
 `1.4.2` is on `main` unreleased (Mac realtime sync, shared-destination dedupe).
 It is *not* submitted. Releasing it means running the `release.yml` workflow —
