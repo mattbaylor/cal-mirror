@@ -3,8 +3,8 @@
 Written 2 September 2026, before there are any users, because the decisions that
 keep scale cheap are all made early and none of them are visible later.
 
-Nothing here needs building now. Three things need *deciding* now, and one thing
-needs never doing.
+Nothing here needs building now. Three things needed *deciding* now — two were
+answered on 2 September and are marked below — and one thing needs never doing.
 
 ---
 
@@ -103,23 +103,25 @@ This is the one to insist on, and the reason is not performance — it is that
 polling the old way for as long as people do not update, and there is no way to
 make them stop. Everything else here can be decided late; this one cannot.
 
-**2. Settle what the per-IP rate limit counts.** §8 says "rate limit per IP"
-without saying what it applies to. If it counts page views, every read becomes a
-write, and SQLite's single writer is the first thing to break — for a limit that
-is not protecting much, because a page view costs nothing. If it counts only
-`POST /v1/pages/{slug}/requests`, writes stay rare and the picture above holds.
-Currently ambiguous, and it is a schema-shaped decision.
+**2. What the per-IP rate limit counts — DECIDED 2 Sept 2026: submissions only.**
+`POST /v1/pages/{slug}/requests`, and nothing else. Page views stay pure reads,
+so the dominant traffic never becomes a write and the picture above holds. Slugs
+are unguessable, so enumeration is not the threat; and read-side flooding, if it
+ever matters, belongs in Caddy where it costs no database write.
+`GET /c/{confirm_token}` is deliberately excluded — a 256-bit token is not
+brute-forced.
 
-**3. Decide whether conversion is counted or attributed.** *"Convert the
-requester into a user"* is a settled goal. Measuring it *per referring page*
-means the server learns that owner B came from owner A's page — a relationship
-between two people who never agreed to be associated, and a cross-owner link of
-exactly the kind the constraint above forbids.
+**3. Counted or attributed — DECIDED 2 Sept 2026: counted, never attributed.**
+An install carries *"came from an askwhen page"* and nothing more. Aggregate
+funnel numbers, no cross-owner link, no new storage, and nothing to reverse. It
+is also the honest v1: Apple offers no reliable install attribution without
+deferred deep links or pasteboard tricks.
 
-Counting is free: an install can carry "came from an askwhen page" without saying
-which one. Attribution across an owner's *own* pages is within one owner and also
-free. Only cross-owner attribution costs anything, nobody has asked for it, and
-it should be refused on purpose rather than by omission.
+Per-page counts would have been safe too — the installer is not an owner yet.
+Full attribution, recording that owner B came from owner A's page, is refused on
+purpose: it creates a relationship between two people who never agreed to be
+associated, and ends the partitioning property for the same reason group
+scheduling does.
 
 ## Where the overlay sits in all this
 

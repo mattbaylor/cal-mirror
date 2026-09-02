@@ -37,7 +37,15 @@ and a future split stays cheap.
 2. `design/rationale.md` — why a dead drop, why no invitations, why annual-only
 3. `design/decisions.md` — what is settled, with reasons, and what is still open
 4. `design/findings.md` — what was ruled out, with evidence, so nobody re-derives it
-4. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
+5. `design/competitors.md` — what the rest of the market is good at, what to take
+   from it, and where our own framing does not survive contact with it
+6. `design/overlay.md` — the best idea worth taking, and the three routes to it
+   that do not work
+7. `design/mcp.md` — configuring it by talking to it, and diagnosis as the case
+8. `design/siri.md` — the iOS surface, and what Apple actually publishes about it
+9. `design/scale.md` — what breaks in what order, and the one feature that must
+   never be built
+10. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
    claim is actually made
 
 ---
@@ -72,6 +80,15 @@ note goes in the body; horizon is 2–45 days, default 14.
   first at the publish site (step 4) rather than trusting them to agree.
 - `meeting.location` encodes as an absent key when nil, though the schema also
   permits explicit `null`. The web app must tolerate both.
+- **`SlotDeriver` should record why each candidate was dropped, not only which
+  survived.** *(added 2 Sept 2026)* `derive` returns `[Slot]` and discards the
+  rejections, but "why is nothing showing on Thursday?" is the question owners
+  actually have, and it is answerable from counts by reason — blocked, inside
+  minimum notice, outside hours, capped, blackout — without naming a single
+  event. It serves the settings screen as much as `design/mcp.md`, and it is a
+  contained change to a 180-line pure function with 289 tests around it today.
+  It gets more expensive with every later step that builds on the current
+  signature, so do it before step 3.
 
 ### 2 · Web app — `web/`
 
