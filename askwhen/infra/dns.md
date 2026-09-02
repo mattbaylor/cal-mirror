@@ -1,5 +1,10 @@
 # DNS — every record, and nothing created
 
+> **Read [`verified.md`](verified.md) first.** As of 2 Sept 2026 the live DNS
+> says two steps here are already done, and that `rehosted.us`'s own SPF record
+> contains a self-referential include which evaluates to `permerror`. This
+> document was written without either fact.
+
 This is a list, not a script. Nothing in this repo can write a DNS record and
 that is deliberate: the only credential that could is `CF_API_TOKEN`, it is
 scoped to one zone, and it exists so that Caddy can write a single

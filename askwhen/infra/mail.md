@@ -1,5 +1,10 @@
 # Mail — the failure that looks like nobody wanting to meet you
 
+> **Read [`verified.md`](verified.md) first.** As of 2 Sept 2026 the live DNS
+> says two steps here are already done, and that `rehosted.us`'s own SPF record
+> contains a self-referential include which evaluates to `permerror`. This
+> document was written without either fact.
+
 **If confirmation emails land in spam, the product does not work, and nothing
 tells you.** There is no error, no bounce, no support ticket. A requester picks
 a slot, types their address, sees "check your email", and never confirms —
