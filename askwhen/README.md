@@ -36,7 +36,9 @@ and a future split stays cheap.
 2. `design/rationale.md` — why a dead drop, why no invitations, why annual-only
 3. `design/decisions.md` — what is settled, with reasons, and what is still open
 4. `design/findings.md` — what was ruled out, with evidence, so nobody re-derives it
-4. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
+5. `design/competitors.md` — what the rest of the market is good at, what to take
+   from it, and where our own framing does not survive contact with it
+6. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
    claim is actually made
 
 ---
