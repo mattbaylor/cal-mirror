@@ -25,6 +25,14 @@ DerivedData/
 *.mobileprovision
 *.key
 
+# askwhen.me deployment secrets. These paths exist on the host and must never
+# exist here: the SMTP submission password, the token pepper (rotating it
+# invalidates every write token, unrecoverably), and the DKIM private key —
+# which should only ever be on dlvr.rehosted.us in the first place.
+# See askwhen/infra/README.md, "Secrets".
+/askwhen/infra/.env
+/askwhen/infra/secrets/
+
 # Private working notes / session log (never published)
 /.notes/
 
@@ -38,3 +46,6 @@ DerivedData/
 
 # npm, for askwhen/web. The lockfile is committed; what it installs is not.
 node_modules/
+
+# Python bytecode from the repo scripts
+__pycache__/

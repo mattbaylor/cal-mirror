@@ -100,3 +100,33 @@ jobs:
       - name: Prove the page reaches nothing off-origin
         working-directory: askwhen/web
         run: node test/no-network.mjs
+
+  askwhen-service:
+    # The Go service. Only the TLS authorisation gate exists so far, and it is
+    # the piece most worth a CI job: it runs on caddy-dc, the proxy that already
+    # fronts unrelated customer sites, and a mistake there costs that proxy its
+    # ability to issue any certificate at all.
+    #
+    # The store tests read infra/schema.sql directly rather than a copy, so this
+    # job also proves the schema still applies and that its foreign keys cascade.
+    name: askwhen service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: askwhen/service/go.sum
+      - name: Vet
+        working-directory: askwhen/service
+        run: go vet ./...
+      - name: Check formatting
+        working-directory: askwhen/service
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "gofmt would change:"; echo "$unformatted"; exit 1
+          fi
+      - name: Test
+        working-directory: askwhen/service
+        run: go test -race ./...
