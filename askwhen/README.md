@@ -40,7 +40,9 @@ and a future split stays cheap.
    from it, and where our own framing does not survive contact with it
 6. `design/overlay.md` — the best idea worth taking, and the three routes to it
    that do not work
-7. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
+7. `design/mcp.md` — configuring it by talking to it, and what such a server must
+   never be allowed to see
+8. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
    claim is actually made
 
 ---

@@ -275,6 +275,56 @@ know.
 
 ---
 
+---
+
+## Naming a claim without making one
+
+The Calendly allegation above is the useful case for a technique that applies to
+all thirteen `docs/vs/*` pages too, and it is worth writing down because this
+repo keeps reaching for the wrong end of it.
+
+There are three things you can do with an unverified claim about a competitor.
+Two of them are bad.
+
+**Assert it.** *"Calendly exposes your invitees' names to anyone you share a
+calendar with."* Fast, damning, and one screenshot from a support engineer ends
+the argument and takes the page's credibility with it. Everything else on that
+page then reads as also possibly made up. This is how comparison pages die.
+
+**Drop it.** Safe, and it throws away a real thing people worry about.
+
+**Name it, attribute it, and answer the category.** State whose claim it is
+without adopting it, then answer the *class* of problem — which does not need
+the claim to be true:
+
+> A competitor has alleged that bookings synced into a shared calendar can expose
+> invitee details to everyone that calendar is shared with. We have not verified
+> that, and it is not the point. **The point is that it is a question you have to
+> ask any tool that writes into your calendar, and never one you have to ask
+> this one** — the service never writes to a calendar at all. Your device does,
+> with a title you chose, into a calendar you picked.
+
+That paragraph is defensible line by line. The allegation is attributed and
+explicitly not endorsed. The structural claim underneath it is not an allegation
+at all: *anything that writes events into your calendar can expose those events
+to anyone you share it with*, and that is arithmetic rather than an accusation.
+
+**And note the structural half stands alone.** It is stronger than the
+allegation, it needs no citation, and it cannot be refuted by Calendly shipping a
+privacy toggle next week — a toggle would answer their version and leave ours
+untouched, because ours is about who does the writing.
+
+So the citation is optional and the category is not. If in doubt, run the
+paragraph without the first sentence. It loses nothing except the hostage.
+
+**The general form, for the other twelve pages:**
+
+1. Whose claim is it? Name them, or drop the sentence.
+2. Have we verified it? If no, say so in the sentence itself, not in a footnote.
+3. What is the class of problem it belongs to? Answer *that*.
+4. Would the answer survive the competitor fixing the specific thing? If not, it
+   was never our argument.
+
 ## Leads, not facts
 
 Flagged so nobody repeats them as verified:
@@ -282,7 +332,8 @@ Flagged so nobody repeats them as verified:
 - **unverified** — a competitor's blog claims Calendly syncs invitee names into
   shared Google Calendars with no privacy toggle, exposing booking details to
   anyone the owner shares that calendar with. Plausible and damaging if true.
-  Verify by observation before it goes anywhere near a comparison page.
+  Do not assert it. See *Naming a claim without making one* below, which is how
+  this gets used.
 - **worth noting, carefully** — Calendly's own privacy pages describe what it
   takes as *"limited scheduling data"* and *"basic scheduling info—like who you
   meet with and how often"*, and do **not** enumerate whether event titles,
