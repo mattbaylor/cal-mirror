@@ -137,6 +137,27 @@ an outright ban would foreclose a legitimate use — a consultant who *wants* to
 found — and push them to a competitor. Opting in has to be a deliberate act, with
 the consequence stated plainly at the moment of choosing.
 
+**The marketing site moves to `calendarmirror.com`.** *(2 Sept 2026)* Matt's,
+and coupled to the infrastructure work rather than separate from it — there are
+now three domains with one set of DNS and TLS decisions behind them:
+`calendarmirror.com` for the site, `askwhen.me` for request pages,
+`rehosted.us` for hosting and mail, plus whatever step 6's custom domains need
+for on-demand issuance.
+
+**Audited 2 Sept 2026, and the move is smaller than `HANDOFF.md` suggests.**
+`docs/` contains **no** absolute URLs to `mattbaylor.github.io` and **no**
+root-absolute paths, so nothing breaks when the path prefix goes from
+`/cal-mirror/` to `/`. The only two references anywhere in the repo are prose, in
+`HANDOFF.md` and in this file. So it is `docs/CNAME`, the DNS records, and
+waiting for the certificate.
+
+**One real bug it surfaces.** `docs/index.html` sets
+`<meta property="og:image" content="icon.png">` — a *relative* URL. Open Graph
+requires an absolute one, so link previews are likely already broken wherever the
+site gets shared, and nobody would have noticed because the page itself looks
+fine. Fixing it needs the final domain, which is one more reason the two are the
+same job.
+
 **askwhen ships as Calendar Mirror 2.0.** *(2 Sept 2026)* Not a separate app and
 not a point release — the major version is the announcement. Follows from the
 packaging decision above: one app, opt-in, off by default. Consequences worth
