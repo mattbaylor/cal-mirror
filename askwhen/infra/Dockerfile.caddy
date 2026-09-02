@@ -1,0 +1,25 @@
+# Caddy, plus the one module the stock image does not carry.
+#
+# `*.askwhen.me` is the $35 tier and a wildcard certificate can only be issued
+# over the DNS-01 challenge, which means Caddy has to be able to write a TXT
+# record into the askwhen.me zone. The official image ships no DNS providers, so
+# this stage exists solely to compile `caddy-dns/cloudflare` in.
+#
+# Pin both the Caddy version and the module. An unpinned `:builder` will one day
+# rebuild against a Caddy whose on-demand TLS options have been renamed, and the
+# failure surfaces as certificates quietly not being issued for paying
+# customers — which nobody notices for a week.
+
+FROM caddy:2.8.4-builder AS builder
+
+RUN xcaddy build v2.8.4 \
+      --with github.com/caddy-dns/cloudflare@v0.0.0-20240703190432-89f16b99c18e
+
+FROM caddy:2.8.4
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+
+# Nothing else is baked in. The Caddyfile is bind-mounted read-only by
+# compose.yml so that `deploy.py reload --apply` can validate and reload it
+# without a rebuild, and so a config change shows up in `git diff` rather than
+# inside an image layer.

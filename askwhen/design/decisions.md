@@ -264,6 +264,51 @@ competitor fixing the specific thing?** If not, it was never our argument. This
 applies to all thirteen `docs/vs/*` pages, which is where the research has
 already been wrong three times.
 
+**The hour that happens twice — qualify the whole day.** *(1 Sept 2026, from
+step 2)* On the day a clock falls back, two slots an hour apart render to the
+same local label: "1:30 AM" twice, and a requester picking one has no way to
+know which they asked for. On any day where that happens, every time on that day
+carries the zone in force at that instant — "1:00 AM MDT", "1:30 AM MST",
+"10:00 AM MST". Qualifying only the colliding pair was tried first and reads as
+a bug: a list of six where two have extra words looks like an oversight rather
+than a distinction. Nothing is qualified on days with no collision, so the
+marker means something when it appears. Spring-forward needs none of this — the
+missing hour has no slots in it to be ambiguous about.
+
+**Slot order is chronological, never wall-clock.** *(1 Sept 2026, from step 2)*
+Sorting a day's slots by their local time looks equivalent to sorting by instant
+and is not: in the fold it interleaves the two passes through the repeated hour,
+so the page offers 1:00, 1:00, 1:30, 1:30 in an order no clock ever produced.
+Ordering by the UTC instant is correct on every day, including that one.
+
+**No proof of work on the request page.** *(1 Sept 2026)* Reconciling two
+documents that disagreed: `architecture.md` §5 and the step 2 component list
+both named proof of work inside `<request-form>`, while the abuse decision above
+defers it to "when there is traffic to justify them". The abuse decision wins,
+and the form ships with the honeypot alone. This is not only sequencing — a
+self-hosted Altcha widget is still a script whose only job is to run on a page
+that currently loads none, and adding it before there is abuse to point at spends
+the auditability the page is arguing from.
+**The per-IP rate limit counts request submissions only.** *(2 Sept 2026)* Matt.
+`POST /v1/pages/{slug}/requests`, and nothing else. Page views stay pure reads,
+which is what keeps `scale.md`'s picture true — the dominant traffic never
+becomes a write, and SQLite's single writer is never under pressure from someone
+simply opening a page. Slugs are unguessable, so enumeration is not a real
+threat; and if read-side flooding ever matters it belongs in Caddy, where it
+costs no database write at all. `GET /c/{confirm_token}` is left out on purpose:
+the token is 256 bits, so brute force is not the attack to worry about.
+
+**Conversion is counted, never attributed.** *(2 Sept 2026)* Matt. An install
+carries *"came from an askwhen page"* and nothing more. That gives aggregate
+funnel numbers with no cross-owner link, no new storage, and nothing to reverse
+later — and it is the honest v1 besides, because Apple offers no reliable install
+attribution without deferred deep links or pasteboard tricks.
+
+Per-page counts would still have been safe, since the installer is not an owner
+yet. Full attribution — recording that owner B came from owner A's page — is the
+one reading of *"convert the requestor into a user"* the architecture forbids: it
+creates a relationship between two people who never agreed to be associated, and
+it ends the partitioning property for the same reason group scheduling does.
 
 ## Proposed — an agent's reasoning, not a decision
 
@@ -316,6 +361,22 @@ grant, come back. Every setup step between a stranger and the thing they wanted
 is a step most of them will not take, and the app can ask for the rest later, on
 its own terms, once it is installed and useful. If there is a reason the overlay
 needs real configuration I have not seen it, but I have not built it either.
+
+
+**Can the requester change the timezone the page is shown in?** *(raised 1 Sept
+2026, from step 2)* Today the browser decides and there is no override, which is
+right for almost everyone and silently wrong for the traveller whose laptop is
+still on home time, and for anyone arranging a call for a zone they are not in.
+Every competitor offers a picker. Against it: a picker is a control on a page
+whose whole argument is that it has almost none, and the times shown are already
+labelled with the zone they are in, so a wrong device clock is visible rather
+than hidden. It is not blocking — `format.js` already takes the zone as an
+argument everywhere, so adding a picker later is a component, not a rewrite.
+
+**The confirmation link is a mutating GET, and mail scanners click links.** This
+one has a deadline: see `HANDOFF.md` and `infra/README.md`. It must be answered
+before step 5 sends a single confirmation email, because a link already sitting
+in an inbox cannot be changed.
 
 New questions will arrive from building — that is expected, and they belong here
 with their reasoning rather than in a commit message nobody reads twice.
