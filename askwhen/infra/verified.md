@@ -118,10 +118,59 @@ the budget. Either way the result is **`permerror`, not `pass`** — for
 from that domain currently passes DMARC on **DKIM alignment alone**, with SPF
 contributing nothing and some receivers penalising the permerror directly.
 
-**Verify with a proper SPF validator before changing anything** — this is read
-off `dig`, and the fix depends on what `dlvr` is actually meant to send as. The
-likely shape is that the macro should enumerate the sending hosts rather than
-include the domain that includes it.
+### The blast radius is four domains, not one
+
+`spf.dlvr.rehosted.us` is included by every domain that relays through Postal:
+
+| Domain | SPF record | State |
+|---|---|---|
+| `rehosted.us` | `v=spf1 mx a include:spf.dlvr.rehosted.us ~all` | permerror |
+| `thebaylors.org` | `v=spf1 +a +mx include:spf.dlvr.rehosted.us ~all` | permerror |
+| `passmaker.io` | `v=spf1 a mx include:spf.dlvr.rehosted.us ~all` | permerror |
+| `imagetopass.com` | `v=spf1 a mx include:spf.dlvr.rehosted.us ~all` | permerror |
+| `espace.cool` | Outlook + SendGrid includes, no dlvr | fine |
+
+### The fix
+
+The intent was clearly that `spf.dlvr.rehosted.us` be a TXT record enumerating
+Postal's senders. It is a CNAME instead, so the lookup follows it to
+`dlvr.rehosted.us` and returns that host's own SPF record — which includes the
+CNAME. **Delete the CNAME, publish a TXT in its place:**
+
+```
+spf.dlvr.rehosted.us.   TXT   "v=spf1 ip4:64.111.22.174 -all"
+```
+
+`dlvr.rehosted.us` has one A record (`64.111.22.174`) and no AAAA, so one `ip4`
+covers it. **If Postal sends from more than one address — an IP pool — enumerate
+all of them here.** Postal knows; DNS does not.
+
+A name cannot hold both a CNAME and a TXT, so the CNAME has to go first. Nothing
+should be resolving `spf.dlvr.rehosted.us` for an address — the name exists to be
+included.
+
+All four domains above then evaluate correctly with **no change to any of them**,
+which is the point of the macro. `dlvr`'s own record becomes valid too:
+`a` → `.174`, `mx` → `mx.dlvr.rehosted.us`, `include` → the new TXT.
+
+**Verify with a real SPF validator, not `dig`.** This is read off DNS and the
+conclusion depends on RFC 7208's loop and lookup-limit behaviour rather than on
+something a resolver reports directly.
+
+### One more, while looking
+
+`mattbaylor.dev` publishes:
+
+```
+v=spf1 a mx a:mail.thebaylors.org sendgrid.com ~all
+```
+
+`sendgrid.com` is a bare domain in mechanism position. SPF mechanism names come
+from a fixed set — `all`, `include`, `a`, `mx`, `ptr`, `ip4`, `ip6`, `exists` —
+and a bare hostname is not one, so this almost certainly parses as an unknown
+term and yields **permerror** as well, by a different route. Probably meant to be
+`include:sendgrid.net` or similar. Unrelated to Postal, unrelated to askwhen,
+worth ten seconds while the zone is open.
 
 ### What it means for `askwhen.me`, which is the opposite of the obvious
 
@@ -164,7 +213,33 @@ Giving askwhen its own address isolates the blast radius, keeps on-demand
 issuance away from the business site, and makes the wildcard and `edge` records
 honest. That is the change I would make to `dns.md`, and it is Matt's call.
 
-### 2. There is already a public edge, and this branch ships a second one
+### 2. Use the edge that already exists — DECIDED
+
+**Matt, 2 Sept 2026: go behind `caddy-dc`. Grow to a second edge only if we
+need to.** So the branch's own `Caddyfile` and `Dockerfile.caddy` become an
+upstream app container behind `172.16.1.4`, not the public edge.
+
+What that pulls in, and none of it is optional:
+
+- **`askwhen.me` DNS points at `.170` (`fw.rehosted.us`)**, not at `.172`. That
+  disposes of correction 1 as a side effect — askwhen never touches the address
+  serving the company website — and the spare IPs stay spare.
+- **On-demand TLS moves into `caddy-dc`.** That proxy is already load-bearing for
+  customer sites, so the `ask_domain` authorisation endpoint has to be right
+  before it is enabled, or a misconfiguration issues certificates on a proxy
+  that matters. This is the single riskiest line in the whole branch now.
+- **The per-IP rate limit has to read a forwarded header**, since every request
+  arrives from the edge. `dns.md`'s grey-cloud argument was written against
+  Cloudflare and applies verbatim here: trust exactly one hop, and trust it only
+  because we run it.
+- **`dns.md`'s wildcard and `edge` records still make sense**, pointed at `.170`.
+  `edge.askwhen.me` remains the stable CNAME target for the $70 tier so the
+  wildcard is not load-bearing for customer domains.
+
+The original text is kept below because it is the reasoning the decision was
+made against.
+
+### 2b. The argument, as it stood
 
 `172.16.1.4` (`rtr`, SSH alias `caddy-dc`) is **already a Caddy reverse proxy**,
 fronting `*.thebaylors.org`, `*.mattbaylor.dev`, `rehosted.us` and
@@ -182,7 +257,10 @@ that it is *the* edge. Two coherent answers and one incoherent one:
 - **Both, unexamined** — two Caddys with overlapping certificate scopes on one
   /29. This is what happens if nobody decides.
 
-### 3. `dlvr` is Postal, so `mail.md` is building the wrong thing
+### 3. `dlvr` is Postal — CONFIRMED, so `mail.md` is building the wrong thing
+
+**Matt confirmed 2 Sept 2026: dlvr is Postal.** So this is not a suspicion to
+check on the box, it is a rewrite `mail.md` needs.
 
 `mail.md` describes standing up **postfix and opendkim by hand** on
 `dlvr.rehosted.us`, including a section on generating a DKIM key with `openssl`.
