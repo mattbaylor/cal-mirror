@@ -1,0 +1,18 @@
+{
+  "name": "askwhen-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The askwhen.me request page. One app, N pages; a slug selects a dump.",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test 'test/*.test.mjs'",
+    "check": "npm run build && npm test && node test/no-network.mjs"
+  },
+  "dependencies": {
+    "lit": "^3.3.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

@@ -71,3 +71,32 @@ jobs:
           xcodebuild -project CalMirror.xcodeproj -scheme CalMirror \
             -configuration Debug -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO -quiet build
+
+  askwhen-web:
+    # The request page. Linux, because nothing here is Apple — and because the
+    # timezone tests want a full-ICU Node, which the setup-node runners have.
+    #
+    # The no-network step is the one that matters. It greps the built bundle for
+    # every way a page can reach off-origin, so the privacy claim is checked
+    # against the artifact that ships rather than against the intent behind it.
+    name: askwhen web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: askwhen/web/package-lock.json
+      - name: Install
+        working-directory: askwhen/web
+        run: npm ci
+      - name: Timezone and DST tests
+        working-directory: askwhen/web
+        run: npm test
+      - name: Build
+        working-directory: askwhen/web
+        run: npm run build
+      - name: Prove the page reaches nothing off-origin
+        working-directory: askwhen/web
+        run: node test/no-network.mjs

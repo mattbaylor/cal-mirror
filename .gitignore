@@ -33,3 +33,8 @@ DerivedData/
 
 # Agent worktrees — transient, and embedded git repos besides
 .claude/worktrees/
+# Local dev-server config; the web app itself needs no server to run.
+.claude/launch.json
+
+# npm, for askwhen/web. The lockfile is committed; what it installs is not.
+node_modules/
