@@ -24,9 +24,33 @@ never the owner's identity, address, calendar or credential.
 requester gets an `.ics` by email and download. Same `UID` + `SEQUENCE` covers
 updates and cancellation. See `rationale.md`.
 
-**Billing — StoreKit, annual only, 14-day trial.** $20 page / $35 subdomain /
-$70 custom domain. Guideline 3.1.1 requires IAP anyway, and Apple's anonymous
-transaction id is a better fit for the privacy claim than Stripe's email and card.
+**Billing — StoreKit, annual only, 90-day trial.** *(2 Sept 2026 — was 14 days)*
+$20 page / $35 subdomain / $70 custom domain. Guideline 3.1.1 requires IAP
+anyway, and Apple's anonymous transaction id is a better fit for the privacy
+claim than Stripe's email and card.
+
+The trial length changed because **14 days cannot contain the value event.** The
+payoff of a request page is *a stranger asked you for a time*, and that may
+simply not happen inside a fortnight — the owner trials a page nobody used and
+concludes it does nothing. Ninety days is roughly the period over which "someone
+wants to meet me" has a shape. Apple allows introductory free trials up to a
+year, so the mechanics are trivial; the argument is entirely about the product
+being rare rather than daily.
+
+**And explicitly not a free tier, for a reason that is not greed.** Mail is
+self-hosted on `dlvr.rehosted.us`, so sending reputation is ours alone and there
+is nobody to absorb a mistake. A free tier is an open relay for anyone who wants
+to send confirmation mail to strangers, and the damage — a poisoned sending
+domain — does not announce itself. It looks exactly like nobody wanting to meet
+you, which is the same silent failure `README.md` step 3 already warns about. A
+trial gated behind StoreKit puts a payment method on file and time-boxes the
+exposure. A free tier does neither.
+
+**Known cost, accepted:** ninety days is a lot of link-sharing, so a lapse now
+strands more links in the wild than a fortnight did. The lapse behaviour below
+already handles this better than it looks — the slug 404s *into the invitation
+page*, so a dead link still explains itself to whoever clicks it. Worth
+re-checking if the trial ever gets longer.
 
 **Packaging — one app, opt-in, off by default.** Shipping in Calendar Mirror *and*
 as a second app would not preserve the clean privacy policy — that only survives
@@ -113,6 +137,28 @@ thing between a page and a search result, so invisible is the safe default. But
 an outright ban would foreclose a legitimate use — a consultant who *wants* to be
 found — and push them to a competitor. Opting in has to be a deliberate act, with
 the consequence stated plainly at the moment of choosing.
+
+**Configuration — opinionated, few settings, good defaults.** *(2 Sept 2026)*
+Cal.com is genuinely good and genuinely hard to configure; that is one sentence,
+not two, and the second half is the opening. Configurability is their moat and
+their tax. We do not out-configure them and should not try: every setting is a
+question asked of someone who wanted to publish a page, and a page that needs a
+manual has already lost to the free scheduler inside their Google account. Where
+a choice can be inferred — collection pace from sync settings, publisher
+defaulting to the Mac, horizon defaulting to 14 days — infer it, and let the
+owner override rather than decide. New settings need an argument, not a use case.
+
+**The overlay is tiered, and non-users get negotiation instead.** *(2 Sept 2026)*
+Full analysis in `overlay.md`. The short version: a requester's calendar cannot
+be fetched from a web page — iCloud and Google feeds both send no CORS header,
+and every workaround is a proxy that would read a stranger's calendar on our
+server. So the overlay is a **Calendar Mirror perk**: the app reads EventKit
+locally and hands busy intervals back in a URL *fragment*, which no browser ever
+sends to a server. Everyone else gets **counter-offer** — *"none of these work,
+here is when I can"* — which needs nothing from them, is nearly free given the
+review queue, and answers the same underlying question. Overlay if you have the
+app; negotiate if you don't. Nobody is shown a broken feature, and both paths
+want the same week-grid UI.
 
 ## Still open
 

@@ -38,7 +38,9 @@ and a future split stays cheap.
 4. `design/findings.md` — what was ruled out, with evidence, so nobody re-derives it
 5. `design/competitors.md` — what the rest of the market is good at, what to take
    from it, and where our own framing does not survive contact with it
-6. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
+6. `design/overlay.md` — the best idea worth taking, and the three routes to it
+   that do not work
+7. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
    claim is actually made
 
 ---
