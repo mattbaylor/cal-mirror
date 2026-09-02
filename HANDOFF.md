@@ -12,32 +12,26 @@ stashed change, and no branch in a broken state.
 
 ## The three tracks
 
-### 1 · The shipping app — waiting on Apple, nothing to do
+### 1 · The shipping app — 1.4.1 is live, nothing to do
 
-**1.4.1 is in review.** Submitted 31 August. It adds the Shortcuts action
-(`SyncNowIntent`) and the new subtitle.
+**1.4.1 cleared review on 1 September** on both platforms. It adds the Shortcuts
+action (`SyncNowIntent`) and the new subtitle. The site says so.
 
-This track is **automated from here, with one manual step**.
-`.github/workflows/watch-review.yml` runs every three hours, asks App Store
-Connect whether 1.4.1 has cleared, and when it has it opens a PR that flips the
-changelog pill from *In review* to *On the App Store* and strips the
-`<!--UNRELEASED:1.4.1-->` blocks from the site. If you find that PR sitting open,
-that is the system working, not a task you forgot.
+The release watcher (`.github/workflows/watch-review.yml`) runs every three hours
+and is now a no-op until something else is marked *In review* — that is by
+design, not something to turn off.
 
-**The watcher cannot open that PR yet, and this is a setting, not a bug.**
-*Settings → Actions → General → Allow GitHub Actions to create and approve pull
-requests* is off, so `gh pr create` is refused. The branch still gets pushed and
-is still correct; only the PR is missing. The workflow now says so in its run
-summary with a one-click compare link rather than failing mutely.
+**One thing may still be pending when you read this.** The watcher lands its edit
+by committing straight to `main` using a `CM_RELEASE_TOKEN` secret. If that
+secret was never added, it falls back to opening a PR — and *Settings → Actions →
+General → Allow GitHub Actions to create and approve pull requests* is off, so
+that fallback fails. It fails loudly now, with a compare link in the run summary,
+but it does not land the change. Check whether the secret exists before trusting
+the watcher on the next release:
 
-Two permanent fixes, both yours to choose: turn that setting on, or add a
-`CM_RELEASE_TOKEN` secret, which switches the watcher to committing straight to
-`main` — that path is already written and dormant.
-
-One more thing if you take the PR route: PRs opened with the default
-`GITHUB_TOKEN` do not trigger workflows, so `cmk-check` never runs and the
-required check leaves the PR looking blocked. An empty commit
-(`git commit --allow-empty -m "Trigger CI" && git push`) unsticks it.
+```
+gh secret list --repo mattbaylor/cal-mirror | grep CM_RELEASE_TOKEN
+```
 
 `1.4.2` is on `main` unreleased (Mac realtime sync, shared-destination dedupe).
 It is *not* submitted. Releasing it means running the `release.yml` workflow —
@@ -124,8 +118,9 @@ delivery); there is no requester-facing view despite §9 promising one; and the
 
 ## Picking it up
 
-**If you have twenty minutes:** merge #50, and merge the watcher's PR if it has
-opened one. Both are low-stakes.
+**If you have twenty minutes:** merge #50, and add the `CM_RELEASE_TOKEN` secret
+if it is still missing. Both are low-stakes and the second one stops the next
+release from stalling silently.
 
 **If you have an afternoon:** step 2, the web app. It is the whole product
 surface, it needs no backend, and it is done when it renders the example dump
@@ -137,6 +132,57 @@ one that will tell you whether this product feels good to use.
 a deadline built into it.
 
 ---
+
+## The prompt to start the next session with
+
+Paste this into a fresh session. It is written to be pasted cold, with no other
+context, and it deliberately tells the session to distrust this file where the
+repo can settle the question instead.
+
+```
+You are picking up cal-mirror and askwhen.me after they were parked on
+1 September 2026. Act as an orchestrator: hold the plan, delegate wide or
+mechanical work, and verify what comes back rather than relaying it.
+
+Start by reading HANDOFF.md at the repo root, then askwhen/README.md and
+askwhen/design/decisions.md. HANDOFF.md was accurate the day it was written and
+standing automation has been running since — so where it makes a claim the repo
+or the GitHub API can settle, check rather than trust, and tell me anything you
+find that has drifted.
+
+Before proposing work, establish the actual current state:
+  - git status, open PRs, and whether any watcher PR is sitting unmerged
+  - whether 1.4.2 has shipped, and what the site's changelog says is current
+  - whether the CM_RELEASE_TOKEN secret exists yet
+
+The next build step is askwhen step 2, the web app: Lit components rendering
+askwhen/schema/policy-dump.example.json from disk. No backend, no network
+request of any kind, no third-party script — not even a font. It is done when it
+renders correctly in three timezones including one across a DST change.
+
+Constraints that are not negotiable and that will bite you if you skip them:
+  - main is protected. Branch, PR, CI must pass. Use a site/... or feat/...
+    branch name to match convention.
+  - gh has two accounts. The active one cannot push to mattbaylor/*. Run
+    `gh auth switch --user mattbaylor` before any push, PR or merge, and switch
+    back to mattbaylor-edify afterwards. Subagents that push leave it switched.
+  - Never `git add -A` in this repo. Stage explicitly.
+  - Screenshots come from a synthetic config, never the live one. The real one
+    holds a work email, an employer, a spouse's calendar and children's names.
+  - It is a request page, never a booking page. Read askwhen/design/glossary.md
+    before writing any user-facing copy.
+  - Do not deploy anything. askwhen/infra/ is inert by design; deploy.py only
+    acts under --apply, and nothing has been provisioned.
+
+One design question has a deadline and is not yet answered: the email
+confirmation link is a mutating GET, and mail scanners click links before humans
+do, which would gut double opt-in. It must be settled before step 5 sends any
+email. Do not let it be discovered during step 5.
+
+My attention is limited, so: do the work, and surface decisions only where the
+answer would change what you build. Tell me plainly when something you find
+contradicts HANDOFF.md.
+```
 
 ## What an orchestrator session needs to know
 
@@ -171,7 +217,7 @@ Runs whether or not anyone is here:
 
 | Workflow | When | What |
 |---|---|---|
-| `watch-review.yml` | every 3h | 1.4.1 clears review → opens a PR that updates the site |
+| `watch-review.yml` | every 3h | a version clears review → stamps the site. Commits to `main` with `CM_RELEASE_TOKEN`; without it, opens a PR — **and PR creation is refused by a repo setting**, so it fails with a compare link instead |
 | `price-drift.yml` | Mondays | site prices vs `prices.json`, and competitor drift |
 | `ci.yml` | every PR | `cmk-check`, standalone apps, App Store targets |
 
