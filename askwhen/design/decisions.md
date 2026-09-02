@@ -170,6 +170,23 @@ The constraint I would still hold: it must never stand *between* a requester and
 asking for a time. Not dismissible is not the same as blocking, and the
 difference is the whole thing.
 
+**Group scheduling is a landmine, not a feature.** *(2 Sept 2026)* Matt asked
+for this to be called out plainly, because future-us chasing functionality will
+be tempted. *"When are Matt and Alex and Sam all free?"* is a query across owners
+by definition and there is no clever way to make it not one. It ends the property
+that makes this data partition — a property nobody built, and which exists only
+because the server was never given enough to join two owners together. It also
+makes the service hold a relationship between two people who never agreed to be
+associated, so it costs the privacy claim as well as the scaling one, and the fix
+afterwards is a rewrite rather than a migration.
+
+It will look small because the UI is small. The UI is small; the query is not.
+And the market will keep suggesting it: polls are free in SavvyCal, free in
+Rallly, and in Doodle's free tier, so eventually the comparison table has a gap
+and a customer asks. Reasoning in `scale.md`; the same warning sits at the top of
+`../infra/schema.sql`, beside the tables it would break, because that is where
+somebody building it would be looking.
+
 **askwhen ships as Calendar Mirror 2.0.** *(2 Sept 2026)* Not a separate app and
 not a point release — the major version is the announcement. Follows from the
 packaging decision above: one app, opt-in, off by default. Consequences worth

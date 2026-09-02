@@ -42,7 +42,9 @@ and a future split stays cheap.
    that do not work
 7. `design/mcp.md` — configuring it by talking to it, and diagnosis as the case
 8. `design/siri.md` — the iOS surface, and what Apple actually publishes about it
-9. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
+9. `design/scale.md` — what breaks in what order, and the one feature that must
+   never be built
+10. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
    claim is actually made
 
 ---
