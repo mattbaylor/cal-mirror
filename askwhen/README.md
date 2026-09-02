@@ -81,7 +81,7 @@ Lit components against a **static dump on disk**. No service, no network.
 <request-page>          routing, loads the dump
   <availability-week>   week grid in the requester's zone, owner's shown beside
     <slot-button>
-  <request-form>        name, email, note, honeypot, proof of work
+  <request-form>        name, email, note, honeypot
   <request-state>       submitted · confirm-your-email · accepted · declined
 ```
 
@@ -90,6 +90,24 @@ timezones including one across a DST change, and makes no network request of any
 kind.
 
 *Why second:* it is the whole product surface and needs no backend to be real.
+
+**Done.** esbuild, one bundle, no config file — chosen so the no-network claim
+is checkable by reading the artifact. `web/test/no-network.mjs` asserts it on
+every build. Three zones: America/Denver, Asia/Kolkata (half-hour offset, slots
+falling into the next local day), Pacific/Auckland (a day ahead, 24-hour locale);
+DST covered in both directions, including the fall-back hour that renders twice.
+
+**Carried forward from step 2:**
+- `loadDump()` in `web/src/dump.js` is the seam. Step 3 turns it into a
+  same-origin fetch of `/p/{slug}.json` and nothing above it changes.
+- `<availability-week>` already takes a `held` array and renders those slots
+  struck through. Nothing populates it, because holds live in the service.
+- The form emits `trapped: true` when the honeypot is filled, and step 2 drops
+  it silently. Step 3 decides what the service does with a trapped submission —
+  it must stay indistinguishable from a real one on the page.
+- Whether a requester can override the displayed timezone is now an open
+  question in `design/decisions.md`. `format.js` takes the zone as an argument
+  everywhere, so it stays a component rather than a rewrite.
 
 ### 3 · Service — `service/`
 

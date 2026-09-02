@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- Off the index by default. The slug is the only thing between a page and
+         a search result, so invisible is the safe default; being listed is an
+         opt-in the owner makes deliberately. See design/decisions.md. -->
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Ask for a time</title>
+    <!-- Everything this page can do, it does from its own origin. Stated here
+         so it is enforced, not merely intended. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #f6f8fc;
+        color: #0d1220;
+        font: 16px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+          sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background: #0b0e14;
+          color: #e6edf3;
+        }
+      }
+      #app[aria-busy='true'] {
+        min-height: 60vh;
+      }
+      noscript {
+        display: block;
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 44px 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" aria-busy="true"></div>
+    <noscript>
+      <h1>This page needs JavaScript</h1>
+      <p>
+        The times are worked out in your browser, in your own time zone — that is what keeps the
+        server from needing to know anything about either of us. Without JavaScript there is nothing
+        to show you.
+      </p>
+    </noscript>
+    <script src="./app.js"></script>
+  </body>
+</html>

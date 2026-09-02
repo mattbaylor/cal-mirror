@@ -318,9 +318,13 @@ difference.
 <request-page>            routing + fetches /p/{slug}.json
   <availability-week>     week grid, requester's timezone
     <slot-button>
-  <request-form>          name, email, note, honeypot, proof of work
+  <request-form>          name, email, note, honeypot
   <request-state>         submitted / confirm-your-email / accepted / declined
 ```
+
+Proof of work is *not* on this page: `decisions.md` defers it until there is
+traffic to justify it, and a widget whose only job is to run would be the one
+script on a page that loads none.
 
 Custom elements, so the same components could later embed in someone's own site
 without dragging a framework along. Same-origin fetch, so the CORS problem that

@@ -114,9 +114,48 @@ an outright ban would foreclose a legitimate use — a consultant who *wants* to
 found — and push them to a competitor. Opting in has to be a deliberate act, with
 the consequence stated plainly at the moment of choosing.
 
+**The hour that happens twice — qualify the whole day.** *(1 Sept 2026, from
+step 2)* On the day a clock falls back, two slots an hour apart render to the
+same local label: "1:30 AM" twice, and a requester picking one has no way to
+know which they asked for. On any day where that happens, every time on that day
+carries the zone in force at that instant — "1:00 AM MDT", "1:30 AM MST",
+"10:00 AM MST". Qualifying only the colliding pair was tried first and reads as
+a bug: a list of six where two have extra words looks like an oversight rather
+than a distinction. Nothing is qualified on days with no collision, so the
+marker means something when it appears. Spring-forward needs none of this — the
+missing hour has no slots in it to be ambiguous about.
+
+**Slot order is chronological, never wall-clock.** *(1 Sept 2026, from step 2)*
+Sorting a day's slots by their local time looks equivalent to sorting by instant
+and is not: in the fold it interleaves the two passes through the repeated hour,
+so the page offers 1:00, 1:00, 1:30, 1:30 in an order no clock ever produced.
+Ordering by the UTC instant is correct on every day, including that one.
+
+**No proof of work on the request page.** *(1 Sept 2026)* Reconciling two
+documents that disagreed: `architecture.md` §5 and the step 2 component list
+both named proof of work inside `<request-form>`, while the abuse decision above
+defers it to "when there is traffic to justify them". The abuse decision wins,
+and the form ships with the honeypot alone. This is not only sequencing — a
+self-hosted Altcha widget is still a script whose only job is to run on a page
+that currently loads none, and adding it before there is abuse to point at spends
+the auditability the page is arguing from.
+
 ## Still open
 
-Nothing. Every decision this design needs has an answer and a reason above.
+**Can the requester change the timezone the page is shown in?** *(raised 1 Sept
+2026, from step 2)* Today the browser decides and there is no override, which is
+right for almost everyone and silently wrong for the traveller whose laptop is
+still on home time, and for anyone arranging a call for a zone they are not in.
+Every competitor offers a picker. Against it: a picker is a control on a page
+whose whole argument is that it has almost none, and the times shown are already
+labelled with the zone they are in, so a wrong device clock is visible rather
+than hidden. It is not blocking — `format.js` already takes the zone as an
+argument everywhere, so adding a picker later is a component, not a rewrite.
+
+**The confirmation link is a mutating GET, and mail scanners click links.** This
+one has a deadline: see `HANDOFF.md` and `infra/README.md`. It must be answered
+before step 5 sends a single confirmation email, because a link already sitting
+in an inbox cannot be changed.
 
 New questions will arrive from building — that is expected, and they belong here
 with their reasoning rather than in a commit message nobody reads twice.
