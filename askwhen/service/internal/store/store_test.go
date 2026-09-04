@@ -433,3 +433,65 @@ func TestQueueVersionsDoNotLeakBetweenOwners(t *testing.T) {
 		t.Fatalf("another page's requests moved this page's queue version (%d -> %d)", before, after)
 	}
 }
+
+func TestVerificationIsWhatOpensTheGate(t *testing.T) {
+	// The two halves, together: tlsauth refuses a domain until this column is
+	// set, and setting it is the only thing that changes the answer. Before this
+	// existed the gate refused every custom domain — correctly, and uselessly.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+	addDomain(t, s, "ask.example.com", "x7f2k9", "custom", false)
+
+	if ok, _ := s.AuthorizedCustomDomain(ctx, "ask.example.com"); ok {
+		t.Fatal("an unverified domain was authorized")
+	}
+
+	if err := s.MarkDomainVerified(ctx, "ask.example.com"); err != nil {
+		t.Fatalf("mark verified: %v", err)
+	}
+
+	if ok, err := s.AuthorizedCustomDomain(ctx, "ask.example.com"); err != nil || !ok {
+		t.Fatalf("after verification: got %v, %v; want true, nil", ok, err)
+	}
+}
+
+func TestMarkingVerifiedIsIdempotentAndNarrow(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+	addDomain(t, s, "ask.example.com", "x7f2k9", "custom", false)
+	addDomain(t, s, "matt.askwhen.me", "x7f2k9", "subdomain", false)
+
+	if err := s.MarkDomainVerified(ctx, "ask.example.com"); err != nil {
+		t.Fatal(err)
+	}
+	var first string
+	s.DB().QueryRow(`SELECT verified_at FROM domain WHERE host='ask.example.com'`).Scan(&first)
+
+	// A second run must not move the timestamp — the caller is a periodic check
+	// and re-confirming something already true is not news.
+	if err := s.MarkDomainVerified(ctx, "ask.example.com"); err != nil {
+		t.Fatal(err)
+	}
+	var second string
+	s.DB().QueryRow(`SELECT verified_at FROM domain WHERE host='ask.example.com'`).Scan(&second)
+	if first != second {
+		t.Fatalf("a repeat verification moved the timestamp: %q -> %q", first, second)
+	}
+
+	// A subdomain is covered by the wildcard and must never take this path.
+	if err := s.MarkDomainVerified(ctx, "matt.askwhen.me"); err != nil {
+		t.Fatal(err)
+	}
+	var sub any
+	s.DB().QueryRow(`SELECT verified_at FROM domain WHERE host='matt.askwhen.me'`).Scan(&sub)
+	if sub != nil {
+		t.Fatalf("a subdomain was marked verified: %v", sub)
+	}
+
+	// An unknown host is not an error; the caller is a sweep, not a command.
+	if err := s.MarkDomainVerified(ctx, "nosuch.example.com"); err != nil {
+		t.Fatalf("marking an unknown host errored: %v", err)
+	}
+}
