@@ -167,3 +167,26 @@ func (s *Store) QueueVersion(ctx context.Context, slug string) (int64, error) {
 	}
 	return v, nil
 }
+
+// MarkDomainVerified records that a custom domain's DNS was observed pointing at
+// our edge, which is what lets `tlsauth` authorise a certificate for it.
+//
+// Only ever sets the column, never clears it. Un-verifying on a failed check
+// would mean a resolver timeout could revoke every customer at once and then
+// refuse to renew their certificates — see domainverify.Unresolvable. Withdrawal
+// is a deliberate act, not a side effect of a bad afternoon for DNS.
+func (s *Store) MarkDomainVerified(ctx context.Context, host string) error {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE domain SET verified_at = ? WHERE host = ? AND kind = 'custom' AND verified_at IS NULL`,
+		time.Now().UTC().Format(time.RFC3339), host)
+	if err != nil {
+		return fmt.Errorf("mark domain verified: %w", err)
+	}
+	if n, err := res.RowsAffected(); err == nil && n == 0 {
+		// Either no such domain, or it was already verified. Both are fine and
+		// neither is worth an error: the caller is a periodic check, and a
+		// second confirmation of something already true is not news.
+		return nil
+	}
+	return nil
+}
