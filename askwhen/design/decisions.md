@@ -351,6 +351,43 @@ server. So the overlay is a Calendar Mirror capability, and everyone else gets
 direction** — the app-push entry above changes who "non-users" are, and shrinks
 this to "non-Apple, or Apple and not interested".
 
+**The confirmation link: `GET` renders, a button `POST`s.** *(researched 4 Sept
+2026 — needs Matt's yes)* The open question with a deadline, answered as far as I
+can answer it.
+
+The problem is real and widely acknowledged. Microsoft's Safe Links rewrites
+every URL and detonates it in a sandbox at delivery, Gmail ships equivalent
+click-time protection, and marketing platforms openly report double opt-in being
+confirmed by scanners rather than by people — one Adobe/Marketo community thread
+on exactly this concludes no satisfactory solution has been found. **Nobody
+publishes a clean fix**, which is worth saying plainly rather than citing a
+recommendation that does not exist.
+
+They live with it because their stake is a mailing list. Ours is the entire spam
+defence (§8), so we cannot.
+
+**The fix is to stop violating HTTP.** `GET /c/{token}` renders a page —
+*"Confirm your request for Tuesday 3pm?"* — and changes nothing. A button on it
+`POST`s, and that is what confirms. Scanners fetch URLs; they do not submit
+arbitrary forms, because a scanner that submitted every form it found would break
+the web on the way past.
+
+This is not a workaround dressed as correctness. RFC 9110 requires `GET` to be
+safe, and the current design breaks that rule whether or not scanners exist —
+the scanners are just the thing that makes the bill arrive. Every mitigation that
+keeps the mutation on the `GET` (requiring JavaScript, hiding the token in the
+fragment) is a guess about scanner behaviour that gets re-tested by every vendor
+update. This one is a property of the method.
+
+**Cost: one extra click**, on a page the flow arguably wants anyway — it is the
+natural place to say what happens next, which is what `<request-state>` already
+does everywhere else.
+
+**Residual risk, stated honestly:** a scanner that renders the page and executes
+its JavaScript could still be made to submit, if the button were wired through
+script. So the button must be a plain HTML `form method="post"` with no
+JavaScript in the path. That is also the version that works with JS disabled.
+
 ## Still open
 
 **How much setup does a requester have to do to get the overlay?** *(2 Sept
