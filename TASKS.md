@@ -77,13 +77,35 @@ In the order I would do them.
 2. **The `caddy-dc` edge block.** Written in `infra/edge.md` and pointed at
    `172.16.1.41`. Needs staging and a look before it goes live, since that proxy
    fronts customer sites.
-3. **Retire `HANDOFF.md`** in favour of this file, once this file has proved
+3. **Swap the web app from JavaScript to TypeScript.** *(Matt, 4 Sept — not
+   specced originally, and he expected TS.)* Contained, and worth more than a
+   language preference:
+
+   - esbuild already compiles TS with no new dependency; only `typescript`
+     itself is needed, for `tsc --noEmit` in `npm run check` and in CI.
+   - The components use static `properties` rather than decorators, so they port
+     without touching the Lit setup.
+   - Node 26 strips types natively, so `test/*.test.mjs` can become `.ts` without
+     a test runner or a build step in front of them.
+   - **The real prize is `schema/policy-dump.schema.json`.** Generate the dump's
+     types from it rather than hand-writing them, and the schema and the code
+     stop being able to drift — which is the one place drift would be silent and
+     would break the privacy claim rather than the build.
+
+4. **Retire `HANDOFF.md`** in favour of this file, once this file has proved
    itself.
 
 Waiting on something above: the `og:image` fix and the website move both need
 DNS.
 
 ## Done, so nobody re-derives it
+
+- **`calendarmirror.com` and `askwhen.me` are both live**, TLS from Let's
+  Encrypt, served through the DC edge. The site runs as a container on CT 112
+  and pulls itself from git every ten minutes; the edge stays a router.
+  `infra/site/` records it.
+- **Branch hygiene** — 30 remote branches down to 5, and
+  `delete_branch_on_merge` is on so it does not come back.
 
 - **The service builds, runs and is deployed to its host.** `cmd/askwhen` exists,
   the image is 12.8 MB built natively on the guest, and it answers on
