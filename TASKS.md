@@ -6,31 +6,72 @@ now substantially out of date; this file is what to read instead.
 Last accurate: **4 September 2026.** Anything here that the repo or the GitHub
 API can settle should be checked rather than trusted.
 
-**How to read it.** The only column that matters is who is blocked. *Matt* means
-it needs a shell, a DNS record, a decision, or an opinion. *Claude* means it is
-code or research and needs nobody. *Both* means the work is mine but the call is
-his.
+**How to read it.** Nothing here is "blocked" as a resting state. Either it is
+being worked, or there is a **named ask** with what it unblocks — and an ask is a
+thing to chase, not a place to stop.
+
+Access checked 4 Sept 2026: the DC is reachable from this machine (`172.16.1.4`,
+`.10`, `.20` all answer on 22 over the Twingate link) and there is a valid
+Cloudflare token — scoped to `thebaylors.org` only, verified against the API
+rather than read off its filename.
 
 ---
 
-## Blocked on Matt
+## Asks — three credentials, and what each one unblocks
 
-Nothing below can move without you. Roughly in the order it starts costing.
+**Please do not paste any of these into chat.** A transcript is the wrong place.
+Each has a way to hand it over that is not.
 
-| | What | Why it is waiting |
+### 1. A Cloudflare token covering the other zones
+
+All four zones sit on the same nameservers (`kip`/`abby.ns.cloudflare.com`), but
+the token on this machine can only see `thebaylors.org`. One token with
+**Zone:DNS:Edit on `rehosted.us`, `askwhen.me` and `calendarmirror.com`**
+unblocks three separate items at once:
+
+- the **SPF loop** — `rehosted.us`, `thebaylors.org`, `passmaker.io` and
+  `imagetopass.com` all `permerror` today
+- every **`askwhen.me` record** in `infra/dns.md`
+- the **site move** to `calendarmirror.com`, including the `og:image` fix that
+  needs a final domain
+
+Drop it at `~/.config/cloudflare/askwhen.env`, mode 600, same shape as the
+existing file. I will not read the value into the transcript.
+
+### 2. SSH into the DC
+
+Port 22 answers from here on all three hosts; authentication is the only gate —
+`caddy-dc` returns `Permission denied (publickey,password)`. Add a key I already
+hold (`~/.ssh/id_ed25519.pub`) to `authorized_keys` on **`caddy-dc`
+(172.16.1.4)** and **`pve01` (172.16.1.10)**, or tell me which existing key is
+the right one and I will use it.
+
+Unblocks: provisioning the askwhen guest, and the `caddy-dc` edge block in
+`infra/edge.md` — which I would want to stage and show you before it is live,
+since that proxy fronts customer sites.
+
+### 3. Postal on `dlvr`
+
+An API key or admin login, to add `askwhen.me` as a sending domain and take the
+DKIM key it generates. Unblocks the rewrite of `infra/mail.md`, whose
+postfix-and-opendkim procedure is written for an empty host that `dlvr` is not.
+
+---
+
+## Yours, and only yours
+
+Judgement, not access. Roughly in the order it starts costing.
+
+| | What | The call |
 |---|---|---|
-| 🔴 | **Answer the mutating-GET question** | `GET /c/{confirm_token}` mutates, and mail scanners click links before humans do — which guts double opt-in. Filed as "before step 5", but the endpoint's shape is decided in **step 3**, which is next. A link already in an inbox cannot be changed. |
-| 🔴 | **Commit the `-target` fix in `build.sh` / `build-ui.sh`** | Uncommitted in your tree. Both scripts have it, applied consistently. On a beta host swiftc was stamping `minos 28.0` into a binary the 26.5 SDK built, which then refused to launch on the machine that built it. It should not be sitting in a working tree. |
-| 🟠 | **Provision the askwhen guest on `pve01`** | `172.16.1.10` is the hypervisor. `infra/edge.md` has `172.16.1.20` as a placeholder and nothing can deploy until the guest exists. |
-| 🟠 | **Add `askwhen.me` to Postal as a sending domain** | `dlvr` is Postal, confirmed. Take the DKIM key it generates. This rewrites most of `infra/mail.md`, whose postfix-and-opendkim procedure is for an empty host. |
-| 🟠 | **DNS for `askwhen.me`** | Zone is live on Cloudflare and empty. Records are listed in `infra/dns.md`, with `.170` rather than `.172` — see `infra/verified.md`. |
-| 🟡 | **Fix the SPF loop** | Not part of this build. `spf.dlvr.rehosted.us` CNAMEs to `dlvr.rehosted.us`, whose SPF includes it — so `rehosted.us`, `thebaylors.org`, `passmaker.io` and `imagetopass.com` all `permerror` today. Delete the CNAME, publish `"v=spf1 ip4:64.111.22.174 -all"`. |
-| 🟡 | **Decide 1.4.2: ship, or fold into 2.0** | On main, unreleased. askwhen ships as 2.0, so 1.4.2 is either a release of its own or absorbed. |
-| 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. A download today gets 1.4.0 from a repo claiming 1.4.1. |
-| ⚪ | **Sit with the request page** | You said you were not sold. `askwhen/web/dist/gallery.html` is every state at true size; it opens straight from the filesystem. |
+| 🔴 | **The mutating-GET confirmation link** | I have a recommendation with reasoning — see *Proposed* in `askwhen/design/decisions.md`. Short version: `GET /c/{token}` renders a page, a button `POST`s. Needs your yes before step 3 writes the endpoint. |
+| 🔴 | **Commit the `-target` fix** | Uncommitted in your tree, in both build scripts, applied consistently, and verified working here. Say the word and I will commit it under your name; I did not want to commit your working tree without asking. |
+| 🟡 | **1.4.2: ship, or fold into 2.0** | On main, unreleased. askwhen ships as 2.0, so it is either a release of its own or absorbed. |
+| 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. Needs a signed, notarised build, so it is a release rather than a tag. |
+| ⚪ | **Sit with the request page** | You said you were not sold. `askwhen/web/dist/gallery.html` is every state at true size and opens straight from the filesystem. |
 | ⚪ | **`feat/synced-events-view`** | One WIP commit, no PR, abandoned mid-thought. Finish or delete. |
 
-## Blocked on Matt, but only for the call
+## Also yours, but lower stakes
 
 | What | The question |
 |---|---|
