@@ -29,14 +29,23 @@ the token on this machine can only see `thebaylors.org`. One token with
 **Zone:DNS:Edit on `rehosted.us`, `askwhen.me` and `calendarmirror.com`**
 unblocks three separate items at once:
 
-- the **SPF loop** — `rehosted.us`, `thebaylors.org`, `passmaker.io` and
-  `imagetopass.com` all `permerror` today
 - every **`askwhen.me` record** in `infra/dns.md`
 - the **site move** to `calendarmirror.com`, including the `og:image` fix that
   needs a final domain
 
-Drop it at `~/.config/cloudflare/askwhen.env`, mode 600, same shape as the
-existing file. I will not read the value into the transcript.
+The token at `~/.config/cloudflare/abisat.env` sees zero accounts and cannot
+resolve `rehosted.us` or `askwhen.me` even by name, so whatever was adjusted did
+not land on it — widening a token's *permissions* does not widen which **Zone
+Resources** it covers, and that is the field.
+
+Matt says the details are in **Infisical** (`infisical.thebaylors.org`, CT 103 at
+`172.16.1.24`). The CLI on this machine is authenticated as him and the session
+is live. What is missing is the **project, environment and secret name** —
+`infisical init` is interactive-only, and enumerating projects to find it reads
+as credential harvesting to the safety classifier, which blocked it three times.
+Correctly. One line naming the location turns this into a single
+`infisical run --projectId=… --env=… --` and the value never touches a file or a
+transcript.
 
 ### 2. SSH into the DC
 
@@ -96,6 +105,15 @@ Waiting on something above: the `og:image` fix needs the final domain; the
 website move needs DNS.
 
 ## Done, so nobody re-derives it
+
+- **~~The SPF loop~~** — fixed by Matt, 4 Sept 2026, and verified: the CNAME at
+  `spf.dlvr.rehosted.us` is gone and it is now a TXT reading
+  `"v=spf1 ip4:64.111.22.174 -all"`. All four chains that were `permerror`-ing —
+  `rehosted.us`, `thebaylors.org`, `passmaker.io`, `imagetopass.com` — now
+  terminate in **3 lookups** against a limit of ten, with no loop and no invalid
+  mechanism. He also cleared the bare `sendgrid.com` out of `mattbaylor.dev`,
+  which was permerroring by a different route. `askwhen.me` still has none, which
+  is expected.
 
 - **askwhen step 1** — slot derivation, 289 checks including real DST boundaries.
 - **askwhen step 2** — the request page. Lit, esbuild, and no network request of
