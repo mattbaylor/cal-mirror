@@ -26,6 +26,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/api"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/store"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/tlsauth"
@@ -61,6 +62,7 @@ type config struct {
 	schemaPath string
 	zone       string
 	tlsSecret  string
+	pepper     []byte
 }
 
 func loadConfig() (config, error) {
@@ -79,6 +81,16 @@ func loadConfig() (config, error) {
 	}
 	c.tlsSecret = secret
 
+	// The pepper is what makes a stolen database useless for publishing to
+	// somebody's page or confirming somebody's request. Without it the service
+	// can still serve, so this is a warning rather than a refusal to start —
+	// but every write path checks and refuses.
+	pepper, err := readSecret("AW_PEPPER_FILE", "AW_PEPPER")
+	if err != nil {
+		return c, err
+	}
+	c.pepper = []byte(pepper)
+
 	// Not fatal, and deliberately so: the service is useful without custom
 	// domains, and refusing to start would take the whole product down over a
 	// tier feature. tlsauth already refuses everything when the secret is empty,
@@ -93,6 +105,9 @@ func run(log *slog.Logger) error {
 	}
 	if cfg.tlsSecret == "" {
 		log.Warn("no TLS authorisation secret configured; custom-domain certificates will all be refused")
+	}
+	if len(cfg.pepper) == 0 {
+		log.Warn("no pepper configured; every write path will refuse")
 	}
 
 	ctx := context.Background()
@@ -170,6 +185,17 @@ func routes(st *store.Store, cfg config, log *slog.Logger) http.Handler {
 	mux.HandleFunc("GET /p/{file}", func(w http.ResponseWriter, r *http.Request) {
 		serveDump(w, r, st, log)
 	})
+
+	// Double opt-in. GET renders, POST confirms — see internal/api/confirm.go
+	// for why that split is not decoration.
+	confirm := &api.Confirm{
+		Store:         st,
+		Pepper:        cfg.pepper,
+		HoldConfirmed: 24 * time.Hour,
+		TTLConfirmed:  336 * time.Hour,
+		Logger:        log,
+	}
+	mux.Handle("/c/{token}", confirm)
 
 	return mux
 }
