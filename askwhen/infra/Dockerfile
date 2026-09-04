@@ -11,25 +11,29 @@
 #
 #   docker compose -f infra/compose.yml build
 #
-# This will not build yet. `../web/` and `../service/` are empty by design (the
-# README in each says so, and the build order in ../README.md puts them at steps
-# 2 and 3). That is not a defect in this file: it is the contract those two
-# directories have to satisfy, written down before they exist so that neither of
-# them invents its own answer to "how does this ship".
+# This builds as of 4 September 2026. `../web/` is step 2 and is done; `../service/`
+# has its entry point and the two pieces built ahead of step 3 — the TLS
+# authorisation gate and the conditional-GET machinery. The request lifecycle is
+# not here yet, so the image runs and serves a policy dump but cannot take a
+# request.
 
 # --------------------------------------------------------------- the Lit app
 FROM node:22-alpine AS web
 
-WORKDIR /src
+# WORKDIR is /src/web, not /src, so that `schema/` can sit beside it exactly as
+# it does in the repository. The bundle imports the example dump as
+# `../../schema/policy-dump.example.json` (web/src/dump.js), and a build layout
+# that does not mirror the source layout means that path resolves here and not
+# there — or the reverse, which is worse because it fails only in CI.
+WORKDIR /src/web
 # Copy the manifests alone first so a source edit does not re-run the install.
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 
 COPY web/ ./
 # The dump the components are developed against (../README.md step 2: "start
-# against a static dump on disk"). It ships in the image so the build can be
-# smoke-tested without a database.
-COPY schema/policy-dump.example.json ./public/example-dump.json
+# against a static dump on disk"), at the path the source expects it.
+COPY schema/ /src/schema/
 RUN npm run build
 
 # The standing constraint from ../README.md: no third-party scripts, no fonts,
@@ -46,20 +50,13 @@ RUN if grep -rIn -E 'https?://' dist/ | grep -v 'www\.w3\.org'; then \
     fi
 
 # --------------------------------------------------------------- the service
-FROM golang:1.23-alpine AS service
+FROM golang:1.25-alpine AS service
 
 WORKDIR /src
 COPY service/go.mod service/go.sum ./
 RUN go mod download
 
 COPY service/ ./
-COPY --from=web /src/dist ./internal/webui/dist
-
-# The schema is embedded rather than shipped beside the binary, so that the file
-# a human reviewed in a pull request is literally the file `-migrate` executes.
-# A schema that lives in two places diverges, and the copy that diverges is
-# always the one with the constraint that was keeping the privacy claim true.
-COPY infra/schema.sql ./internal/store/schema.sql
 
 # CGO_ENABLED=0 is not incidental. It is what makes the runtime stage able to be
 # distroless/static, and it is why the SQLite driver has to be the pure-Go one
@@ -81,6 +78,19 @@ FROM gcr.io/distroless/static-debian12:nonroot
 # than fattening this stage.
 
 COPY --from=service /out/askwhen /askwhen
+
+# The schema travels beside the binary rather than compiled into it, and it is
+# the same infra/schema.sql a human reviewed in a pull request — not a copy. A
+# schema that lives in two places diverges, and the copy that diverges is always
+# the one carrying the constraint that was keeping the privacy claim true. The
+# service reads it at startup from AW_SCHEMA, which defaults to this path.
+COPY infra/schema.sql /schema.sql
+
+# The built request page. Nothing serves it yet — that is step 3, along with the
+# rest of the request lifecycle — but the web stage above still earns its place:
+# it proves the page builds and greps the output for external URLs, which is
+# where the product's central claim is actually enforced.
+COPY --from=web /src/web/dist /web
 
 # 8080, not 80: the process runs as an unprivileged user and Caddy is the only
 # thing that ever binds a privileged port.
