@@ -1,3 +1,11 @@
+> **Superseded 4 September 2026 — read [`TASKS.md`](TASKS.md) instead.**
+> This was a snapshot written at a stopping point on 1 September. Work resumed
+> the next day and most of what follows has moved: three PRs merged, the
+> infrastructure corrected against the real datacenter, and `askwhen/design/`
+> is now the record. Kept because the reasoning in it is still good and
+> because deleting the thing that says what you believed is how you forget
+> that you believed it.
+
 # Handoff — 1 September 2026
 
 Written at a deliberate stopping point. Two audiences: you, picking this up cold
