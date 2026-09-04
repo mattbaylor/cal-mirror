@@ -64,6 +64,10 @@ COPY service/ ./
 ENV CGO_ENABLED=0
 RUN go build -trimpath -ldflags="-s -w" -o /out/askwhen ./cmd/askwhen
 
+# An empty directory, carried into the final stage so /data exists in the image
+# owned by the user that has to write to it. See the final stage.
+RUN mkdir -p /out/data
+
 # --------------------------------------------------------------- the runtime
 FROM gcr.io/distroless/static-debian12:nonroot
 
@@ -78,6 +82,18 @@ FROM gcr.io/distroless/static-debian12:nonroot
 # than fattening this stage.
 
 COPY --from=service /out/askwhen /askwhen
+
+# /data must exist in the image, owned by nonroot, BEFORE a volume is mounted
+# over it. Docker seeds a fresh named volume from whatever is at the mount point
+# and inherits its ownership; if the path is absent the volume is created
+# root-owned, and this container — which runs as 65532 with a read-only root
+# filesystem — cannot open the database.
+#
+# Found by deploying it, not by reading it. The container exited immediately and
+# the failure looked like a dozen other startup problems until the volume was
+# inspected. Fixed here rather than with a chown in an entrypoint, because a
+# shell in the runtime stage is exactly what distroless was chosen to avoid.
+COPY --from=service --chown=65532:65532 /out/data /data
 
 # The schema travels beside the binary rather than compiled into it, and it is
 # the same infra/schema.sql a human reviewed in a pull request — not a copy. A
