@@ -24,15 +24,45 @@ import Foundation
 /// interval arithmetic is correct.
 public enum SlotDeriver {
 
+    /// Busy plus policy in, offerable slots out.
     public static func derive(policy: RequestPolicy, busy: [BusyInterval], now: Date) -> [Slot] {
+        walk(policy: policy, busy: busy, now: now).offers
+    }
+
+    /// The same walk, reporting **why** each candidate was dropped.
+    ///
+    /// *"Why is nothing showing on Thursday?"* is the question owners actually
+    /// have, and no settings screen can answer it — the answer is an interaction
+    /// between the policy and the contents of a calendar, and a screen is not
+    /// looking at the calendar. See `askwhen/design/mcp.md`.
+    ///
+    /// Counts only. `Rejection` cannot carry an event even if a caller wanted
+    /// one.
+    public static func explain(policy: RequestPolicy, busy: [BusyInterval], now: Date) -> Diagnosis {
+        walk(policy: policy, busy: busy, now: now).diagnosis
+    }
+
+    /// One walk behind both entry points.
+    ///
+    /// `derive` pays for the counting it then throws away, which is a handful of
+    /// integer increments per grid position and worth it: two walks would be two
+    /// things to keep in step, and the one that drifted would be the one nobody
+    /// was testing. A diagnosis that disagrees with the offers is worse than no
+    /// diagnosis, because it would be believed.
+    static func walk(policy: RequestPolicy, busy: [BusyInterval], now: Date)
+        -> (offers: [Slot], diagnosis: Diagnosis) {
+        func nothing(_ problem: PolicyProblem) -> ([Slot], Diagnosis) {
+            ([], Diagnosis(policyProblem: problem, days: []))
+        }
+
         // An unknown zone means no offers at all. See `resolvedTimeZone`: an
         // empty page is a failure the owner can see, a page at the wrong hour is
         // one only their requesters find out about.
-        guard let zone = policy.resolvedTimeZone else { return [] }
+        guard let zone = policy.resolvedTimeZone else { return nothing(.unknownTimeZone) }
         guard let dayStartMin = RequestPolicy.minutesPastMidnight(policy.day.starts),
               let dayEndMin = RequestPolicy.minutesPastMidnight(policy.day.ends),
-              dayEndMin > dayStartMin,
-              policy.maxPerDay > 0 else { return [] }
+              dayEndMin > dayStartMin else { return nothing(.dayWindowInvalid) }
+        guard policy.maxPerDay > 0 else { return nothing(.maxPerDayNotPositive) }
 
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = zone
@@ -60,16 +90,30 @@ public enum SlotDeriver {
 
         let firstDay = cal.startOfDay(for: now)
         var offers: [Slot] = []
+        var days: [DayDiagnosis] = []
+
+        func excluded(_ day: String, _ why: DayRejection) {
+            days.append(DayDiagnosis(day: day, offered: 0, considered: 0,
+                                     rejections: [:], dayRejection: why))
+        }
 
         for dayIndex in 0..<policy.horizonDays {
+            // A Calendar that cannot add a day to a valid date is not a case
+            // this can report on — there is no day string to report it against.
             guard let midnight = cal.date(byAdding: .day, value: dayIndex, to: firstDay) else { continue }
             // Re-normalising matters in the handful of zones whose transition
             // happens *at* midnight, where "same wall time, next day" is not the
             // start of that day.
             let day = cal.startOfDay(for: midnight)
 
-            guard allowedWeekdays.contains(cal.component(.weekday, from: day)) else { continue }
-            guard !blackout.contains(dayFormatter.string(from: day)) else { continue }
+            let dayKey = dayFormatter.string(from: day)
+
+            guard allowedWeekdays.contains(cal.component(.weekday, from: day)) else {
+                excluded(dayKey, .weekdayNotOffered); continue
+            }
+            guard !blackout.contains(dayKey) else {
+                excluded(dayKey, .blackoutDate); continue
+            }
 
             let nextMidnight = cal.date(byAdding: .day, value: 1, to: day).map { cal.startOfDay(for: $0) }
                 ?? day.addingTimeInterval(25 * 3600)
@@ -77,35 +121,60 @@ public enum SlotDeriver {
             // so an event ending at the following midnight does not eat a second
             // day. This is the whole reason `isAllDay` is carried across the
             // boundary rather than inferred from the timestamps.
-            if allDayBusy.contains(where: { $0.start < nextMidnight && $0.end > day }) { continue }
+            if allDayBusy.contains(where: { $0.start < nextMidnight && $0.end > day }) {
+                excluded(dayKey, .allDayEvent); continue
+            }
 
-            guard let dayEnds = wallClock(dayEndMin, on: day, cal: cal) else { continue }
+            guard let dayEnds = wallClock(dayEndMin, on: day, cal: cal) else {
+                excluded(dayKey, .dayUnavailable); continue
+            }
 
             var candidates: [Slot] = []
+            var considered = 0
+            var rejections: [Rejection: Int] = [:]
+            // Attribution is first-reason-wins, in the order the checks run
+            // below. A slot inside both lunch and a meeting counts once, as
+            // lunch. That keeps the numbers summing to `considered`, which is
+            // what makes the output checkable — the alternative reports a slot
+            // several times and the totals stop meaning anything.
+            func reject(_ why: Rejection) { rejections[why, default: 0] += 1 }
             var minute = firstAlignedMinute(atOrAfter: dayStartMin, align: policy.align)
             while minute + policy.slotMinutes <= dayEndMin {
                 defer { minute += policy.align }
+                considered += 1
 
                 // A wall-clock time that does not exist — the hour spring-forward
                 // deletes — has no instant to offer, so it is skipped rather than
                 // silently rounded into the hour either side of the gap.
-                guard let start = wallClock(minute, on: day, cal: cal, requireExact: true) else { continue }
+                guard let start = wallClock(minute, on: day, cal: cal, requireExact: true) else {
+                    reject(.clockSkipped); continue
+                }
                 let end = start.addingTimeInterval(slotSeconds)
 
                 // Checked as instants, not as wall-clock minutes, so a slot can
                 // never run past the owner's day on a 25-hour one.
-                if end > dayEnds { continue }
-                if start < notBefore { continue }
-                if let lunch = policy.lunch, overlapsLunch(start: start, end: end, lunch: lunch, day: day, cal: cal) { continue }
-                if timedBusy.contains(where: { start < $0.end && end > $0.start }) { continue }
+                if end > dayEnds { reject(.pastDayEnd); continue }
+                if start < notBefore { reject(.minimumNotice); continue }
+                if let lunch = policy.lunch, overlapsLunch(start: start, end: end, lunch: lunch, day: day, cal: cal) {
+                    reject(.lunch); continue
+                }
+                if timedBusy.contains(where: { start < $0.end && end > $0.start }) {
+                    reject(.busy); continue
+                }
 
                 candidates.append(Slot(start: start, end: end))
             }
 
-            offers.append(contentsOf: spread(candidates, cap: policy.maxPerDay))
+            let picked = spread(candidates, cap: policy.maxPerDay)
+            if candidates.count > picked.count {
+                rejections[.cappedPerDay] = candidates.count - picked.count
+            }
+            days.append(DayDiagnosis(day: dayKey, offered: picked.count, considered: considered,
+                                     rejections: rejections, dayRejection: nil))
+            offers.append(contentsOf: picked)
         }
 
-        return offers
+        return (offers, Diagnosis(policyProblem: nil, days: days))
     }
 
     // MARK: - Pieces
