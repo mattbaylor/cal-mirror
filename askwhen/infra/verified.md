@@ -294,6 +294,43 @@ document.
 | Docker | `docker.io` 26.1.5 from Debian, plus the compose plugin v2.40.3 as a single pinned binary — Debian 13 has no `docker-compose-v2` package, and one binary beats adding a third-party apt repo to a host that exists to run one service |
 | Proven | `docker run hello-world` succeeds, on **overlay2 over ZFS** with cgroup v2. No `vfs` fallback, which is the failure people hit with Docker in unprivileged LXC. |
 
+### Proven by deploying to it, 4 September 2026
+
+The image was built **on the guest** and run there. Two bugs surfaced that
+reading could not have found, both now fixed in the Dockerfile (see the service
+branch):
+
+- **Architecture.** An image built on an Apple Silicon laptop is arm64 and dies
+  on this host with `exec format error`. Production builds happen on the host —
+  `deploy.py` runs there — so this only bites a human shipping an image by hand,
+  which is exactly what happened. Build on the host, or pass
+  `--platform linux/amd64`.
+- **Volume ownership.** Docker seeds a fresh named volume from the mount point in
+  the image and inherits its ownership. `/data` did not exist there, so the
+  volume came up **root-owned** and a container running as 65532 with a read-only
+  root filesystem could not open the database. It exited instantly, looking like
+  any other startup failure. *An already root-owned volume must be removed before
+  the fix reseeds it.*
+
+With both fixed, on the real host:
+
+```
+build            native on CT 112, amd64/linux, 12.8 MB
+volume owner     65532:65532
+schema applied   from /schema.sql
+askwhen.db       created, WAL mode (db + -shm + -wal present)
+healthz          200
+unknown dump     404
+gate, no key     404
+gate, bad host   400      ← discriminating, not blanket-404ing
+gate, unknown    404
+```
+
+Running with `--read-only`, `--cap-drop ALL`, `no-new-privileges`, which is what
+`compose.yml` asks for. A smoke instance is still up on `:8080` with a random
+secret in `/root/.aw-tls-secret`; nothing points at it and it can be removed with
+`docker rm -f aw`.
+
 **On picking the address.** `172.16.1.40` is silent to `ping` and *in use* — it
 answered ARP with a Proxmox MAC. Ping is not an occupancy test on a subnet where
 hosts are firewalled; the ARP table is. `.41` through `.44` answered neither, and
