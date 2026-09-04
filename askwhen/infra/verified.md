@@ -281,6 +281,27 @@ right. It is the **procedure** that is wrong, and the procedure is most of the
 document.
 
 
+## The guest — provisioned 4 September 2026
+
+`pve01` runs the askwhen host as **CT 112, `askwhen`, at `172.16.1.41`**.
+
+| | |
+|---|---|
+| Shape | Debian 13 LXC, **unprivileged**, `nesting=1,keyctl=1` |
+| Why a container | It matches `infisical` (CT 103), which is the same shape doing the same job. The DC's *stateful* services are VMs; a Docker host is not one, and a container is trivially destroyable if this turns out wrong. |
+| Resources | 2 cores, 2048 MB, 2048 swap, 20 GB on `local-zfs` — the `infisical` convention, smaller disk |
+| Network | `vmbr2`, `172.16.1.41/24`, gw `172.16.1.1`, firewall on, `onboot=1` |
+| Docker | `docker.io` 26.1.5 from Debian, plus the compose plugin v2.40.3 as a single pinned binary — Debian 13 has no `docker-compose-v2` package, and one binary beats adding a third-party apt repo to a host that exists to run one service |
+| Proven | `docker run hello-world` succeeds, on **overlay2 over ZFS** with cgroup v2. No `vfs` fallback, which is the failure people hit with Docker in unprivileged LXC. |
+
+**On picking the address.** `172.16.1.40` is silent to `ping` and *in use* — it
+answered ARP with a Proxmox MAC. Ping is not an occupancy test on a subnet where
+hosts are firewalled; the ARP table is. `.41` through `.44` answered neither, and
+`.41` was taken.
+
+Still to do on it: **reserve `.41` in pfSense** so a DHCP lease can never collide
+with it, and decide whether this host is backed up by PBS like the rest.
+
 ## The /29, for reference
 
 | IP | rDNS | What |

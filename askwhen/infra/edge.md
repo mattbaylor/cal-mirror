@@ -67,7 +67,7 @@ In the global options block:
 ```caddyfile
 {
 	on_demand_tls {
-		ask http://172.16.1.20:8080/internal/tls-authorize?key={$AW_TLS_AUTH_SECRET}
+		ask http://172.16.1.41:8080/internal/tls-authorize?key={$AW_TLS_AUTH_SECRET}
 	}
 }
 ```
@@ -80,12 +80,12 @@ https:// {
 	tls {
 		on_demand
 	}
-	reverse_proxy 172.16.1.20:8080
+	reverse_proxy 172.16.1.41:8080
 }
 ```
 
-Replace `172.16.1.20` with the guest's address once it exists —
-`172.16.1.10` is `pve01`, the hypervisor, not the app.
+`172.16.1.41` is CT 112 on `pve01`, provisioned 4 Sept 2026 — see
+`verified.md`. Not `172.16.1.10`, which is the hypervisor.
 
 `AW_TLS_AUTH_SECRET` must be in `caddy-dc`'s environment with the same value as
 `infra/secrets/tls_auth_secret`:
