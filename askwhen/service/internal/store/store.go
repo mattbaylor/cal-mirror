@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
@@ -189,4 +190,136 @@ func (s *Store) MarkDomainVerified(ctx context.Context, host string) error {
 		return nil
 	}
 	return nil
+}
+
+// ------------------------------------------------------------------ requests
+
+// Request is one person asking for one slot.
+type Request struct {
+	ID        string
+	Slug      string
+	SlotStart string
+	SlotEnd   string
+	State     string
+	Name      string
+	Email     string
+	Note      string
+	HoldUntil string
+}
+
+// ErrSlotHeld means somebody else is already asking for that slot.
+//
+// Surfaced as its own error because it is not a failure: §4b says a slot may be
+// asked for once, and the requester needs to be told that plainly rather than
+// shown a generic error they will read as a bug.
+var ErrSlotHeld = errors.New("slot already held")
+
+// CreateRequest records an unconfirmed request and takes the initial hold.
+//
+// The hold is a database constraint, not a read-then-write. Two people
+// submitting the same slot in the same second is exactly the case a check-first
+// implementation loses, and the loser gets declined for a reason that was never
+// about them.
+func (s *Store) CreateRequest(ctx context.Context, r Request, confirmTokenHash []byte,
+	holdUntil, purgeAfter time.Time) error {
+
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO request (id, slug, slot_start, slot_end, requester_name,
+		                     requester_email, note, state, confirm_token_hash,
+		                     created_at, hold_until, purge_after)
+		VALUES (?, ?, ?, ?, ?, ?, ?, 'unconfirmed', ?, ?, ?, ?)`,
+		r.ID, r.Slug, r.SlotStart, r.SlotEnd, r.Name, r.Email, r.Note,
+		confirmTokenHash, nowRFC3339(), holdUntil.UTC().Format(time.RFC3339),
+		purgeAfter.UTC().Format(time.RFC3339))
+
+	// SQLite names the *columns* in a unique-constraint violation, not the index
+	// — "UNIQUE constraint failed: request.slug, request.slot_start" — so match
+	// on those. A test asserts this mapping still works, because if SQLite ever
+	// rewords it the failure would surface as a generic 500 on a case that is
+	// not an error at all.
+	if err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed") &&
+		strings.Contains(err.Error(), "slot_start") {
+		return ErrSlotHeld
+	}
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	return nil
+}
+
+// RequestByConfirmToken finds a live request by its confirmation token hash.
+//
+// Only unconfirmed requests are returned. A token that has already been used is
+// not an error the requester needs explaining — the page says the same thing
+// either way, because a second click on a link in an inbox is a normal thing to
+// do and should not look like a failure.
+func (s *Store) RequestByConfirmToken(ctx context.Context, hash []byte) (Request, error) {
+	var r Request
+	var name, email, note sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, slug, slot_start, slot_end, state,
+		       requester_name, requester_email, note, hold_until
+		FROM request
+		WHERE confirm_token_hash = ? AND state = 'unconfirmed'
+		  AND hold_released_at IS NULL`, hash).
+		Scan(&r.ID, &r.Slug, &r.SlotStart, &r.SlotEnd, &r.State,
+			&name, &email, &note, &r.HoldUntil)
+	if err == sql.ErrNoRows {
+		return r, ErrNoRequest
+	}
+	if err != nil {
+		return r, fmt.Errorf("request by confirm token: %w", err)
+	}
+	r.Name, r.Email, r.Note = name.String, email.String, note.String
+	return r, nil
+}
+
+// ErrNoRequest covers "no such token", "already confirmed" and "expired"
+// alike. §4c's reasoning applies here too: the page must not distinguish them.
+var ErrNoRequest = errors.New("no such request")
+
+// ConfirmRequest moves a request into the queue and extends its hold.
+//
+// Conditional on the row still being unconfirmed, so two clicks on the same
+// link cannot confirm twice — the second UPDATE matches nothing. That is the
+// whole of the idempotency story and it lives in the WHERE clause rather than
+// in a check the caller has to remember.
+func (s *Store) ConfirmRequest(ctx context.Context, id string, holdUntil, purgeAfter time.Time) (bool, error) {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE request
+		SET state = 'confirmed', confirmed_at = ?, hold_until = ?, purge_after = ?,
+		    confirm_token_hash = NULL
+		WHERE id = ? AND state = 'unconfirmed' AND hold_released_at IS NULL`,
+		nowRFC3339(), holdUntil.UTC().Format(time.RFC3339),
+		purgeAfter.UTC().Format(time.RFC3339), id)
+	if err != nil {
+		return false, fmt.Errorf("confirm request: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("confirm request: %w", err)
+	}
+	return n == 1, nil
+}
+
+func nowRFC3339() string { return time.Now().UTC().Format(time.RFC3339) }
+
+// SlotIsOffered reports whether a slot start appears in the page's published
+// dump.
+//
+// Asked on every incoming request, because otherwise someone can ask for a time
+// that was never on the page — the form posts a slot, and a form is whatever the
+// client says it is. Answered by querying the stored document with SQLite's JSON
+// functions rather than keeping a second table of slots, so there is nothing
+// that can drift from the dump it came from.
+func (s *Store) SlotIsOffered(ctx context.Context, slug, slotStart string) (bool, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, `
+		SELECT count(*)
+		FROM page, json_each(page.dump, '$.slots')
+		WHERE page.slug = ? AND json_extract(value, '$.s') = ?`, slug, slotStart).Scan(&n)
+	if err != nil {
+		return false, fmt.Errorf("slot is offered: %w", err)
+	}
+	return n > 0, nil
 }
