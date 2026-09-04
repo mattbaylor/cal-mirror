@@ -3,7 +3,7 @@
 The living board. `HANDOFF.md` was a snapshot written at a stopping point and is
 now substantially out of date; this file is what to read instead.
 
-Last accurate: **4 September 2026.** Anything here that the repo or the GitHub
+Last accurate: **4 September 2026, late afternoon.** Anything here that the repo or the GitHub
 API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -17,49 +17,26 @@ rather than read off its filename.
 
 ---
 
-## Asks — three credentials, and what each one unblocks
+## Asks — two things, and what each unblocks
 
 **Please do not paste any of these into chat.** A transcript is the wrong place.
 Each has a way to hand it over that is not.
 
-### 1. A Cloudflare token covering the other zones
+### 1. Add `Zone:DNS:Edit` to the Cloudflare token
 
-All four zones sit on the same nameservers (`kip`/`abby.ns.cloudflare.com`), but
-the token on this machine can only see `thebaylors.org`. One token with
-**Zone:DNS:Edit on `rehosted.us`, `askwhen.me` and `calendarmirror.com`**
-unblocks three separate items at once:
+**Narrowed to one field.** The token is in Infisical (project
+`calendarmirror-com-v2-yo`, env `prod`, secret `cloudflare_apitoken`) and the
+stale CLI session is fixed, so I can reach it. It can list zones and **read** DNS
+on all five, but a write returns `HTTP 403, code 10000` — it has `Zone:DNS:Read`
+and not `Edit`.
 
-- every **`askwhen.me` record** in `infra/dns.md`
-- the **site move** to `calendarmirror.com`, including the `og:image` fix that
-  needs a final domain
+Cloudflare → My Profile → API Tokens → edit that token → add **Zone → DNS →
+Edit**. The value does not change, so Infisical needs no update.
 
-The token at `~/.config/cloudflare/abisat.env` sees zero accounts and cannot
-resolve `rehosted.us` or `askwhen.me` even by name, so whatever was adjusted did
-not land on it — widening a token's *permissions* does not widen which **Zone
-Resources** it covers, and that is the field.
+Unblocks the five `askwhen.me` web records and the `calendarmirror.com` move. The
+script is written and idempotent.
 
-Matt says the details are in **Infisical** (`infisical.thebaylors.org`, CT 103 at
-`172.16.1.24`). The CLI on this machine is authenticated as him and the session
-is live. What is missing is the **project, environment and secret name** —
-`infisical init` is interactive-only, and enumerating projects to find it reads
-as credential harvesting to the safety classifier, which blocked it three times.
-Correctly. One line naming the location turns this into a single
-`infisical run --projectId=… --env=… --` and the value never touches a file or a
-transcript.
-
-### 2. SSH into the DC
-
-Port 22 answers from here on all three hosts; authentication is the only gate —
-`caddy-dc` returns `Permission denied (publickey,password)`. Add a key I already
-hold (`~/.ssh/id_ed25519.pub`) to `authorized_keys` on **`caddy-dc`
-(172.16.1.4)** and **`pve01` (172.16.1.10)**, or tell me which existing key is
-the right one and I will use it.
-
-Unblocks: provisioning the askwhen guest, and the `caddy-dc` edge block in
-`infra/edge.md` — which I would want to stage and show you before it is live,
-since that proxy fronts customer sites.
-
-### 3. Postal on `dlvr`
+### 2. Postal on `dlvr`
 
 An API key or admin login, to add `askwhen.me` as a sending domain and take the
 DKIM key it generates. Unblocks the rewrite of `infra/mail.md`, whose
@@ -74,6 +51,7 @@ Judgement, not access. Roughly in the order it starts costing.
 | | What | The call |
 |---|---|---|
 | 🔴 | **The mutating-GET confirmation link** | I have a recommendation with reasoning — see *Proposed* in `askwhen/design/decisions.md`. Short version: `GET /c/{token}` renders a page, a button `POST`s. Needs your yes before step 3 writes the endpoint. |
+| 🔴 | **Rotate five credentials before prod** | `cloudflare_apitoken`, `cloudflare_accesskey`, `cloudflare_secretaccesskey`, the R2 endpoint (carries the account hash) and `gh_claude` were printed into a session transcript on 4 Sept — `infisical secrets` shows values by default and I did not suppress it. You said rotate at prod rather than now; this is the reminder so it does not get lost. Use `infisical run` from here on, never `infisical secrets`. |
 | 🔴 | **Commit the `-target` fix** | Uncommitted in your tree, in both build scripts, applied consistently, and verified working here. Say the word and I will commit it under your name; I did not want to commit your working tree without asking. |
 | 🟡 | **1.4.2: ship, or fold into 2.0** | On main, unreleased. askwhen ships as 2.0, so it is either a release of its own or absorbed. |
 | 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. Needs a signed, notarised build, so it is a release rather than a tag. |
@@ -92,19 +70,33 @@ Judgement, not access. Roughly in the order it starts costing.
 
 In the order I would do them.
 
-1. **CNAME observation → `domain.verified_at`.** The other half of the TLS gate.
-   Nothing writes that column, so the gate currently refuses every custom domain
-   — correctly, and uselessly. Pure code, testable.
-2. **askwhen step 3, the service.** `store`, `httpcache` and `tlsauth` are
-   already under it. Needs the mutating-GET answer before the confirm endpoint
-   is written.
+1. **askwhen step 3, the service.** The entry point, store, `httpcache`,
+   `tlsauth` and `domainverify` are all merged and under it. Needs the
+   mutating-GET answer before the confirm endpoint is written — everything else
+   in step 3 can proceed without it.
+2. **The `caddy-dc` edge block.** Written in `infra/edge.md` and pointed at
+   `172.16.1.41`. Needs staging and a look before it goes live, since that proxy
+   fronts customer sites.
 3. **Retire `HANDOFF.md`** in favour of this file, once this file has proved
    itself.
 
-Waiting on something above: the `og:image` fix needs the final domain; the
-website move needs DNS.
+Waiting on something above: the `og:image` fix and the website move both need
+DNS.
 
 ## Done, so nobody re-derives it
+
+- **The service builds, runs and is deployed to its host.** `cmd/askwhen` exists,
+  the image is 12.8 MB built natively on the guest, and it answers on
+  `172.16.1.41:8080`. Deploying it found two bugs reading could not: an arm64
+  image dies on an amd64 host, and a named volume seeded from a mount point the
+  image lacks comes up root-owned, which a container running as 65532 with a
+  read-only rootfs cannot write.
+- **The guest** — CT 112, `askwhen`, `172.16.1.41`, Debian 13 unprivileged LXC
+  with Docker on overlay2 over ZFS. `infra/verified.md` has the detail.
+- **Domain verification** — `domainverify` writes `domain.verified_at`, so the
+  TLS gate now has both halves.
+- **The deriver reports why** it dropped each candidate, which is what the agent
+  surfaces need and what a settings screen structurally cannot answer.
 
 - **~~The SPF loop~~** — fixed by Matt, 4 Sept 2026, and verified: the CNAME at
   `spf.dlvr.rehosted.us` is gone and it is now a TXT reading
