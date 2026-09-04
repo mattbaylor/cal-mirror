@@ -1008,5 +1008,123 @@ do {
           "slots truncate to the schema's ceiling rather than publishing an invalid document")
 }
 
+
+print("SlotDeriver.explain:")
+// The diagnosis exists so that "why is nothing showing on Thursday?" has an
+// answer. Everything here is counts — a Rejection cannot carry an event even if
+// a caller wanted one, which is what makes it safe to hand to an assistant.
+do {
+    func day(_ d: Diagnosis, _ key: String) -> DayDiagnosis? { d.days.first { $0.day == key } }
+
+    // The invariant that makes the numbers checkable rather than merely
+    // plausible: every grid position is attributed to exactly one outcome.
+    func addsUp(_ d: Diagnosis) -> Bool {
+        d.days.allSatisfy { day in
+            day.offered + day.rejections.values.reduce(0, +) == day.considered
+        }
+    }
+
+    // Mid-morning, so `minNoticeHours` actually bites — from local midnight it
+    // would not, and a check that cannot fail is not a check.
+    let wedMorning = mtn(2026, 9, 2, 10)
+    let busyPolicy = reqPolicy(minNoticeHours: 2, lunch: .init(from: "12:00", to: "13:00"), weekdays: [.wed])
+    let meeting = [BusyInterval(start: mtn(2026, 9, 2, 14), end: mtn(2026, 9, 2, 16), isAllDay: false)]
+    let d = SlotDeriver.explain(policy: busyPolicy, busy: meeting, now: wedMorning)
+
+    check(addsUp(d), "offered plus every rejection equals considered, on every day")
+    check(d.totalOffered == SlotDeriver.derive(policy: busyPolicy, busy: meeting, now: wedMorning).count,
+          "explain and derive agree about how many slots are offered")
+    check(d.policyProblem == nil, "a workable policy reports no policy problem")
+
+    let wedDay = day(d, "2026-09-02")
+    check(wedDay?.considered == 8, "a 9–5 day at hourly slots considers eight grid positions")
+    check(wedDay?.rejections[.lunch] == 1, "the noon slot is attributed to lunch")
+    check(wedDay?.rejections[.busy] == 2, "the two slots inside the meeting are attributed to busy")
+    check(wedDay?.rejections[.minimumNotice] == 3, "three morning slots fall inside two hours' notice")
+    check(wedDay?.offered == 2, "leaving two the requester can actually ask for")
+
+    // First reason wins, in the order the checks run. A slot inside both lunch
+    // and a meeting is counted once — as lunch — so the totals keep meaning
+    // something.
+    let overlapping = [BusyInterval(start: mtn(2026, 9, 2, 12), end: mtn(2026, 9, 2, 13), isAllDay: false)]
+    let both = SlotDeriver.explain(policy: reqPolicy(lunch: .init(from: "12:00", to: "13:00"), weekdays: [.wed]),
+                                   busy: overlapping, now: wed)
+    check(day(both, "2026-09-02")?.rejections[.lunch] == 1, "a doubly-rejected slot counts once")
+    check(day(both, "2026-09-02")?.rejections[.busy] == nil, "and it counts under the first reason, not the second")
+    check(addsUp(both), "which is what keeps the totals summing to considered")
+}
+
+do {
+    // Whole-day exclusions, each reported as itself rather than as an absence.
+    let offDay = SlotDeriver.explain(policy: reqPolicy(weekdays: [.thu]), busy: [], now: wed)
+    check(offDay.days.first?.dayRejection == .weekdayNotOffered,
+          "a weekday the owner does not offer says so")
+    check(offDay.days.first?.considered == 0, "and considers nothing")
+
+    let blacked = SlotDeriver.explain(policy: reqPolicy(weekdays: [.wed], blackout: ["2026-09-02"]),
+                                      busy: [], now: wed)
+    check(blacked.days.first?.dayRejection == .blackoutDate, "a blackout date says so")
+
+    let allDay = [BusyInterval(start: mtn(2026, 9, 2), end: mtn(2026, 9, 3), isAllDay: true)]
+    let covered = SlotDeriver.explain(policy: reqPolicy(weekdays: [.wed]), busy: allDay, now: wed)
+    check(covered.days.first?.dayRejection == .allDayEvent,
+          "an all-day event blocks the day and names itself as the reason")
+    check(covered.emptyDays.count == covered.days.count, "so the day offers nothing")
+}
+
+do {
+    // The cap is separated from the rest on purpose: these are slots the owner
+    // *could* have offered and chose not to, which is a different answer to
+    // "why is nothing showing" than "you were busy".
+    let capped = SlotDeriver.explain(policy: reqPolicy(maxPerDay: 3, weekdays: [.wed]), busy: [], now: wed)
+    let wedDay = capped.days.first
+    check(wedDay?.offered == 3, "maxPerDay caps the offer")
+    check(wedDay?.rejections[.cappedPerDay] == 5, "and the five it thinned out are attributed to the cap")
+    check(wedDay?.considered == 8, "having considered all eight")
+}
+
+do {
+    // The morning the clock skips an hour. A 1am–5am window is the only way to
+    // put the gap inside the offered day.
+    let springForward = mtn(2026, 3, 8)
+    let d = SlotDeriver.explain(policy: reqPolicy(starts: "01:00", ends: "05:00", weekdays: [.sun]),
+                                busy: [], now: springForward)
+    check(d.days.first?.rejections[.clockSkipped] == 1,
+          "the hour spring-forward deletes is reported as skipped, not silently missing")
+}
+
+do {
+    // A policy that cannot work says why, once, instead of returning an empty
+    // day list that looks like a quiet week.
+    var badZone = reqPolicy(); badZone.timeZone = "Mars/Olympus"
+    check(SlotDeriver.explain(policy: badZone, busy: [], now: wed).policyProblem == .unknownTimeZone,
+          "an unknown zone is reported as a policy problem, not as empty days")
+    check(SlotDeriver.explain(policy: reqPolicy(starts: "17:00", ends: "09:00"), busy: [], now: wed)
+            .policyProblem == .dayWindowInvalid,
+          "a day that ends before it starts says so")
+    check(SlotDeriver.explain(policy: reqPolicy(maxPerDay: 0), busy: [], now: wed)
+            .policyProblem == .maxPerDayNotPositive,
+          "a zero cap says so rather than looking like a full calendar")
+}
+
+do {
+    // Rejections are ordered for output, and encode as a JSON object. Both
+    // matter because the reader is a model: a dictionary that iterates
+    // arbitrarily reads like a different answer each time, and an alternating
+    // array is a puzzle that will occasionally be read wrong.
+    let d = SlotDeriver.explain(policy: reqPolicy(minNoticeHours: 2, weekdays: [.wed]),
+                                busy: [], now: mtn(2026, 9, 2, 10))
+    let ordered = d.days.first?.orderedRejections ?? []
+    check(ordered.allSatisfy { $0.1 > 0 }, "orderedRejections drops the zero counts")
+    check(ordered.map(\.0) == Rejection.allCases.filter { r in ordered.contains { $0.0 == r } },
+          "and returns them in a stable order")
+
+    let json = try! JSONEncoder().encode(d.days.first!)
+    let text = String(decoding: json, as: UTF8.self)
+    check(text.contains("\"minimumNotice\":3"),
+          "rejection counts encode as a JSON object, not as an alternating array")
+    check(!text.contains("["), "and a day carries no list of anything that could name an event")
+}
+
 print(failures == 0 ? "\nALL CHECKS PASSED" : "\n\(failures) CHECK(S) FAILED")
 exit(failures == 0 ? 0 : 1)
