@@ -1,0 +1,33 @@
+# calendarmirror.com — the marketing site.
+#
+# Runs as a caddy:2-alpine container on the askwhen guest (CT 112,
+# 172.16.1.41), serving /opt/site/docs over :8081. The DC edge proxy at
+# 172.16.1.4 reverse-proxies to it and does nothing else — it is a router, and
+# turning it into a web server was explicitly rejected.
+#
+# Deployed by hand on 4 September 2026; this file is the record of what is
+# running, so a rebuild does not have to be archaeology.
+
+:8081 {
+	root * /srv
+	encode gzip zstd
+	file_server
+
+	header {
+		# The site is hand-written HTML and CSS. The single script is
+		# redirect.js, which forwards the old GitHub Pages address and is a
+		# no-op here — so script-src is 'self' rather than 'none', and there is
+		# no 'unsafe-inline' anywhere.
+		#
+		# This is the header GitHub Pages could not set, and part of why the
+		# site moved off it.
+		Content-Security-Policy "default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	handle_errors {
+		respond "{err.status_code} {err.status_text}"
+	}
+}
