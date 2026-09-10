@@ -3,7 +3,7 @@
 The living board. `HANDOFF.md` was a snapshot written at a stopping point and is
 now substantially out of date; this file is what to read instead.
 
-Last accurate: **10 September 2026, mid-afternoon.** Anything here that the repo or the
+Last accurate: **10 September 2026, late afternoon.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -32,8 +32,10 @@ Judgement, not access. Roughly in the order it starts costing.
 | 🟡 | **Disable Universal SSL on `askwhen.me`** | Cloudflare keeps injecting CAA records for its own CAs into the zone. Harmless while the records also permit Let's Encrypt, but it is a foreign hand in a zone we otherwise control. Cloudflare → SSL/TLS → Edge Certificates → Disable Universal SSL. |
 | 🟡 | **Reserve `172.16.1.41` in pfSense** and **add CT 112 to PBS** | The guest has a static address nothing else knows about, and no backup. Both are yours because both are DC-wide config. |
 | 🟡 | **An Infisical machine identity** | User sessions expire in 20–60 minutes and each expiry cost a round trip today. A Universal Auth identity scoped to `calendarmirror-com-v2-yo/prod`, read-only, would let `infisical run` work unattended. |
+| 🟡 | **The request-page UI** | Step 4 built everything under it and nothing of it. Needed, in the order a new owner meets them: the two checkboxes in Manage Mirrors (`RequestPageConfig.blocking` / `.requestCalendar`); a settings sheet for display name, blurb, meeting title and the policy; the StoreKit entitlement → `create`; a notification per collected request with Accept / Decline; and the conflict sheet that shows `RequestChecker`'s alternatives. Yours because it is look-and-feel; the Kit's surface is in `askwhen/README.md` §4. |
 | 🟡 | **1.4.2: ship, or fold into 2.0** | On main, unreleased. askwhen ships as 2.0, so it is either a release of its own or absorbed. |
 | 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. Needs a signed, notarised build, so it is a release rather than a tag. |
+| ⚪ | **Design the emails** *(Matt, 10 Sept)* | All four — confirm, accepted, declined, no-response — are deliberately plain today: one `<p>` after another, no image, no styled button, nothing fetched. The plainness is partly a security stance (a scanner rendering the confirm mail finds nothing to click but a URL whose GET does nothing) and partly that nobody has designed them yet. Whatever they become should keep both properties; the templates are in `askwhen/service/internal/mail/postal.go`, and the same look should probably reach the request page's own states. |
 | ⚪ | **Sit with the request page** | You said you were not sold. `askwhen/web/dist/gallery.html` is every state at true size and opens straight from the filesystem. |
 | ⚪ | **`feat/synced-events-view`** | One WIP commit, no PR, abandoned mid-thought. Finish or delete. |
 
@@ -49,16 +51,11 @@ Judgement, not access. Roughly in the order it starts costing.
 
 In the order I would do them.
 
-1. **Step 4, the device client.** `CalMirrorKit` gains the dump publisher and the
-   queue poller: derive slots → `PUT /v1/pages/{slug}` → poll the queue with the
-   weak ETag → surface each request for accept/decline → `POST .../resolve`. The
-   service side of every one of those calls now exists and is exercised end to
-   end.
-2. **Step 6, custom domains.** The `on_demand` catch-all block on `caddy-dc` is
+1. **Step 6, custom domains.** The `on_demand` catch-all block on `caddy-dc` is
    written and deliberately **not** enabled — enabling it makes the edge answer
    any hostname the gate approves, and the gate should be watched on real
    traffic first.
-3. **Swap the web app from JavaScript to TypeScript.** *(Matt, 4 Sept — not
+2. **Swap the web app from JavaScript to TypeScript.** *(Matt, 4 Sept — not
    specced originally, and he expected TS.)* Contained, and worth more than a
    language preference:
 
@@ -73,7 +70,13 @@ In the order I would do them.
      stop being able to drift — which is the one place drift would be silent and
      would break the privacy claim rather than the build.
 
-4. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
+3. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
+4. **Serve the request page from the service.** `GET /{slug}` is in the
+   architecture's endpoint table and the Lit bundle is built into the image at
+   `/web`, but nothing routes to it yet — a stranger with a link gets a 404
+   today. Small, and it is what makes the whole loop reachable by a human
+   rather than by curl. Waits on your look-and-feel sit-down only in the sense
+   that whatever ships will be what they see.
 5. **Postal webhooks** for bounce and delivery. Today "purged once delivery
    confirms" means "purged at the 48-hour ceiling", because nothing tells the
    service a message was delivered or bounced. Postal can POST both; the
@@ -101,6 +104,15 @@ In the order I would do them.
   delivered by Postal to a real inbox. The pepper was generated on the host that
   day and exists nowhere else; **back it up** (README, "The pepper deserves its
   own paragraph").
+- **Step 4, the device client, is complete**
+  ([#72](https://github.com/mattbaylor/cal-mirror/pull/72)). `RequestPageConfig`
+  in `Config`, `PolicyDump.make` as the one publish site, `PublishPlanner`,
+  `RequestChecker`, `AskwhenClient`, `RequestPageCoordinator`, and
+  `MirrorEngine.busyIntervals` as the privacy boundary. No UI. `cmk-check`
+  289 → 385, including the coordinator through a fake service.
+- **`askwhen.me/` 301s to `calendarmirror.com`**
+  ([#71](https://github.com/mattbaylor/cal-mirror/pull/71), Matt, 10 Sept),
+  with a one-day cache bound so the root can be reclaimed later. Deployed.
 - **Step 5, mail, is complete** ([#66](https://github.com/mattbaylor/cal-mirror/pull/66)
   [#69](https://github.com/mattbaylor/cal-mirror/pull/69)). Confirmation,
   accepted-with-`.ics` (`METHOD:PUBLISH`, no organiser — the service has no
