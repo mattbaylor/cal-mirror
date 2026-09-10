@@ -323,3 +323,61 @@ func (s *Store) SlotIsOffered(ctx context.Context, slug, slotStart string) (bool
 	}
 	return n > 0, nil
 }
+
+// ---------------------------------------------------------------- rate limit
+
+// Bump increments a per-key counter for the current window and returns the new
+// count.
+//
+// The key is already a hash. Per-IP limiting puts this service in the awkward
+// position of holding requester addresses on a page whose argument is that
+// nobody watches the requester, so it does not hold them: the caller passes
+// HMAC(daily pepper, ip), the pepper rotates, and the rows die with their
+// window. After rotation yesterday's rows cannot be linked to an address even
+// by us. schema.sql says the same thing beside the table.
+//
+// One statement, so two requests arriving together cannot both read a count of
+// nine and both proceed.
+func (s *Store) Bump(ctx context.Context, keyHash []byte, window time.Time) (int, error) {
+	w := window.UTC().Format(time.RFC3339)
+	var n int
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO ratelimit (key_hash, window_start, count) VALUES (?, ?, 1)
+		ON CONFLICT (key_hash, window_start) DO UPDATE SET count = count + 1
+		RETURNING count`, keyHash, w).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("rate limit bump: %w", err)
+	}
+	return n, nil
+}
+
+// PageExists is the cheap check before doing any work on a slug.
+func (s *Store) PageExists(ctx context.Context, slug string) (bool, error) {
+	var one int
+	err := s.db.QueryRowContext(ctx, `SELECT 1 FROM page WHERE slug = ?`, slug).Scan(&one)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("page exists: %w", err)
+	}
+	return true, nil
+}
+
+// SlotEnd returns the end of an offered slot, so the request records exactly
+// what was offered rather than whatever the form claimed.
+func (s *Store) SlotEnd(ctx context.Context, slug, slotStart string) (string, error) {
+	var end string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT json_extract(value, '$.e')
+		FROM page, json_each(page.dump, '$.slots')
+		WHERE page.slug = ? AND json_extract(value, '$.s') = ?
+		LIMIT 1`, slug, slotStart).Scan(&end)
+	if err == sql.ErrNoRows {
+		return "", ErrNoRequest
+	}
+	if err != nil {
+		return "", fmt.Errorf("slot end: %w", err)
+	}
+	return end, nil
+}

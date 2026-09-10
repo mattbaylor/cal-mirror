@@ -57,12 +57,14 @@ func main() {
 }
 
 type config struct {
-	listen     string
-	dbPath     string
-	schemaPath string
-	zone       string
-	tlsSecret  string
-	pepper     []byte
+	listen       string
+	dbPath       string
+	schemaPath   string
+	zone         string
+	tlsSecret    string
+	pepper       []byte
+	origin       string
+	trustedProxy string
 }
 
 func loadConfig() (config, error) {
@@ -71,6 +73,11 @@ func loadConfig() (config, error) {
 		dbPath:     envOr("AW_DB", "/data/askwhen.db"),
 		schemaPath: envOr("AW_SCHEMA", "/schema.sql"),
 		zone:       envOr("AW_ZONE", "askwhen.me"),
+		origin:     envOr("AW_ORIGIN", "https://askwhen.me"),
+		// The one proxy whose X-Forwarded-For is believed. edge.md: trust it
+		// from 172.16.1.4 and nowhere else, or the per-IP limit either counts
+		// the proxy or lets a requester pick their own bucket.
+		trustedProxy: envOr("AW_TRUSTED_PROXY", "172.16.1.4"),
 	}
 
 	// Read from a file rather than an environment variable so the value does not
@@ -196,6 +203,26 @@ func routes(st *store.Store, cfg config, log *slog.Logger) http.Handler {
 		Logger:        log,
 	}
 	mux.Handle("/c/{token}", confirm)
+
+	// A stranger asking for a time. The one write a stranger can cause, and the
+	// only endpoint the per-IP limit applies to — page views stay pure reads.
+	mux.Handle("POST /v1/pages/{slug}/requests", &api.Requests{
+		Store:          st,
+		Pepper:         cfg.pepper,
+		Origin:         cfg.origin,
+		HoldInitial:    15 * time.Minute,
+		TTLUnconfirmed: time.Hour,
+		RatePerIP:      10,
+		RateWindow:     time.Hour,
+		TrustedProxy:   cfg.trustedProxy,
+		// Step 5 supplies real delivery. Until then the confirmation link is
+		// logged, which is enough to exercise the whole loop by hand.
+		Deliver: func(ctx context.Context, to, url string) error {
+			log.Info("deliver (stub): confirmation link", "url", url)
+			return nil
+		},
+		Logger: log,
+	})
 
 	return mux
 }
