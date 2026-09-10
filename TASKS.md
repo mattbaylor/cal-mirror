@@ -3,7 +3,7 @@
 The living board. `HANDOFF.md` was a snapshot written at a stopping point and is
 now substantially out of date; this file is what to read instead.
 
-Last accurate: **10 September 2026, early afternoon.** Anything here that the repo or the
+Last accurate: **10 September 2026, mid-afternoon.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -49,19 +49,16 @@ Judgement, not access. Roughly in the order it starts costing.
 
 In the order I would do them.
 
-1. **Step 5, the rest of the mail.** The confirmation link is sent. Still to
-   write: the accepted-request email carrying an `.ics`, and the decline and
-   hold-expired notices. Same `mail.Postal` type, three more templates.
-2. **Step 4, the device client.** `CalMirrorKit` gains the dump publisher and the
+1. **Step 4, the device client.** `CalMirrorKit` gains the dump publisher and the
    queue poller: derive slots → `PUT /v1/pages/{slug}` → poll the queue with the
    weak ETag → surface each request for accept/decline → `POST .../resolve`. The
    service side of every one of those calls now exists and is exercised end to
    end.
-3. **Step 6, custom domains.** The `on_demand` catch-all block on `caddy-dc` is
+2. **Step 6, custom domains.** The `on_demand` catch-all block on `caddy-dc` is
    written and deliberately **not** enabled — enabling it makes the edge answer
    any hostname the gate approves, and the gate should be watched on real
    traffic first.
-4. **Swap the web app from JavaScript to TypeScript.** *(Matt, 4 Sept — not
+3. **Swap the web app from JavaScript to TypeScript.** *(Matt, 4 Sept — not
    specced originally, and he expected TS.)* Contained, and worth more than a
    language preference:
 
@@ -76,7 +73,13 @@ In the order I would do them.
      stop being able to drift — which is the one place drift would be silent and
      would break the privacy claim rather than the build.
 
-5. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
+4. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
+5. **Postal webhooks** for bounce and delivery. Today "purged once delivery
+   confirms" means "purged at the 48-hour ceiling", because nothing tells the
+   service a message was delivered or bounced. Postal can POST both; the
+   endpoint would shorten `purge_after` on delivery and resend once on bounce.
+   The address is only kept those 48 hours for this, so until it exists the
+   window buys nothing.
 
 ## Done, so nobody re-derives it
 
@@ -98,6 +101,14 @@ In the order I would do them.
   delivered by Postal to a real inbox. The pepper was generated on the host that
   day and exists nowhere else; **back it up** (README, "The pepper deserves its
   own paragraph").
+- **Step 5, mail, is complete** ([#66](https://github.com/mattbaylor/cal-mirror/pull/66)
+  [#69](https://github.com/mattbaylor/cal-mirror/pull/69)). Confirmation,
+  accepted-with-`.ics` (`METHOD:PUBLISH`, no organiser — the service has no
+  owner address), declined, and no-response after fourteen days. All four
+  verified 10 Sept from the live host into a real inbox; the mail client parsed
+  the `.ics` as a calendar part. The sweep was also brought in line with §4b
+  and §10: a lapsed 24-hour hold frees the slot but leaves the request queued
+  for its fourteen days, rather than expiring it after one.
 - **Found and fixed on the way:** the 48-hour purge-ceiling trigger compared an
   RFC3339 string to `datetime()` output as text, so every resolve 503'd. Wrap both
   sides in `datetime()`. Regression test in `store_test.go`.
