@@ -4,12 +4,18 @@
 > says two steps here are already done, and that `rehosted.us`'s own SPF record
 > contains a self-referential include which evaluates to `permerror`. This
 > document was written without either fact.
+>
+> **As of 10 Sept 2026 every record below exists.** The web records and the
+> mail records were written through the Cloudflare API from a laptop, with a
+> token that lives in Infisical and never on the host; the DKIM key and
+> selector are Postal's, not the hand-generated `aw1` this file describes.
+> What follows is the record of what has to exist and why, kept as written.
 
-This is a list, not a script. Nothing in this repo can write a DNS record and
-that is deliberate: the only credential that could is `CF_API_TOKEN`, it is
-scoped to one zone, and it exists so that Caddy can write a single
-`_acme-challenge` TXT for the wildcard. Everything below is created by hand,
-once, by someone looking at what they are doing.
+This is a list, not a script. Nothing on the host can write a DNS record and
+that is deliberate: the guest holds no DNS credential at all. There is no
+wildcard and so no `_acme-challenge` to automate — see `edge.md` for why the
+subdomain tier rides on-demand TLS instead. Everything below was created by
+someone looking at what they were doing.
 
 Two zones are involved and they do different jobs. `askwhen.me` is what the
 world sees and what mail is signed as. `rehosted.us` already exists and only
@@ -63,8 +69,7 @@ aliases on `mail.thebaylors.org` before the first email is sent. A `rua=` addres
 that bounces means the reports that would tell you delivery is broken are
 themselves undeliverable.
 
-No `_acme-challenge` record is listed. Caddy creates and deletes it for the
-wildcard order, which is the entire reason `CF_API_TOKEN` exists.
+No `_acme-challenge` record is listed. There is no wildcard order to need one.
 
 ---
 
