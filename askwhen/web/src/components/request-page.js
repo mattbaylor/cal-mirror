@@ -328,6 +328,7 @@ export class RequestPage extends LitElement {
       </p>
       <availability-week
         .slots=${live}
+        .held=${dump.held ?? []}
         .zone=${zone}
         .ownerZone=${dump.display?.tz}
         .ownerName=${name}
@@ -413,6 +414,11 @@ export class RequestPage extends LitElement {
       this.state = 'confirm-your-email';
     } else {
       // held and slot both mean "not that time"; the rest mean "not right now".
+      if (result.reason === 'held' && this._chosen?.slot?.s) {
+        // The dump we hold predates that hold. Show it the way a fresh
+        // fetch would, without making one.
+        this.dump = { ...this.dump, held: [...(this.dump.held ?? []), this._chosen.slot.s] };
+      }
       this.state = result.reason === 'held' || result.reason === 'slot' ? 'held'
         : result.reason === 'gone' ? 'unavailable'
         : 'failed';

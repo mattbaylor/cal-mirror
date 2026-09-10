@@ -119,6 +119,14 @@ it a *label*: "Matt Baylor", "Matt B" or "The Referee Guy" are all valid, so the
 owner decides how much they are disclosing. It remains the only identifying field
 in the dump.
 
+**Held slots ride with the dump.** *(10 Sept 2026)* `/p/{slug}.json` carries a
+`held` list — the start of every slot somebody has asked for and not yet been
+answered on — added by the service on the way out, never by the device, which
+the service refuses. A held slot renders as *just asked for* rather than
+vanishing (§4b). Privacy-neutral: a hold was already visible as a 409 to anyone
+who asked for the time. The validator covers both halves, so a hold appearing
+or lapsing is a new representation and caches revalidate into it.
+
 **Resolved requests — purged once delivery confirms, 48-hour ceiling.**
 Deleting the instant the owner accepts sounds like the stronger claim, but a
 bounced `.ics` would then be unrecoverable: no address left to resend to, and the

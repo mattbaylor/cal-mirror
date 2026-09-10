@@ -14,6 +14,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -342,6 +343,13 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, lo
 
 // serveDump answers the request every visitor makes, and answers it cheaply the
 // second time.
+//
+// What goes out is the owner's dump plus one field the service adds: `held`,
+// the starts currently held by somebody's request (§4b). The validator covers
+// both, so a hold appearing or lapsing is a new representation and a cache
+// revalidates into it — and it is computed from the stored ETag and the hold
+// index alone, so a returning visitor is still answered without the document
+// being read.
 func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slog.Logger) {
 	file := r.PathValue("file")
 	slug, ok := strings.CutSuffix(file, ".json")
@@ -351,7 +359,7 @@ func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slo
 		return
 	}
 
-	etag, err := st.DumpETag(r.Context(), slug)
+	dumpETag, err := st.DumpETag(r.Context(), slug)
 	if errors.Is(err, store.ErrNoPage) {
 		http.NotFound(w, r)
 		return
@@ -361,14 +369,18 @@ func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slo
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
 	}
-
-	// The whole point of storing the validator: a returning visitor is answered
-	// without the document ever being read.
-	if httpcache.Serve(w, r, etag) {
+	held, err := st.HeldStarts(r.Context(), slug)
+	if err != nil {
+		log.Error("dump held", "err", err)
+		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
 	}
 
-	dump, etag2, err := st.Dump(r.Context(), slug)
+	if httpcache.Serve(w, r, servedETag(dumpETag, held)) {
+		return
+	}
+
+	dump, dumpETag2, err := st.Dump(r.Context(), slug)
 	if errors.Is(err, store.ErrNoPage) {
 		http.NotFound(w, r)
 		return
@@ -378,14 +390,43 @@ func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slo
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
 	}
+	body, err := withHeld(dump, held)
+	if err != nil {
+		log.Error("dump merge", "slug", slug, "err", err)
+		http.Error(w, "unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	// A publish can land between the two reads. Serving the new bytes under the
 	// old validator would leave every cache holding a document it thinks is
 	// current and is not.
-	w.Header().Set("ETag", etag2)
+	w.Header().Set("ETag", servedETag(dumpETag2, held))
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	// §8: noindex by default. The page opts in per slug; the dump never does.
 	w.Header().Set("X-Robots-Tag", "noindex")
-	fmt.Fprint(w, dump)
+	w.Write(body)
+}
+
+// servedETag is the validator for dump-plus-holds: strong, and different
+// whenever either half is.
+func servedETag(dumpETag string, held []string) string {
+	return httpcache.StrongETag([]byte(dumpETag + "\n" + strings.Join(held, "\n")))
+}
+
+// withHeld adds the `held` list to the stored document. Every other value is
+// carried as raw bytes, so what the owner published is what goes out; only the
+// key order changes, to the sorted one, which is also what makes the output
+// deterministic for the validator.
+func withHeld(dump string, held []string) ([]byte, error) {
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(dump), &doc); err != nil {
+		return nil, err
+	}
+	list, err := json.Marshal(held)
+	if err != nil {
+		return nil, err
+	}
+	doc["held"] = list
+	return json.Marshal(doc)
 }
 
 // validSlug mirrors the CHECK constraint in schema.sql. Applied here so a

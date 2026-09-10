@@ -105,6 +105,15 @@
           }
         }
       }
+    },
+    "held": {
+      "type": "array",
+      "maxItems": 500,
+      "description": "Added by the SERVICE on the way out, never by the device: the start of every slot somebody has asked for and not yet been answered on (architecture 4b). A held slot renders as 'just asked for' rather than vanishing. Privacy-neutral - a hold is already visible as a 409 to anyone who asks - and the service refuses an uploaded dump that carries it. Matt, 10 Sept 2026.",
+      "items": {
+        "type": "string",
+        "format": "date-time"
+      }
     }
   }
 }

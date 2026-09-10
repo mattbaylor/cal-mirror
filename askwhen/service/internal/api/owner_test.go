@@ -225,6 +225,23 @@ func TestPublishRejectsADumpForAnotherPage(t *testing.T) {
 	}
 }
 
+func TestPublishRefusesADumpThatClaimsHolds(t *testing.T) {
+	// `held` is the service's field, added on the way out. A device sending it
+	// is either confused or forging a hold on a slot nobody asked for.
+	o := setupOwner(t)
+	slug, token := createPage(t, o)
+	forged := strings.Replace(dumpFor(slug), `"slots"`, `"held":["2026-09-12T16:00:00Z"],"slots"`, 1)
+	w := do(o.Publish, http.MethodPut, "/v1/pages/"+slug, forged, token, map[string]string{"slug": slug}, nil)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("a dump carrying held was accepted: %d", w.Code)
+	}
+	// An empty list is still a claim about a field that is not the device's.
+	forged = strings.Replace(dumpFor(slug), `"slots"`, `"held":[],"slots"`, 1)
+	if w := do(o.Publish, http.MethodPut, "/v1/pages/"+slug, forged, token, map[string]string{"slug": slug}, nil); w.Code != http.StatusBadRequest {
+		t.Fatalf("a dump carrying an empty held was accepted: %d", w.Code)
+	}
+}
+
 func TestQueueIs304WhenNothingChangedAndFullWhenItDid(t *testing.T) {
 	o := setupOwner(t)
 	slug, token := createPage(t, o)

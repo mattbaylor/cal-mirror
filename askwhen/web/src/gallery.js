@@ -126,6 +126,9 @@ add(
     page({ ...example, expires: '2026-08-31T00:00:00Z' }, { zone: 'America/Denver' }),
   ),
   frame('No page there', 'The only page a stranger sees cold', () => page(null)),
+  frame('One slot just asked for', 'Held renders as taken, not as gone (§4b)', () =>
+    page({ ...fresh(example), held: [example.slots[0].s] }, { zone: 'America/Denver' }),
+  ),
   frame('Nothing offered', 'Absence of a slot is not evidence of a meeting', () =>
     page({ ...fresh(example), slots: [] }, { zone: 'America/Denver' }),
   ),
