@@ -3,7 +3,7 @@
 The living board. `HANDOFF.md` was a snapshot written at a stopping point and is
 now substantially out of date; this file is what to read instead.
 
-Last accurate: **10 September 2026, evening.** Anything here that the repo or the
+Last accurate: **10 September 2026, night.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -26,6 +26,7 @@ Judgement, not access. Roughly in the order it starts costing.
 | | What | The call |
 |---|---|---|
 | 🔴 | **Rotate five credentials before prod** | `cloudflare_apitoken`, `cloudflare_accesskey`, `cloudflare_secretaccesskey`, the R2 endpoint (carries the account hash) and `gh_claude` were printed into a session transcript on 4 Sept. You said rotate at prod rather than now; this is the reminder so it does not get lost. `~/.claude/settings.json` now denies `infisical secrets` outright. |
+| 🔴 | **Flip on-demand TLS on `caddy-dc`** | Step 6 is built, deployed and proven up to this line: the gate answers 200/200/404 for a claimed custom domain, a claimed subdomain and an unclaimed name when asked from the proxy itself. What remains is writing the global `on_demand_tls` options and the catch-all `https://` block into `/opt/caddy/Caddyfile` and reloading — on the proxy that fronts your customers' sites, which is why it stops here. `askwhen/infra/edge.md`, "The flip, as one command": one line, validates before it reloads, backup beside the file. Two fixtures are waiting for it: `ask-test.calendarmirror.com` (CNAME, in your zone) and `matt-test.askwhen.me`. Delete both, and the fixture page `qjvg8iar`, when done — or leave them as the first real customer domains. |
 | 🔴 | **Back up the pepper** | `/opt/cal-mirror/askwhen/infra/secrets/pepper` on CT 112, generated 10 Sept. It hashes every write token; lose it and every owner silently stops being able to publish. Somewhere you would keep a private key — not Infisical's `prod` env alongside things that rotate. |
 | 🔴 | **Commit the `-target` fix** | Still uncommitted in your tree (`build.sh`, `build-ui.sh`). Say the word and I will commit it; I did not want to commit your working tree unasked. |
 | 🟡 | **Edge Caddy: 2.6.2 → 2.11.4, and drop the wildcard** | Plan and argument in `askwhen/infra/edge/upgrade-plan.md`. Only apex + `www` are staged today because 2.6.2 has no DNS modules. Recommendation: upgrade for the security fixes, and do **not** add the wildcard — every `*.askwhen.me` name we would ever serve is a custom-domain CNAME, which on-demand TLS already covers. |
@@ -51,11 +52,7 @@ Judgement, not access. Roughly in the order it starts costing.
 
 In the order I would do them.
 
-1. **Step 6, custom domains.** The `on_demand` catch-all block on `caddy-dc` is
-   written and deliberately **not** enabled — enabling it makes the edge answer
-   any hostname the gate approves, and the gate should be watched on real
-   traffic first.
-2. **Swap the web app from JavaScript to TypeScript.** *(Matt, 4 Sept — not
+1. **Swap the web app from JavaScript to TypeScript.** *(Matt, 4 Sept — not
    specced originally, and he expected TS.)* Contained, and worth more than a
    language preference:
 
@@ -70,8 +67,8 @@ In the order I would do them.
      stop being able to drift — which is the one place drift would be silent and
      would break the privacy claim rather than the build.
 
-3. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
-4. **Postal webhooks** for bounce and delivery. Today "purged once delivery
+2. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
+3. **Postal webhooks** for bounce and delivery. Today "purged once delivery
    confirms" means "purged at the 48-hour ceiling", because nothing tells the
    service a message was delivered or bounced. Postal can POST both; the
    endpoint would shorten `purge_after` on delivery and resend once on bounce.
@@ -98,6 +95,12 @@ In the order I would do them.
   delivered by Postal to a real inbox. The pepper was generated on the host that
   day and exists nowhere else; **back it up** (README, "The pepper deserves its
   own paragraph").
+- **Step 6, custom domains, is built** ([#77](https://github.com/mattbaylor/cal-mirror/pull/77)).
+  Claim, verify (live on the owner's GET and every five minutes), serve by
+  Host, gate. Subdomains ride on-demand too — `*.askwhen.me` is a DNS wildcard
+  A record, not a certificate — so there is no DNS credential on the guest.
+  `/internal/*` is perimeter-checked. The only thing not done is the flip on
+  the edge, above.
 - **Held slots ride with the dump** (Matt, 10 Sept). `held: [starts]` is added
   by the service on the way out; a device that sends it is refused. The picker
   strikes them through, and a 409 on submit marks the slot locally without a
