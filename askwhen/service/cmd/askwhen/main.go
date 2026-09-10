@@ -258,6 +258,15 @@ func routes(st *store.Store, cfg config, post *mail.Postal, log *slog.Logger) ht
 		fmt.Fprintln(w, "ok")
 	})
 
+	// The bare domain is nobody's page. Send whoever lands there to the product
+	// site (Matt, 10 Sept 2026). 301 as asked, but with a one-day cache rather
+	// than a browser's default forever, so a landing page here later — "what is
+	// this link I was sent?" — does not fight a redirect cached in 2026.
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		http.Redirect(w, r, "https://calendarmirror.com/", http.StatusMovedPermanently)
+	})
+
 	mux.Handle("GET /internal/tls-authorize", tlsauth.New(st, tlsauth.Config{
 		Zone:   cfg.zone,
 		Secret: cfg.tlsSecret,
