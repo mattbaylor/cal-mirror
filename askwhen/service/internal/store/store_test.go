@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
 )
@@ -493,5 +494,168 @@ func TestMarkingVerifiedIsIdempotentAndNarrow(t *testing.T) {
 	// An unknown host is not an error; the caller is a sweep, not a command.
 	if err := s.MarkDomainVerified(ctx, "nosuch.example.com"); err != nil {
 		t.Fatalf("marking an unknown host errored: %v", err)
+	}
+}
+
+// ------------------------------------------------- the confirmation flow
+
+func newRequest(slug, id, slot string) Request {
+	return Request{ID: id, Slug: slug, SlotStart: slot, SlotEnd: "2026-09-02T23:30:00Z",
+		Name: "Alex Fisher", Email: "alex@example.com", Note: "intro call"}
+}
+
+func TestASlotCanOnlyBeAskedForOnce(t *testing.T) {
+	// §4b, enforced by the unique index rather than by a read-then-write. Two
+	// people submitting in the same second is exactly the case a check-first
+	// implementation loses, and the loser is declined for a reason that was
+	// never about them.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+	hold := time.Now().Add(15 * time.Minute)
+	purge := time.Now().Add(time.Hour)
+
+	if err := s.CreateRequest(ctx, newRequest("x7f2k9", "r1", "2026-09-02T16:00:00Z"),
+		[]byte("hash-1"), hold, purge); err != nil {
+		t.Fatalf("first request: %v", err)
+	}
+
+	err := s.CreateRequest(ctx, newRequest("x7f2k9", "r2", "2026-09-02T16:00:00Z"),
+		[]byte("hash-2"), hold, purge)
+	if !errors.Is(err, ErrSlotHeld) {
+		t.Fatalf("second request for the same slot: %v, want ErrSlotHeld", err)
+	}
+
+	// A different slot on the same page is unaffected.
+	if err := s.CreateRequest(ctx, newRequest("x7f2k9", "r3", "2026-09-02T17:00:00Z"),
+		[]byte("hash-3"), hold, purge); err != nil {
+		t.Fatalf("a different slot was refused: %v", err)
+	}
+}
+
+func TestConfirmingIsIdempotent(t *testing.T) {
+	// A second click on a link sitting in an inbox is a normal thing to do. The
+	// condition lives in the WHERE clause, so the second UPDATE matches nothing
+	// rather than confirming twice or erroring.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+
+	tokenHash := []byte("the-confirm-token-hash")
+	if err := s.CreateRequest(ctx, newRequest("x7f2k9", "r1", "2026-09-02T16:00:00Z"),
+		tokenHash, time.Now().Add(15*time.Minute), time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := s.RequestByConfirmToken(ctx, tokenHash)
+	if err != nil {
+		t.Fatalf("lookup: %v", err)
+	}
+	if r.ID != "r1" || r.Email != "alex@example.com" {
+		t.Fatalf("looked up the wrong request: %+v", r)
+	}
+
+	ok, err := s.ConfirmRequest(ctx, "r1", time.Now().Add(24*time.Hour), time.Now().Add(48*time.Hour))
+	if err != nil || !ok {
+		t.Fatalf("first confirm: ok=%v err=%v", ok, err)
+	}
+	ok, err = s.ConfirmRequest(ctx, "r1", time.Now().Add(24*time.Hour), time.Now().Add(48*time.Hour))
+	if err != nil {
+		t.Fatalf("second confirm errored: %v", err)
+	}
+	if ok {
+		t.Fatal("the same request confirmed twice")
+	}
+}
+
+func TestAUsedTokenStopsResolving(t *testing.T) {
+	// Confirming clears the token, so the capability is spent. A leaked link
+	// from a forwarded email cannot be replayed.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+
+	tokenHash := []byte("the-confirm-token-hash")
+	if err := s.CreateRequest(ctx, newRequest("x7f2k9", "r1", "2026-09-02T16:00:00Z"),
+		tokenHash, time.Now().Add(15*time.Minute), time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ConfirmRequest(ctx, "r1", time.Now().Add(24*time.Hour), time.Now().Add(48*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.RequestByConfirmToken(ctx, tokenHash); !errors.Is(err, ErrNoRequest) {
+		t.Fatalf("a spent token still resolved: %v", err)
+	}
+}
+
+func TestAnUnknownTokenIsNotDistinguishable(t *testing.T) {
+	// §4c's reasoning: never-existed, already-used and expired must look the
+	// same from outside.
+	ctx := context.Background()
+	s := openTestStore(t)
+	if _, err := s.RequestByConfirmToken(ctx, []byte("never issued")); !errors.Is(err, ErrNoRequest) {
+		t.Fatalf("got %v, want ErrNoRequest", err)
+	}
+}
+
+func TestConfirmingMovesTheQueueVersion(t *testing.T) {
+	// The owner's device learns about it by polling, and the trigger is what
+	// tells it something changed.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+
+	before, _ := s.QueueVersion(ctx, "x7f2k9")
+	if err := s.CreateRequest(ctx, newRequest("x7f2k9", "r1", "2026-09-02T16:00:00Z"),
+		[]byte("h"), time.Now().Add(15*time.Minute), time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ConfirmRequest(ctx, "r1", time.Now().Add(24*time.Hour), time.Now().Add(48*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := s.QueueVersion(ctx, "x7f2k9")
+	if after <= before {
+		t.Fatalf("queue version did not move (%d -> %d)", before, after)
+	}
+}
+
+func TestOnlyOfferedSlotsCanBeAskedFor(t *testing.T) {
+	// The form posts a slot, and a form is whatever the client says it is. This
+	// is what stops someone asking for a time that was never on the page.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+
+	const dump = `{"v":1,"slots":[{"s":"2026-09-02T16:00:00Z","e":"2026-09-02T16:30:00Z"},
+	                              {"s":"2026-09-02T20:00:00Z","e":"2026-09-02T20:30:00Z"}]}`
+	if err := s.SetDump(ctx, "x7f2k9", dump); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		slot string
+		want bool
+	}{
+		{"2026-09-02T16:00:00Z", true},
+		{"2026-09-02T20:00:00Z", true},
+		{"2026-09-02T17:00:00Z", false},      // a real time, never offered
+		{"2026-09-02T16:00:00+00:00", false}, // same instant, different spelling
+		{"", false},
+		{"'; DROP TABLE request; --", false},
+	} {
+		got, err := s.SlotIsOffered(ctx, "x7f2k9", tc.slot)
+		if err != nil {
+			t.Fatalf("%q: %v", tc.slot, err)
+		}
+		if got != tc.want {
+			t.Errorf("SlotIsOffered(%q) = %v, want %v", tc.slot, got, tc.want)
+		}
+	}
+
+	// And the table is still there, which is the point of the last case.
+	var n int
+	if err := s.DB().QueryRow(`SELECT count(*) FROM request`).Scan(&n); err != nil {
+		t.Fatalf("request table is gone: %v", err)
 	}
 }
