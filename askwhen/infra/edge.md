@@ -69,6 +69,29 @@ The service is deployed with all of this. What is **not** done is the last
 step below: `on_demand` is not enabled on `caddy-dc`. That flip is Matt's, per
 "three things that are not optional", 3.
 
+## The flip, as one command
+
+`edge-flip.py` writes both blocks below into `/opt/caddy/Caddyfile` — a backup
+beside it first — and is idempotent. It reads the secret from stdin so the
+value never sits in a shell history or a transcript. From this laptop:
+
+```bash
+scp askwhen/infra/edge-flip.py matt@172.16.1.4:/tmp/ && ssh root@172.16.1.41 'cat /opt/cal-mirror/askwhen/infra/secrets/tls_auth_secret' | ssh matt@172.16.1.4 'sudo python3 /tmp/edge-flip.py && rm /tmp/edge-flip.py && sudo docker exec caddy-caddy-1 caddy validate --config /etc/caddy/Caddyfile && sudo docker exec caddy-caddy-1 caddy reload --config /etc/caddy/Caddyfile'
+```
+
+`validate` runs before `reload`, and `reload` keeps the old config if the new
+one fails, so a mistake here is a message and not an outage. Then:
+
+```bash
+curl -sI https://ask-test.calendarmirror.com/ | head -1 && curl -sI https://matt-test.askwhen.me/ | head -1 && curl -sI https://nobody.askwhen.me/ 2>&1 | head -1
+```
+
+The first two are a claimed custom domain and a claimed subdomain and should
+answer `200` with a fresh Let's Encrypt certificate; the third is unclaimed and
+should fail the handshake — no certificate was ordered for it, which is the
+whole point. The gate was asked for all three from this proxy on 10 Sept and
+answered 200, 200, 404.
+
 ## The block to paste into `caddy-dc`
 
 The secret is in the query string because that is the only channel Caddy offers.
