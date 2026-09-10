@@ -52,23 +52,8 @@ Judgement, not access. Roughly in the order it starts costing.
 
 In the order I would do them.
 
-1. **Swap the web app from JavaScript to TypeScript.** *(Matt, 4 Sept — not
-   specced originally, and he expected TS.)* Contained, and worth more than a
-   language preference:
-
-   - esbuild already compiles TS with no new dependency; only `typescript`
-     itself is needed, for `tsc --noEmit` in `npm run check` and in CI.
-   - The components use static `properties` rather than decorators, so they port
-     without touching the Lit setup.
-   - Node 26 strips types natively, so `test/*.test.mjs` can become `.ts` without
-     a test runner or a build step in front of them.
-   - **The real prize is `schema/policy-dump.schema.json`.** Generate the dump's
-     types from it rather than hand-writing them, and the schema and the code
-     stop being able to drift — which is the one place drift would be silent and
-     would break the privacy claim rather than the build.
-
-2. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
-3. **Postal webhooks** for bounce and delivery. Today "purged once delivery
+1. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
+2. **Postal webhooks** for bounce and delivery. Today "purged once delivery
    confirms" means "purged at the 48-hour ceiling", because nothing tells the
    service a message was delivered or bounced. Postal can POST both; the
    endpoint would shorten `purge_after` on delivery and resend once on bounce.
@@ -95,6 +80,11 @@ In the order I would do them.
   delivered by Postal to a real inbox. The pepper was generated on the host that
   day and exists nowhere else; **back it up** (README, "The pepper deserves its
   own paragraph").
+- **The web app is TypeScript** ([#79](https://github.com/mattbaylor/cal-mirror/pull/79),
+  Matt asked 4 Sept). Strict, checked by `tsc` in CI, and the dump's type is
+  generated from `schema/policy-dump.schema.json` — committed, and diffed in CI
+  so the schema and the code cannot drift silently. Tests run under Node's own
+  type stripping; still no test runner.
 - **Step 6, custom domains, is built** ([#77](https://github.com/mattbaylor/cal-mirror/pull/77)).
   Claim, verify (live on the owner's GET and every five minutes), serve by
   Host, gate. Subdomains ride on-demand too — `*.askwhen.me` is a DNS wildcard
