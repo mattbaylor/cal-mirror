@@ -3,7 +3,7 @@
 The living board. `HANDOFF.md` was a snapshot written at a stopping point and is
 now substantially out of date; this file is what to read instead.
 
-Last accurate: **10 September 2026, midday.** Anything here that the repo or the
+Last accurate: **10 September 2026, early afternoon.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -26,6 +26,7 @@ Judgement, not access. Roughly in the order it starts costing.
 | | What | The call |
 |---|---|---|
 | 🔴 | **Rotate five credentials before prod** | `cloudflare_apitoken`, `cloudflare_accesskey`, `cloudflare_secretaccesskey`, the R2 endpoint (carries the account hash) and `gh_claude` were printed into a session transcript on 4 Sept. You said rotate at prod rather than now; this is the reminder so it does not get lost. `~/.claude/settings.json` now denies `infisical secrets` outright. |
+| 🔴 | **Back up the pepper** | `/opt/cal-mirror/askwhen/infra/secrets/pepper` on CT 112, generated 10 Sept. It hashes every write token; lose it and every owner silently stops being able to publish. Somewhere you would keep a private key — not Infisical's `prod` env alongside things that rotate. |
 | 🔴 | **Commit the `-target` fix** | Still uncommitted in your tree (`build.sh`, `build-ui.sh`). Say the word and I will commit it; I did not want to commit your working tree unasked. |
 | 🟡 | **Edge Caddy: 2.6.2 → 2.11.4, and drop the wildcard** | Plan and argument in `askwhen/infra/edge/upgrade-plan.md`. Only apex + `www` are staged today because 2.6.2 has no DNS modules. Recommendation: upgrade for the security fixes, and do **not** add the wildcard — every `*.askwhen.me` name we would ever serve is a custom-domain CNAME, which on-demand TLS already covers. |
 | 🟡 | **Disable Universal SSL on `askwhen.me`** | Cloudflare keeps injecting CAA records for its own CAs into the zone. Harmless while the records also permit Let's Encrypt, but it is a foreign hand in a zone we otherwise control. Cloudflare → SSL/TLS → Edge Certificates → Disable Universal SSL. |
@@ -48,22 +49,19 @@ Judgement, not access. Roughly in the order it starts costing.
 
 In the order I would do them.
 
-1. **Merge [#67](https://github.com/mattbaylor/cal-mirror/pull/67) and redeploy
-   CT 112.** The host is running the image from before request creation; the
-   full lifecycle only exists on main once 67 lands.
-2. **Step 5, the rest of the mail.** The confirmation link is sent. Still to
+1. **Step 5, the rest of the mail.** The confirmation link is sent. Still to
    write: the accepted-request email carrying an `.ics`, and the decline and
    hold-expired notices. Same `mail.Postal` type, three more templates.
-3. **Step 4, the device client.** `CalMirrorKit` gains the dump publisher and the
+2. **Step 4, the device client.** `CalMirrorKit` gains the dump publisher and the
    queue poller: derive slots → `PUT /v1/pages/{slug}` → poll the queue with the
    weak ETag → surface each request for accept/decline → `POST .../resolve`. The
    service side of every one of those calls now exists and is exercised end to
    end.
-4. **Step 6, custom domains.** The `on_demand` catch-all block on `caddy-dc` is
+3. **Step 6, custom domains.** The `on_demand` catch-all block on `caddy-dc` is
    written and deliberately **not** enabled — enabling it makes the edge answer
    any hostname the gate approves, and the gate should be watched on real
    traffic first.
-5. **Swap the web app from JavaScript to TypeScript.** *(Matt, 4 Sept — not
+4. **Swap the web app from JavaScript to TypeScript.** *(Matt, 4 Sept — not
    specced originally, and he expected TS.)* Contained, and worth more than a
    language preference:
 
@@ -78,7 +76,7 @@ In the order I would do them.
      stop being able to drift — which is the one place drift would be silent and
      would break the privacy claim rather than the build.
 
-6. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
+5. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
 
 ## Done, so nobody re-derives it
 
@@ -91,6 +89,15 @@ In the order I would do them.
   dump → a stranger asks → GET renders and only POST confirms → the owner polls
   with a weak ETag → accept or decline → holds and rows expire on their own
   schedule. Matt decided the confirmation shape (POST) on 10 Sept.
+- **It is deployed, and the loop closes in production**
+  ([#68](https://github.com/mattbaylor/cal-mirror/pull/68)). CT 112 runs the
+  service from compose out of a real clone at `/opt/cal-mirror`; `deploy.py
+  --apply` is the whole procedure. The guest holds no DNS credential — the edge
+  terminates TLS and the in-guest Caddy is gone. Verified 10 Sept through
+  `https://askwhen.me` with nothing mocked, including a confirmation email
+  delivered by Postal to a real inbox. The pepper was generated on the host that
+  day and exists nowhere else; **back it up** (README, "The pepper deserves its
+  own paragraph").
 - **Found and fixed on the way:** the 48-hour purge-ceiling trigger compared an
   RFC3339 string to `datetime()` output as text, so every resolve 503'd. Wrap both
   sides in `datetime()`. Regression test in `store_test.go`.

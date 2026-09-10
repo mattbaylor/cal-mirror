@@ -473,7 +473,7 @@ func (s *Store) Queue(ctx context.Context, slug string) ([]Request, error) {
 		SELECT id, slug, slot_start, slot_end, state, requester_name,
 		       requester_email, note, hold_until
 		FROM request
-		WHERE slug = ? AND state = 'confirmed' AND hold_released_at IS NULL
+		WHERE slug = ? AND state = 'confirmed'
 		ORDER BY confirmed_at ASC`, slug)
 	if err != nil {
 		return nil, fmt.Errorf("queue: %w", err)
@@ -494,15 +494,25 @@ func (s *Store) Queue(ctx context.Context, slug string) ([]Request, error) {
 	return out, rows.Err()
 }
 
-// Resolve moves a confirmed request to accepted or declined.
+// Resolved is what a resolution hands back: the request, and the two display
+// fields the notification needs to say whose time it was and in which zone.
+// The email is here because this is the one moment it is read for its purpose;
+// nothing else in the service returns it alongside a page.
+type Resolved struct {
+	Request
+	DisplayName string
+	TZ          string
+}
+
+// Resolve records the owner's answer and returns the request, or nil if there
+// was nothing to resolve — already answered, expired, or not this page's, and
+// the caller must not distinguish those.
 //
-// Conditional on state = 'confirmed', so a second resolve — a double tap on
-// the device, or two devices racing — matches nothing rather than flipping the
-// answer. The slug is part of the WHERE so a write token for one page cannot
-// resolve a request on another.
-func (s *Store) Resolve(ctx context.Context, slug, id, decision string, purgeAfter time.Time) (bool, error) {
+// Scoped by slug in the WHERE rather than checked after the read, so a valid
+// token for one page cannot resolve another page's request by guessing an id.
+func (s *Store) Resolve(ctx context.Context, slug, id, decision string, purgeAfter time.Time) (*Resolved, error) {
 	if decision != "accepted" && decision != "declined" {
-		return false, fmt.Errorf("resolve: bad decision %q", decision)
+		return nil, fmt.Errorf("resolve: bad decision %q", decision)
 	}
 	// A declined request releases its hold immediately (§4b). An accepted one
 	// keeps it: the slot is a real event now.
@@ -510,52 +520,136 @@ func (s *Store) Resolve(ctx context.Context, slug, id, decision string, purgeAft
 	if decision == "declined" {
 		release = nowRFC3339()
 	}
-	res, err := s.db.ExecContext(ctx, `
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("resolve: %w", err)
+	}
+	defer tx.Rollback()
+
+	var out Resolved
+	var name, email, note sql.NullString
+	err = tx.QueryRowContext(ctx, `
 		UPDATE request
 		SET state = ?, resolved_at = ?, purge_after = ?,
 		    hold_released_at = CASE WHEN ? = '' THEN hold_released_at ELSE ? END
-		WHERE id = ? AND slug = ? AND state = 'confirmed'`,
+		WHERE id = ? AND slug = ? AND state = 'confirmed'
+		RETURNING id, slug, slot_start, slot_end, state, requester_name,
+		          requester_email, note, hold_until`,
 		decision, nowRFC3339(), purgeAfter.UTC().Format(time.RFC3339),
-		release, release, id, slug)
-	if err != nil {
-		return false, fmt.Errorf("resolve: %w", err)
+		release, release, id, slug).Scan(
+		&out.ID, &out.Slug, &out.SlotStart, &out.SlotEnd, &out.State,
+		&name, &email, &note, &out.HoldUntil)
+	if err == sql.ErrNoRows {
+		return nil, nil
 	}
-	n, _ := res.RowsAffected()
-	return n == 1, nil
+	if err != nil {
+		return nil, fmt.Errorf("resolve: %w", err)
+	}
+	out.Name, out.Email, out.Note = name.String, email.String, note.String
+	if err := tx.QueryRowContext(ctx, `SELECT display_name, tz FROM page WHERE slug = ?`, slug).
+		Scan(&out.DisplayName, &out.TZ); err != nil {
+		return nil, fmt.Errorf("resolve: page: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("resolve: %w", err)
+	}
+	return &out, nil
 }
 
-// Sweep is retention (§10) as two statements, run on a timer.
+// Swept is what one pass of the sweeper did, and who it owes an email.
+type Swept struct {
+	// Lapsed is unconfirmed requests whose fifteen minutes ran out. Nobody is
+	// told: the address was never proven, so there is nobody to tell.
+	Lapsed int64
+	// Released is confirmed requests whose 24-hour hold ended. They stay in the
+	// queue — the owner still has their fourteen days — but the slot is offered
+	// again, and the device re-checks the calendar at accept (§7).
+	Released int64
+	// Purged is rows past their death date, whatever state they were in.
+	Purged int64
+	// NoResponse is confirmed requests that reached the fourteen-day limit
+	// without an answer. Each carries the address that now needs the "no
+	// response" email, and each has 48 hours left before it is purged.
+	NoResponse []Resolved
+}
+
+// Sweep is retention (§10) on a timer, and the hold table in §4b.
 //
-// First: holds that lapsed. An unconfirmed request past hold_until becomes
-// expired and releases its slot, which is what frees the partial unique index
-// so somebody else can ask. Second: anything past its purge_after is deleted,
-// whatever state it is in — every row carries its own death date, so there is
-// no state whose expiry somebody forgot to implement.
-func (s *Store) Sweep(ctx context.Context, now time.Time) (expired, purged int64, err error) {
+// Every row carries its own death date, so the purge is one unconditional
+// DELETE and there is no state whose expiry somebody forgot to implement. The
+// one exception is `confirmed`: those rows leave through the fourteen-day
+// transition below, which needs the address for one last email before the row
+// goes, so the purge does not take them directly. `confirmedFor` is that limit
+// and comes from the same config as the confirm handler.
+func (s *Store) Sweep(ctx context.Context, now time.Time, confirmedFor time.Duration) (Swept, error) {
+	var out Swept
 	ts := now.UTC().Format(time.RFC3339)
 
 	r1, err := s.db.ExecContext(ctx, `
 		UPDATE request
 		SET state = 'expired', hold_released_at = ?
-		WHERE state IN ('unconfirmed', 'confirmed')
-		  AND hold_released_at IS NULL AND hold_until < ?`, ts, ts)
+		WHERE state = 'unconfirmed' AND hold_released_at IS NULL AND hold_until < ?`, ts, ts)
 	if err != nil {
-		return 0, 0, fmt.Errorf("sweep expire: %w", err)
+		return out, fmt.Errorf("sweep lapsed: %w", err)
 	}
-	expired, _ = r1.RowsAffected()
+	out.Lapsed, _ = r1.RowsAffected()
 
-	r2, err := s.db.ExecContext(ctx, `DELETE FROM request WHERE purge_after < ?`, ts)
+	r2, err := s.db.ExecContext(ctx, `
+		UPDATE request
+		SET hold_released_at = ?
+		WHERE state = 'confirmed' AND hold_released_at IS NULL AND hold_until < ?`, ts, ts)
 	if err != nil {
-		return expired, 0, fmt.Errorf("sweep purge: %w", err)
+		return out, fmt.Errorf("sweep release: %w", err)
 	}
-	purged, _ = r2.RowsAffected()
+	out.Released, _ = r2.RowsAffected()
+
+	// Fourteen days without an answer. resolved_at is set so the 48-hour
+	// ceiling in schema.sql applies to these exactly as to a decline.
+	cutoff := now.Add(-confirmedFor).UTC().Format(time.RFC3339)
+	rows, err := s.db.QueryContext(ctx, `
+		UPDATE request
+		SET state = 'expired', resolved_at = ?, purge_after = ?,
+		    hold_released_at = COALESCE(hold_released_at, ?)
+		WHERE state = 'confirmed' AND confirmed_at < ?
+		RETURNING id, slug, slot_start, slot_end, state, requester_name,
+		          requester_email, note, hold_until,
+		          (SELECT display_name FROM page WHERE page.slug = request.slug),
+		          (SELECT tz FROM page WHERE page.slug = request.slug)`,
+		ts, now.Add(48*time.Hour).UTC().Format(time.RFC3339), ts, cutoff)
+	if err != nil {
+		return out, fmt.Errorf("sweep no-response: %w", err)
+	}
+	for rows.Next() {
+		var r Resolved
+		var name, email, note, display, tz sql.NullString
+		if err := rows.Scan(&r.ID, &r.Slug, &r.SlotStart, &r.SlotEnd, &r.State,
+			&name, &email, &note, &r.HoldUntil, &display, &tz); err != nil {
+			rows.Close()
+			return out, fmt.Errorf("sweep no-response: %w", err)
+		}
+		r.Name, r.Email, r.Note = name.String, email.String, note.String
+		r.DisplayName, r.TZ = display.String, tz.String
+		out.NoResponse = append(out.NoResponse, r)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return out, fmt.Errorf("sweep no-response: %w", err)
+	}
+	rows.Close()
+
+	r3, err := s.db.ExecContext(ctx,
+		`DELETE FROM request WHERE purge_after < ? AND state <> 'confirmed'`, ts)
+	if err != nil {
+		return out, fmt.Errorf("sweep purge: %w", err)
+	}
+	out.Purged, _ = r3.RowsAffected()
 
 	// Rate-limit rows die with their window. Two days is generous; the point
 	// is that they cannot accumulate.
 	_, _ = s.db.ExecContext(ctx, `DELETE FROM ratelimit WHERE window_start < ?`,
 		now.Add(-48*time.Hour).UTC().Format(time.RFC3339))
 
-	return expired, purged, nil
+	return out, nil
 }
 
 func nullIfEmpty(s string) any {

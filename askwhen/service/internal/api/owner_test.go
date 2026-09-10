@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -11,11 +12,48 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/mail"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/store"
 )
+
+// sent records what would have been emailed, so a test can say "the requester
+// was told" without a mail server.
+type sent struct {
+	kind string
+	to   string
+	ev   mail.Event
+}
+
+type recorder struct {
+	mu   sync.Mutex
+	sent []sent
+	fail error
+}
+
+func (r *recorder) record(kind, to string, ev mail.Event) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.sent = append(r.sent, sent{kind, to, ev})
+	return r.fail
+}
+func (r *recorder) all() []sent {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]sent(nil), r.sent...)
+}
+func (r *recorder) Accepted(_ context.Context, to string, ev mail.Event) error {
+	return r.record("accepted", to, ev)
+}
+func (r *recorder) Declined(_ context.Context, to string, ev mail.Event) error {
+	return r.record("declined", to, ev)
+}
+func (r *recorder) NoResponse(_ context.Context, to string, ev mail.Event) error {
+	return r.record("no-response", to, ev)
+}
 
 func setupOwner(t *testing.T) *Owner {
 	t.Helper()
@@ -33,7 +71,7 @@ func setupOwner(t *testing.T) *Owner {
 		t.Fatal(err)
 	}
 	return &Owner{Store: s, Pepper: pepper, DumpTTL: 24 * time.Hour, TTLResolved: 48 * time.Hour,
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		Notify: &recorder{}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 }
 
 func do(h http.HandlerFunc, method, target string, body any, bearer string, path map[string]string, hdr map[string]string) *httptest.ResponseRecorder {
@@ -326,12 +364,12 @@ func TestSweepReleasesLapsedHoldsAndPurges(t *testing.T) {
 	o.Store.CreateRequest(ctx, store.Request{ID: "live", Slug: slug, SlotStart: "2026-09-12T18:00:00Z",
 		SlotEnd: "2026-09-12T18:30:00Z"}, []byte("h3"), time.Now().Add(time.Hour), time.Now().Add(time.Hour))
 
-	expired, purged, err := o.Store.Sweep(ctx, time.Now())
+	res, err := o.Store.Sweep(ctx, time.Now(), 336*time.Hour)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if expired < 1 || purged != 1 {
-		t.Fatalf("expired=%d purged=%d", expired, purged)
+	if res.Lapsed < 1 || res.Purged != 1 {
+		t.Fatalf("lapsed=%d purged=%d", res.Lapsed, res.Purged)
 	}
 
 	var state string
@@ -352,5 +390,159 @@ func TestSweepReleasesLapsedHoldsAndPurges(t *testing.T) {
 	o.Store.DB().QueryRow(`SELECT count(*) FROM request WHERE id='live'`).Scan(&n)
 	if n != 1 {
 		t.Fatal("the sweep took a live request with it")
+	}
+}
+
+func TestAcceptEmailsTheRequesterAnEventInTheOwnersZone(t *testing.T) {
+	o := setupOwner(t)
+	rec := o.Notify.(*recorder)
+	slug, token := createPage(t, o)
+	ctx := context.Background()
+
+	o.Store.CreateRequest(ctx, store.Request{ID: "r1", Slug: slug, SlotStart: "2026-09-12T16:00:00Z",
+		SlotEnd: "2026-09-12T16:30:00Z", Name: "Alex", Email: "alex@example.com", Note: "About the thing."},
+		[]byte("h"), time.Now().Add(15*time.Minute), time.Now().Add(time.Hour))
+	o.Store.ConfirmRequest(ctx, "r1", time.Now().Add(24*time.Hour), time.Now().Add(48*time.Hour))
+
+	w := do(o.Resolve, http.MethodPost, "/v1/requests/r1/resolve",
+		map[string]string{"slug": slug, "decision": "accept"}, token, map[string]string{"id": "r1"}, nil)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("accept got %d: %s", w.Code, w.Body.String())
+	}
+	if len(rec.sent) != 1 || rec.sent[0].kind != "accepted" || rec.sent[0].to != "alex@example.com" {
+		t.Fatalf("sent = %+v", rec.sent)
+	}
+	ev := rec.sent[0].ev
+	if ev.UID != "r1" || ev.OwnerName != "Matt Baylor" || ev.RequesterName != "Alex" || ev.Note != "About the thing." {
+		t.Fatalf("event = %+v", ev)
+	}
+	if ev.TZ != "America/Denver" || !strings.Contains(ev.When(), "10:00–10:30 MDT") {
+		t.Fatalf("when = %q (tz %q); 16:00Z is 10:00 in Denver in September", ev.When(), ev.TZ)
+	}
+	if !strings.Contains(string(ev.ICS()), "DTSTART:20260912T160000Z") {
+		t.Fatalf("ics:\n%s", ev.ICS())
+	}
+}
+
+func TestDeclineEmailsNotThisTime(t *testing.T) {
+	o := setupOwner(t)
+	rec := o.Notify.(*recorder)
+	slug, token := createPage(t, o)
+	ctx := context.Background()
+
+	o.Store.CreateRequest(ctx, store.Request{ID: "r1", Slug: slug, SlotStart: "2026-09-12T16:00:00Z",
+		SlotEnd: "2026-09-12T16:30:00Z", Name: "Alex", Email: "alex@example.com"},
+		[]byte("h"), time.Now().Add(15*time.Minute), time.Now().Add(time.Hour))
+	o.Store.ConfirmRequest(ctx, "r1", time.Now().Add(24*time.Hour), time.Now().Add(48*time.Hour))
+
+	do(o.Resolve, http.MethodPost, "/v1/requests/r1/resolve",
+		map[string]string{"slug": slug, "decision": "decline"}, token, map[string]string{"id": "r1"}, nil)
+	if len(rec.sent) != 1 || rec.sent[0].kind != "declined" {
+		t.Fatalf("sent = %+v", rec.sent)
+	}
+}
+
+func TestAFailedNotifyDoesNotUnrecordTheAnswer(t *testing.T) {
+	o := setupOwner(t)
+	o.Notify.(*recorder).fail = errors.New("postal is down")
+	slug, token := createPage(t, o)
+	ctx := context.Background()
+
+	o.Store.CreateRequest(ctx, store.Request{ID: "r1", Slug: slug, SlotStart: "2026-09-12T16:00:00Z",
+		SlotEnd: "2026-09-12T16:30:00Z", Email: "alex@example.com"},
+		[]byte("h"), time.Now().Add(15*time.Minute), time.Now().Add(time.Hour))
+	o.Store.ConfirmRequest(ctx, "r1", time.Now().Add(24*time.Hour), time.Now().Add(48*time.Hour))
+
+	w := do(o.Resolve, http.MethodPost, "/v1/requests/r1/resolve",
+		map[string]string{"slug": slug, "decision": "accept"}, token, map[string]string{"id": "r1"}, nil)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("got %d; the device already wrote the event, a 5xx would make it retry a resolve that now 404s", w.Code)
+	}
+	var state string
+	var email any
+	o.Store.DB().QueryRow(`SELECT state, requester_email FROM request WHERE id='r1'`).Scan(&state, &email)
+	if state != "accepted" || email == nil {
+		t.Fatalf("state=%s email=%v; the address must survive for the 48h retry window", state, email)
+	}
+}
+
+func TestALapsedConfirmedHoldStaysInTheQueueButFreesTheSlot(t *testing.T) {
+	o := setupOwner(t)
+	slug, token := createPage(t, o)
+	ctx := context.Background()
+
+	// Confirmed a day ago; its 24-hour hold just ran out. Fourteen days have not.
+	o.Store.CreateRequest(ctx, store.Request{ID: "r1", Slug: slug, SlotStart: "2026-09-12T16:00:00Z",
+		SlotEnd: "2026-09-12T16:30:00Z", Email: "alex@example.com"},
+		[]byte("h"), time.Now().Add(-25*time.Hour), time.Now().Add(300*time.Hour))
+	o.Store.ConfirmRequest(ctx, "r1", time.Now().Add(-time.Minute), time.Now().Add(300*time.Hour))
+
+	res, err := o.Store.Sweep(ctx, time.Now(), 336*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Released != 1 || res.Lapsed != 0 || len(res.NoResponse) != 0 {
+		t.Fatalf("swept = %+v", res)
+	}
+
+	// Still the owner's to answer.
+	w := do(o.Queue, http.MethodGet, "/v1/pages/"+slug+"/queue", nil, token, map[string]string{"slug": slug}, nil)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"id":"r1"`) {
+		t.Fatalf("queue after a lapsed hold: %d %s", w.Code, w.Body.String())
+	}
+	// And the slot is askable by somebody else meanwhile (§4b: released, page shows it again).
+	if err := o.Store.CreateRequest(ctx, store.Request{ID: "r2", Slug: slug, SlotStart: "2026-09-12T16:00:00Z",
+		SlotEnd: "2026-09-12T16:30:00Z"}, []byte("h2"), time.Now().Add(time.Hour), time.Now().Add(time.Hour)); err != nil {
+		t.Fatalf("slot still held after its hold lapsed: %v", err)
+	}
+}
+
+func TestFourteenDaysOfSilenceExpiresAndTellsTheRequester(t *testing.T) {
+	o := setupOwner(t)
+	slug, token := createPage(t, o)
+	ctx := context.Background()
+
+	o.Store.CreateRequest(ctx, store.Request{ID: "old", Slug: slug, SlotStart: "2026-09-12T16:00:00Z",
+		SlotEnd: "2026-09-12T16:30:00Z", Name: "Alex", Email: "alex@example.com"},
+		[]byte("h"), time.Now(), time.Now().Add(time.Hour))
+	o.Store.ConfirmRequest(ctx, "old", time.Now().Add(24*time.Hour), time.Now().Add(336*time.Hour))
+	// Backdate the confirmation past the limit.
+	o.Store.DB().Exec(`UPDATE request SET confirmed_at = ? WHERE id = 'old'`,
+		time.Now().Add(-337*time.Hour).UTC().Format(time.RFC3339))
+
+	rec := &recorder{}
+	sweepCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		Sweeper(sweepCtx, o.Store, 10*time.Millisecond, 336*time.Hour, rec, o.Logger)
+		close(done)
+	}()
+	deadline := time.Now().Add(2 * time.Second)
+	for len(rec.all()) == 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	cancel()
+	<-done
+
+	got := rec.all()
+	if len(got) != 1 || got[0].kind != "no-response" || got[0].to != "alex@example.com" {
+		t.Fatalf("sent = %+v", got)
+	}
+	if got[0].ev.OwnerName != "Matt Baylor" {
+		t.Fatalf("the no-response mail did not know whose page it was: %+v", got[0].ev)
+	}
+	var state string
+	var purge string
+	o.Store.DB().QueryRow(`SELECT state, purge_after FROM request WHERE id='old'`).Scan(&state, &purge)
+	if state != "expired" {
+		t.Fatalf("state = %s", state)
+	}
+	if p, _ := time.Parse(time.RFC3339, purge); p.After(time.Now().Add(49 * time.Hour)) {
+		t.Fatalf("purge_after %s is beyond the 48h ceiling", purge)
+	}
+	// Gone from the queue.
+	w := do(o.Queue, http.MethodGet, "/v1/pages/"+slug+"/queue", nil, token, map[string]string{"slug": slug}, nil)
+	if strings.Contains(w.Body.String(), `"id":"old"`) {
+		t.Fatalf("an expired request is still in the queue: %s", w.Body.String())
 	}
 }

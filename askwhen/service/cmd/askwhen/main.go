@@ -156,11 +156,12 @@ func run(log *slog.Logger) error {
 	// somebody forgot to implement.
 	sweepCtx, stopSweep := context.WithCancel(ctx)
 	defer stopSweep()
-	go api.Sweeper(sweepCtx, st, 60*time.Second, log)
+	post := mailer(cfg, log)
+	go api.Sweeper(sweepCtx, st, 60*time.Second, ttlConfirmed, notifier(post, log), log)
 
 	srv := &http.Server{
 		Addr:    cfg.listen,
-		Handler: routes(st, cfg, log),
+		Handler: routes(st, cfg, post, log),
 
 		// A request is a name, an email, a note and a slot. Nothing here should
 		// take long, and an unbounded read is how a slow-loris ties up a service
@@ -195,20 +196,60 @@ func run(log *slog.Logger) error {
 	}
 }
 
-// deliverer sends through Postal when a key is configured, and otherwise logs
-// the link so the loop can still be exercised by hand on a box without one.
-func deliverer(cfg config, log *slog.Logger) func(context.Context, string, string) error {
+// The retention numbers, in one place, because the confirm handler and the
+// sweeper must agree on them: a request confirmed under one limit and swept
+// under another is a request that dies early or lingers.
+const (
+	holdConfirmed = 24 * time.Hour
+	ttlConfirmed  = 336 * time.Hour // 14 days
+	ttlResolved   = 48 * time.Hour  // ceiling; the trigger in schema.sql agrees
+)
+
+// mailer is Postal when a key is configured, and otherwise something that
+// logs what it would have sent so the loop can be exercised by hand on a box
+// without one.
+func mailer(cfg config, log *slog.Logger) *mail.Postal {
 	if cfg.postalKey == "" {
+		return nil
+	}
+	return &mail.Postal{BaseURL: cfg.postalURL, APIKey: cfg.postalKey, From: cfg.mailFrom}
+}
+
+func deliverer(p *mail.Postal, log *slog.Logger) func(context.Context, string, string) error {
+	if p == nil {
 		return func(ctx context.Context, to, url string) error {
 			log.Info("deliver (no Postal key): confirmation link", "url", url)
 			return nil
 		}
 	}
-	p := &mail.Postal{BaseURL: cfg.postalURL, APIKey: cfg.postalKey, From: cfg.mailFrom}
 	return p.Confirmation
 }
 
-func routes(st *store.Store, cfg config, log *slog.Logger) http.Handler {
+// logNotifier stands in for Postal on a keyless box. It logs the outcome and
+// not the address: the address is the one thing in the row that is somebody's.
+type logNotifier struct{ log *slog.Logger }
+
+func (l logNotifier) Accepted(_ context.Context, _ string, ev mail.Event) error {
+	l.log.Info("notify (no Postal key): accepted", "uid", ev.UID, "when", ev.When())
+	return nil
+}
+func (l logNotifier) Declined(_ context.Context, _ string, ev mail.Event) error {
+	l.log.Info("notify (no Postal key): declined", "uid", ev.UID, "when", ev.When())
+	return nil
+}
+func (l logNotifier) NoResponse(_ context.Context, _ string, ev mail.Event) error {
+	l.log.Info("notify (no Postal key): no response", "uid", ev.UID, "when", ev.When())
+	return nil
+}
+
+func notifier(p *mail.Postal, log *slog.Logger) api.Notifier {
+	if p == nil {
+		return logNotifier{log}
+	}
+	return p
+}
+
+func routes(st *store.Store, cfg config, post *mail.Postal, log *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -235,8 +276,8 @@ func routes(st *store.Store, cfg config, log *slog.Logger) http.Handler {
 	confirm := &api.Confirm{
 		Store:         st,
 		Pepper:        cfg.pepper,
-		HoldConfirmed: 24 * time.Hour,
-		TTLConfirmed:  336 * time.Hour,
+		HoldConfirmed: holdConfirmed,
+		TTLConfirmed:  ttlConfirmed,
 		Logger:        log,
 	}
 	mux.Handle("/c/{token}", confirm)
@@ -252,7 +293,7 @@ func routes(st *store.Store, cfg config, log *slog.Logger) http.Handler {
 		RatePerIP:      10,
 		RateWindow:     time.Hour,
 		TrustedProxy:   cfg.trustedProxy,
-		Deliver:        deliverer(cfg, log),
+		Deliver:        deliverer(post, log),
 		Logger:         log,
 	})
 
@@ -262,7 +303,8 @@ func routes(st *store.Store, cfg config, log *slog.Logger) http.Handler {
 		Store:       st,
 		Pepper:      cfg.pepper,
 		DumpTTL:     24 * time.Hour,
-		TTLResolved: 48 * time.Hour,
+		TTLResolved: ttlResolved,
+		Notify:      notifier(post, log),
 		Logger:      log,
 	}
 	mux.HandleFunc("POST /v1/pages", owner.Create)
