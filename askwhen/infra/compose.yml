@@ -1,15 +1,17 @@
 # askwhen.me — the whole deployment.
 #
-# Runs on CT 112 (172.16.1.41) behind caddy-dc. Mail is not here: it goes to
-# Postal on dlvr.rehosted.us over its API, so the DKIM private key never exists
-# on this machine. See mail.md for why that separation is worth a network hop.
+# Runs on CT 112 (172.16.1.41). TLS is terminated one hop out, on caddy-dc
+# (172.16.1.4), which proxies askwhen.me to this host's :8080 — see edge.md.
+# There is no Caddy here: the edge is the router, and putting a second one on
+# the guest would mean a DNS credential on a box that otherwise needs none.
+# Mail is not here either: it goes to Postal on dlvr.rehosted.us over its API,
+# so the DKIM private key never exists on this machine (mail.md).
 #
-#   docker compose -f infra/compose.yml build
-#   docker compose -f infra/compose.yml up -d
+#   python3 infra/deploy.py --apply
 #
-# but read README.md first — there are DNS records and a DKIM key that have to
-# exist before the first confirmation email is sent, and no way to un-send the
-# ones that go out before they do.
+# is the whole procedure. Read README.md first — there are DNS records and a
+# DKIM key that have to exist before the first confirmation email is sent, and
+# no way to un-send the ones that go out before they do.
 
 name: askwhen
 
@@ -78,10 +80,12 @@ services:
     volumes:
       - aw-data:/data
 
-    # Not published. Caddy is the only route in, which is what makes the
-    # /internal/* refusal in the Caddyfile meaningful rather than decorative.
-    expose:
-      - "8080"
+    # Published on the internal network only; 172.16.1.0/24 is not routable
+    # from outside and caddy-dc is the only thing that talks to it. The gate on
+    # /internal/tls-authorize does not rely on that — it refuses without the
+    # secret regardless of who is asking (tlsauth).
+    ports:
+      - "8080:8080"
 
     read_only: true
     tmpfs:
@@ -107,48 +111,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  caddy:
-    build:
-      context: .
-      dockerfile: Dockerfile.caddy
-    restart: unless-stopped
-    depends_on:
-      - app
-
-    environment:
-      AW_ACME_EMAIL: "${AW_ACME_EMAIL:?set AW_ACME_EMAIL in infra/.env}"
-      # Scoped to Zone:DNS:Edit on askwhen.me and nothing else. It exists for
-      # one job — writing the _acme-challenge TXT for the *.askwhen.me wildcard
-      # — and it is the only credential in this deployment that can change DNS.
-      #
-      # An env var rather than a mounted secret because the Cloudflare DNS
-      # module reads the environment and has no file form. That means it is
-      # visible in `docker inspect`, which is a real if small downgrade; the
-      # mitigation is the scope, not the storage.
-      CF_API_TOKEN: "${CF_API_TOKEN:?set CF_API_TOKEN in infra/.env}"
-
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"   # HTTP/3
-
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      # Issued certificates and the ACME account key. Losing this volume is not
-      # fatal but it is expensive: every certificate is re-issued from scratch,
-      # against Let's Encrypt's weekly limits, and the $70 customers are the
-      # ones who feel it. Back it up.
-      - caddy-data:/data
-      - caddy-config:/config
-
-    security_opt:
-      - no-new-privileges:true
-
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
 secrets:
   # From Infisical: postal_api_key. A Postal *server* credential of type API,
@@ -164,5 +126,3 @@ secrets:
 
 volumes:
   aw-data:
-  caddy-data:
-  caddy-config:
