@@ -3,7 +3,7 @@
 The living board. `HANDOFF.md` was a snapshot written at a stopping point and is
 now substantially out of date; this file is what to read instead.
 
-Last accurate: **10 September 2026, late afternoon.** Anything here that the repo or the
+Last accurate: **10 September 2026, evening.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -45,6 +45,7 @@ Judgement, not access. Roughly in the order it starts costing.
 |---|---|
 | **Overlay: how much setup?** | I would argue **zero** — EventKit permission and nothing else. Every setup step between a stranger and the thing they wanted is one most will not take. |
 | **Timezone picker on the request page** | Browser decides today. Right for almost everyone, silently wrong for the traveller. `format.js` takes the zone as an argument everywhere, so it stays a component rather than a rewrite. |
+| **Held slots on the picker** | The design says a held slot renders as *just asked for* rather than vanishing. The dump carries no hold information, so today it vanishes only once the owner republishes. The cheap fix is the service adding a `held: [starts]` list to `/p/{slug}.json` from its own hold table — privacy-neutral (a hold is already visible as a 409) but a change to the one document that leaves the service, so it is yours to say yes to. |
 | **The *Proposed* entries in `decisions.md`** | My reasoning filed as mine, not as settled. One I would argue hard for: requester text must never share a context with a config-write tool. |
 
 ## Mine, and unblocked
@@ -71,13 +72,7 @@ In the order I would do them.
      would break the privacy claim rather than the build.
 
 3. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
-4. **Serve the request page from the service.** `GET /{slug}` is in the
-   architecture's endpoint table and the Lit bundle is built into the image at
-   `/web`, but nothing routes to it yet — a stranger with a link gets a 404
-   today. Small, and it is what makes the whole loop reachable by a human
-   rather than by curl. Waits on your look-and-feel sit-down only in the sense
-   that whatever ships will be what they see.
-5. **Postal webhooks** for bounce and delivery. Today "purged once delivery
+4. **Postal webhooks** for bounce and delivery. Today "purged once delivery
    confirms" means "purged at the 48-hour ceiling", because nothing tells the
    service a message was delivered or bounced. Postal can POST both; the
    endpoint would shorten `purge_after` on delivery and resend once on bounce.
@@ -104,6 +99,12 @@ In the order I would do them.
   delivered by Postal to a real inbox. The pepper was generated on the host that
   day and exists nowhere else; **back it up** (README, "The pepper deserves its
   own paragraph").
+- **The request page is served, and works** ([#74](https://github.com/mattbaylor/cal-mirror/pull/74)).
+  `GET /{slug}` and `/app.js` from the image, no slug lookup, `noindex` and
+  CSP as headers. The web app makes exactly two same-origin calls now, and
+  `no-network.mjs` asserts that shape against the bundle with teeth (a planted
+  foreign URL fails the build). Driven in a browser against the real binary,
+  which found two bugs the tests had not; then live through the edge.
 - **Step 4, the device client, is complete**
   ([#72](https://github.com/mattbaylor/cal-mirror/pull/72)). `RequestPageConfig`
   in `Config`, `PolicyDump.make` as the one publish site, `PublishPlanner`,
