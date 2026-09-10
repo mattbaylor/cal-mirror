@@ -151,6 +151,13 @@ func run(log *slog.Logger) error {
 	}
 	log.Info("schema applied", "db", cfg.dbPath, "schema", cfg.schemaPath)
 
+	// Retention as a timer. Every row carries its own death date, so the sweep
+	// is two unconditional statements and there is no state whose expiry
+	// somebody forgot to implement.
+	sweepCtx, stopSweep := context.WithCancel(ctx)
+	defer stopSweep()
+	go api.Sweeper(sweepCtx, st, 60*time.Second, log)
+
 	srv := &http.Server{
 		Addr:    cfg.listen,
 		Handler: routes(st, cfg, log),
@@ -248,6 +255,21 @@ func routes(st *store.Store, cfg config, log *slog.Logger) http.Handler {
 		Deliver:        deliverer(cfg, log),
 		Logger:         log,
 	})
+
+	// The owner's side. Every route here needs the page's write token — the one
+	// credential the service ever issues, and the one it stores only as a hash.
+	owner := &api.Owner{
+		Store:       st,
+		Pepper:      cfg.pepper,
+		DumpTTL:     24 * time.Hour,
+		TTLResolved: 48 * time.Hour,
+		Logger:      log,
+	}
+	mux.HandleFunc("POST /v1/pages", owner.Create)
+	mux.HandleFunc("PUT /v1/pages/{slug}", owner.Publish)
+	mux.HandleFunc("DELETE /v1/pages/{slug}", owner.Delete)
+	mux.HandleFunc("GET /v1/pages/{slug}/queue", owner.Queue)
+	mux.HandleFunc("POST /v1/requests/{id}/resolve", owner.Resolve)
 
 	return mux
 }

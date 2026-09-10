@@ -381,3 +381,186 @@ func (s *Store) SlotEnd(ctx context.Context, slug, slotStart string) (string, er
 	}
 	return end, nil
 }
+
+// -------------------------------------------------------------------- pages
+
+// Page is what the owner's device sees of its own page.
+type Page struct {
+	Slug        string
+	DisplayName string
+	Blurb       string
+	TZ          string
+}
+
+// ErrSlugTaken is a collision on a random slug: astronomically unlikely, and
+// the caller should simply mint another.
+var ErrSlugTaken = errors.New("slug already exists")
+
+// CreatePage brings a page into existence with an empty dump.
+//
+// The write token hash is stored; the plaintext was returned to the device
+// exactly once by the caller and exists nowhere else. entitlementHash is
+// SHA-256 of the StoreKit originalTransactionId — the service can answer "is
+// this the same subscription as before" and deliberately cannot answer "whose".
+func (s *Store) CreatePage(ctx context.Context, p Page, entitlementHash, writeTokenHash []byte, expires time.Time) error {
+	const emptyDump = `{"v":1,"slots":[]}`
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO page (slug, entitlement_hash, write_token_hash, display_name,
+		                  blurb, tz, dump, dump_etag, updated_at, expires_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		p.Slug, entitlementHash, writeTokenHash, p.DisplayName, nullIfEmpty(p.Blurb), p.TZ,
+		emptyDump, httpcache.StrongETag([]byte(emptyDump)),
+		nowRFC3339(), expires.UTC().Format(time.RFC3339))
+	if err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed") &&
+		strings.Contains(err.Error(), "page.slug") {
+		return ErrSlugTaken
+	}
+	if err != nil {
+		return fmt.Errorf("create page: %w", err)
+	}
+	return nil
+}
+
+// WriteTokenHash returns the stored hash for a slug, for the auth check.
+func (s *Store) WriteTokenHash(ctx context.Context, slug string) ([]byte, error) {
+	var h []byte
+	err := s.db.QueryRowContext(ctx, `SELECT write_token_hash FROM page WHERE slug = ?`, slug).Scan(&h)
+	if err == sql.ErrNoRows {
+		return nil, ErrNoPage
+	}
+	if err != nil {
+		return nil, fmt.Errorf("write token hash: %w", err)
+	}
+	return h, nil
+}
+
+// Publish replaces the dump and the display fields together, and refreshes
+// expiry. One statement, because the dump carries display.name and the page
+// has a display_name column, and they must not disagree.
+func (s *Store) Publish(ctx context.Context, slug, dump string, p Page, expires time.Time) error {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE page SET dump = ?, dump_etag = ?, display_name = ?, blurb = ?, tz = ?,
+		                updated_at = ?, expires_at = ?
+		WHERE slug = ?`,
+		dump, httpcache.StrongETag([]byte(dump)), p.DisplayName, nullIfEmpty(p.Blurb), p.TZ,
+		nowRFC3339(), expires.UTC().Format(time.RFC3339), slug)
+	if err != nil {
+		return fmt.Errorf("publish: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNoPage
+	}
+	return nil
+}
+
+// DeletePage removes the page. Requests and domains cascade — that is what
+// "owner deletes the page" means in §9, and the FK pragma is on per connection
+// so the cascade actually fires.
+func (s *Store) DeletePage(ctx context.Context, slug string) error {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM page WHERE slug = ?`, slug)
+	if err != nil {
+		return fmt.Errorf("delete page: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNoPage
+	}
+	return nil
+}
+
+// Queue is what the owner's device collects: confirmed requests, oldest first.
+func (s *Store) Queue(ctx context.Context, slug string) ([]Request, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, slug, slot_start, slot_end, state, requester_name,
+		       requester_email, note, hold_until
+		FROM request
+		WHERE slug = ? AND state = 'confirmed' AND hold_released_at IS NULL
+		ORDER BY confirmed_at ASC`, slug)
+	if err != nil {
+		return nil, fmt.Errorf("queue: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Request
+	for rows.Next() {
+		var r Request
+		var name, email, note sql.NullString
+		if err := rows.Scan(&r.ID, &r.Slug, &r.SlotStart, &r.SlotEnd, &r.State,
+			&name, &email, &note, &r.HoldUntil); err != nil {
+			return nil, fmt.Errorf("queue: %w", err)
+		}
+		r.Name, r.Email, r.Note = name.String, email.String, note.String
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// Resolve moves a confirmed request to accepted or declined.
+//
+// Conditional on state = 'confirmed', so a second resolve — a double tap on
+// the device, or two devices racing — matches nothing rather than flipping the
+// answer. The slug is part of the WHERE so a write token for one page cannot
+// resolve a request on another.
+func (s *Store) Resolve(ctx context.Context, slug, id, decision string, purgeAfter time.Time) (bool, error) {
+	if decision != "accepted" && decision != "declined" {
+		return false, fmt.Errorf("resolve: bad decision %q", decision)
+	}
+	// A declined request releases its hold immediately (§4b). An accepted one
+	// keeps it: the slot is a real event now.
+	release := ""
+	if decision == "declined" {
+		release = nowRFC3339()
+	}
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE request
+		SET state = ?, resolved_at = ?, purge_after = ?,
+		    hold_released_at = CASE WHEN ? = '' THEN hold_released_at ELSE ? END
+		WHERE id = ? AND slug = ? AND state = 'confirmed'`,
+		decision, nowRFC3339(), purgeAfter.UTC().Format(time.RFC3339),
+		release, release, id, slug)
+	if err != nil {
+		return false, fmt.Errorf("resolve: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	return n == 1, nil
+}
+
+// Sweep is retention (§10) as two statements, run on a timer.
+//
+// First: holds that lapsed. An unconfirmed request past hold_until becomes
+// expired and releases its slot, which is what frees the partial unique index
+// so somebody else can ask. Second: anything past its purge_after is deleted,
+// whatever state it is in — every row carries its own death date, so there is
+// no state whose expiry somebody forgot to implement.
+func (s *Store) Sweep(ctx context.Context, now time.Time) (expired, purged int64, err error) {
+	ts := now.UTC().Format(time.RFC3339)
+
+	r1, err := s.db.ExecContext(ctx, `
+		UPDATE request
+		SET state = 'expired', hold_released_at = ?
+		WHERE state IN ('unconfirmed', 'confirmed')
+		  AND hold_released_at IS NULL AND hold_until < ?`, ts, ts)
+	if err != nil {
+		return 0, 0, fmt.Errorf("sweep expire: %w", err)
+	}
+	expired, _ = r1.RowsAffected()
+
+	r2, err := s.db.ExecContext(ctx, `DELETE FROM request WHERE purge_after < ?`, ts)
+	if err != nil {
+		return expired, 0, fmt.Errorf("sweep purge: %w", err)
+	}
+	purged, _ = r2.RowsAffected()
+
+	// Rate-limit rows die with their window. Two days is generous; the point
+	// is that they cannot accumulate.
+	_, _ = s.db.ExecContext(ctx, `DELETE FROM ratelimit WHERE window_start < ?`,
+		now.Add(-48*time.Hour).UTC().Format(time.RFC3339))
+
+	return expired, purged, nil
+}
+
+func nullIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
