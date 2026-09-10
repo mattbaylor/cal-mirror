@@ -45,7 +45,7 @@ func testRoutes(t *testing.T) http.Handler {
 	}
 
 	cfg := config{zone: "askwhen.me", tlsSecret: "s3cret"}
-	return routes(st, cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return routes(st, cfg, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 func do(h http.Handler, method, target string, hdr map[string]string) *httptest.ResponseRecorder {

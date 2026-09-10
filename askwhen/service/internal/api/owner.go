@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/mail"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/store"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/tokens"
 )
@@ -30,7 +31,18 @@ type Owner struct {
 	// TTLResolved is the ceiling on a resolved request — 48h, matching the
 	// trigger in schema.sql. The sweeper purges earlier when delivery confirms.
 	TTLResolved time.Duration
-	Logger      *slog.Logger
+	// Notify sends the requester the outcome. Nil means log and carry on,
+	// which is a box without a Postal key, never production.
+	Notify Notifier
+	Logger *slog.Logger
+}
+
+// Notifier is the three ways a request ends, as email. *mail.Postal is the
+// one that sends; tests and keyless boxes substitute one that does not.
+type Notifier interface {
+	Accepted(ctx context.Context, to string, ev mail.Event) error
+	Declined(ctx context.Context, to string, ev mail.Event) error
+	NoResponse(ctx context.Context, to string, ev mail.Event) error
 }
 
 // authenticate checks the bearer token against the page's stored hash.
@@ -336,19 +348,55 @@ func (o *Owner) Resolve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, err := o.Store.Resolve(r.Context(), in.Slug, id, state, time.Now().Add(o.TTLResolved))
+	res, err := o.Store.Resolve(r.Context(), in.Slug, id, state, time.Now().Add(o.TTLResolved))
 	if err != nil {
 		o.Logger.Error("owner: resolve", "err", err)
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	if !ok {
+	if res == nil {
 		// Already resolved, expired, or not this page's. One answer.
 		http.NotFound(w, r)
 		return
 	}
 	o.Logger.Info("owner: resolved", "slug", in.Slug, "decision", state)
+
+	// The answer is recorded before the email goes, and a failed send does not
+	// unrecord it: the owner's device has already written the event, and a 5xx
+	// here would have it retry a resolve that now 404s. The row keeps the
+	// address for 48 hours for exactly this case (decisions.md), and the send
+	// is logged loudly enough to be found in that window.
+	if o.Notify != nil && res.Email != "" {
+		ev := eventFor(*res)
+		var err error
+		if state == "accepted" {
+			err = o.Notify.Accepted(r.Context(), res.Email, ev)
+		} else {
+			err = o.Notify.Declined(r.Context(), res.Email, ev)
+		}
+		if err != nil {
+			o.Logger.Error("owner: notify failed; address held 48h", "id", res.ID, "decision", state, "err", err)
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// eventFor is the one place a stored request becomes something a calendar can
+// hold. Slot timestamps are RFC 3339 by schema CHECK, so a parse failure here
+// is a bug rather than input, and the zero time it leaves is visible in the
+// mail rather than hidden behind an error nobody would act on.
+func eventFor(r store.Resolved) mail.Event {
+	start, _ := time.Parse(time.RFC3339, r.SlotStart)
+	end, _ := time.Parse(time.RFC3339, r.SlotEnd)
+	return mail.Event{
+		UID:           r.ID,
+		OwnerName:     r.DisplayName,
+		RequesterName: r.Name,
+		Start:         start,
+		End:           end,
+		TZ:            r.TZ,
+		Note:          r.Note,
+	}
 }
 
 // ------------------------------------------------------------------ helpers
@@ -366,7 +414,7 @@ func newSlug() string {
 }
 
 // Sweeper runs Store.Sweep on an interval until ctx ends.
-func Sweeper(ctx context.Context, st *store.Store, every time.Duration, log *slog.Logger) {
+func Sweeper(ctx context.Context, st *store.Store, every, confirmedFor time.Duration, notify Notifier, log *slog.Logger) {
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
@@ -374,13 +422,22 @@ func Sweeper(ctx context.Context, st *store.Store, every time.Duration, log *slo
 		case <-ctx.Done():
 			return
 		case now := <-t.C:
-			expired, purged, err := st.Sweep(ctx, now)
+			res, err := st.Sweep(ctx, now, confirmedFor)
 			if err != nil {
 				log.Error("sweep", "err", err)
 				continue
 			}
-			if expired > 0 || purged > 0 {
-				log.Info("sweep", "expired", expired, "purged", purged)
+			if res.Lapsed > 0 || res.Released > 0 || res.Purged > 0 || len(res.NoResponse) > 0 {
+				log.Info("sweep", "lapsed", res.Lapsed, "released", res.Released,
+					"purged", res.Purged, "no_response", len(res.NoResponse))
+			}
+			for _, r := range res.NoResponse {
+				if notify == nil || r.Email == "" {
+					continue
+				}
+				if err := notify.NoResponse(ctx, r.Email, eventFor(r)); err != nil {
+					log.Error("sweep: no-response notify failed", "id", r.ID, "err", err)
+				}
 			}
 		}
 	}
