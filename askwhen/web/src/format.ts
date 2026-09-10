@@ -9,8 +9,34 @@
 // handed one. Every function that needs "now" takes it as an argument, so a
 // test can stand anywhere in time.
 
+import type { PolicyDump, Slot } from './generated/policy-dump.ts';
+
+/** One slot, localised for the requester: what the picker renders. */
+export interface Entry {
+  slot: Slot;
+  start: Date;
+  end: Date;
+  /** "9:00 AM", or "1:30 AM MDT" on a day the clock falls back. */
+  time: string;
+  endTime: string;
+  /** The owner's local time for this start, when their zone differs. */
+  ownerTime: string | null;
+  /** Set only on a repeated-hour day; the short zone name in force. */
+  zone?: string;
+}
+
+/** One local day of entries. */
+export interface Day {
+  key: string;
+  midnight: Date;
+  entries: Entry[];
+  repeatedHour: boolean;
+}
+
+export type Freshness = { level: 'green' | 'amber' | 'red'; text: string; hours?: number };
+
 /** The zone the requester is in, unless a caller pins one (tests, gallery). */
-export function requesterZone(explicit) {
+export function requesterZone(explicit?: string | null): string {
   if (explicit) return explicit;
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -19,9 +45,9 @@ export function requesterZone(explicit) {
   }
 }
 
-function partsOf(date, zone, options) {
+function partsOf(date: Date, zone: string, options: Intl.DateTimeFormatOptions): Record<string, string> {
   const fmt = new Intl.DateTimeFormat('en-US', { timeZone: zone, ...options });
-  const out = {};
+  const out: Record<string, string> = {};
   for (const part of fmt.formatToParts(date)) out[part.type] = part.value;
   return out;
 }
@@ -33,13 +59,13 @@ function partsOf(date, zone, options) {
  * adjusting by a fixed offset is wrong twice a year, and wrong permanently for
  * the half-hour and three-quarter-hour zones.
  */
-export function dayKey(date, zone) {
+export function dayKey(date: Date, zone: string): string {
   const p = partsOf(date, zone, { year: 'numeric', month: '2-digit', day: '2-digit' });
   return `${p.year}-${p.month}-${p.day}`;
 }
 
 /** "9:00 AM" or "09:00", whichever the requester's locale actually uses. */
-export function timeLabel(date, zone, locale) {
+export function timeLabel(date: Date, zone: string, locale?: string): string {
   return new Intl.DateTimeFormat(locale, {
     timeZone: zone,
     hour: 'numeric',
@@ -48,7 +74,7 @@ export function timeLabel(date, zone, locale) {
 }
 
 /** "MDT", "GMT+5:30", "NZST" — the short zone name for this instant. */
-export function zoneLabel(date, zone, locale) {
+export function zoneLabel(date: Date, zone: string, locale?: string): string {
   const p = partsOf(date, zone, { timeZoneName: 'short' });
   if (p.timeZoneName) return p.timeZoneName;
   return new Intl.DateTimeFormat(locale, { timeZone: zone, timeZoneName: 'short' })
@@ -59,7 +85,7 @@ export function zoneLabel(date, zone, locale) {
 }
 
 /** "Wednesday, September 2" — the requester's locale decides the shape. */
-export function dayHeading(date, zone, locale) {
+export function dayHeading(date: Date, zone: string, locale?: string): string {
   return new Intl.DateTimeFormat(locale, {
     timeZone: zone,
     weekday: 'long',
@@ -69,7 +95,7 @@ export function dayHeading(date, zone, locale) {
 }
 
 /** "Today", "Tomorrow", or null. Relative to `now`, in the requester's zone. */
-export function relativeDayName(date, zone, now) {
+export function relativeDayName(date: Date, zone: string, now: Date): string | null {
   const key = dayKey(date, zone);
   if (key === dayKey(now, zone)) return 'Today';
   const tomorrow = new Date(now.getTime() + 86400000);
@@ -84,8 +110,8 @@ export function relativeDayName(date, zone, now) {
  * about DST to compute the thing that tells you about DST, and the days it gets
  * wrong are exactly the days worth testing.
  */
-export function startOfLocalDay(key, zone) {
-  const [y, m, d] = key.split('-').map(Number);
+export function startOfLocalDay(key: string, zone: string): Date {
+  const [y = 0, m = 1, d = 1] = key.split('-').map(Number);
   let lo = Date.UTC(y, m - 1, d) - 18 * 3600000;
   let hi = Date.UTC(y, m - 1, d) + 18 * 3600000;
   while (hi - lo > 60000) {
@@ -97,11 +123,11 @@ export function startOfLocalDay(key, zone) {
 }
 
 /** The Monday-based week key a day belongs to, as its own YYYY-MM-DD. */
-export function weekStartKey(key, zone, weekStartsOn = 1) {
+export function weekStartKey(key: string, zone: string, weekStartsOn = 1): string {
   const midnight = startOfLocalDay(key, zone);
   const p = partsOf(midnight, zone, { weekday: 'short' });
-  const order = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  const back = (order[p.weekday] - weekStartsOn + 7) % 7;
+  const order: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const back = ((order[p.weekday ?? ''] ?? 0) - weekStartsOn + 7) % 7;
   // Step whole local days backwards. Subtracting 86400000 repeatedly would
   // drift across a DST change; re-deriving the key each step cannot.
   let cursor = key;
@@ -112,10 +138,10 @@ export function weekStartKey(key, zone, weekStartsOn = 1) {
 }
 
 /** The seven day-keys of the week starting at `startKey`. */
-export function weekDayKeys(startKey, zone) {
+export function weekDayKeys(startKey: string, zone: string): string[] {
   const keys = [startKey];
   for (let i = 1; i < 7; i++) {
-    const prev = startOfLocalDay(keys[i - 1], zone);
+    const prev = startOfLocalDay(keys[i - 1] ?? startKey, zone);
     keys.push(dayKey(new Date(prev.getTime() + 36 * 3600000), zone));
   }
   return keys;
@@ -130,16 +156,21 @@ export function weekDayKeys(startKey, zone) {
  * which. On such a day every time is qualified with the zone in force at that
  * instant: "1:30 AM MDT" and "1:30 AM MST".
  */
-export function groupByDay(slots, zone, { locale, ownerZone } = {}) {
-  const byKey = new Map();
+export function groupByDay(
+  slots: Slot[],
+  zone: string,
+  { locale, ownerZone }: { locale?: string; ownerZone?: string } = {},
+): Day[] {
+  const byKey = new Map<string, Entry[]>();
 
   for (const slot of slots) {
     const start = new Date(slot.s);
     const end = new Date(slot.e);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
     const key = dayKey(start, zone);
-    if (!byKey.has(key)) byKey.set(key, []);
-    byKey.get(key).push({
+    const list = byKey.get(key) ?? [];
+    byKey.set(key, list);
+    list.push({
       slot,
       start,
       end,
@@ -149,14 +180,14 @@ export function groupByDay(slots, zone, { locale, ownerZone } = {}) {
     });
   }
 
-  const days = [];
+  const days: Day[] = [];
   for (const key of [...byKey.keys()].sort()) {
     // Chronological, by instant. Sorting on the local wall clock looks
     // equivalent and is not: in the fold, 1:30 comes before 1:00 an hour later,
     // and a wall-clock sort interleaves the two passes through the hour.
-    const entries = byKey.get(key).sort((a, b) => a.start - b.start);
+    const entries = (byKey.get(key) ?? []).sort((a, b) => a.start.getTime() - b.start.getTime());
 
-    const seen = new Map();
+    const seen = new Map<string, number>();
     for (const e of entries) seen.set(e.time, (seen.get(e.time) || 0) + 1);
     const repeatedHour = [...seen.values()].some((n) => n > 1);
 
@@ -180,7 +211,7 @@ export function groupByDay(slots, zone, { locale, ownerZone } = {}) {
  * Freshness, per architecture §4a. Shown, never hidden: a red light is the page
  * being straight, and the alternative is quietly serving week-old availability.
  */
-export function freshness(generatedISO, now) {
+export function freshness(generatedISO: string, now: Date): Freshness {
   const generated = new Date(generatedISO);
   if (Number.isNaN(generated.getTime())) {
     return { level: 'red', text: 'Not updated recently. Times shown may be out of date.' };
@@ -192,13 +223,13 @@ export function freshness(generatedISO, now) {
 }
 
 /** A dump past its own `expires` is not availability any more. */
-export function isExpired(dump, now) {
-  const expires = new Date(dump?.expires);
+export function isExpired(dump: Pick<PolicyDump, 'expires'> | null | undefined, now: Date): boolean {
+  const expires = new Date(dump?.expires ?? NaN);
   if (Number.isNaN(expires.getTime())) return false;
   return expires.getTime() <= now.getTime();
 }
 
 /** Slots that have not already started. A snapshot can outlive its own times. */
-export function upcoming(slots, now) {
+export function upcoming(slots: Slot[], now: Date): Slot[] {
   return slots.filter((s) => new Date(s.s).getTime() > now.getTime());
 }

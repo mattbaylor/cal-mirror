@@ -6,27 +6,32 @@
 // in three timezones side by side, at the same instant, and let the difference
 // be read directly.
 
-import './components/request-page.js';
-import example from '../../schema/policy-dump.example.json';
-import denverDst from '../test/fixtures/dst-america-denver.json';
+import './components/request-page.ts';
+import type { PageState, RequestPage } from './components/request-page.ts';
+import type { PolicyDump } from './generated/policy-dump.ts';
+import exampleJson from '../../schema/policy-dump.example.json' with { type: 'json' };
+import denverJson from '../test/fixtures/dst-america-denver.json' with { type: 'json' };
+
+const example = exampleJson as PolicyDump;
+const denverDst = denverJson as PolicyDump;
 
 const NOW = new Date('2026-09-01T18:30:00Z');
 
-const ZONES = [
+const ZONES: [string, string, string][] = [
   ['America/Denver', 'en-US', "The owner's own zone — no second time is shown"],
   ['Asia/Kolkata', 'en-US', 'Half-hour offset; the 2pm slot lands at 1:30 the next morning'],
   ['Pacific/Auckland', 'en-NZ', 'A day ahead throughout, and a 24-hour locale'],
 ];
 
-const aged = (dump, hours) => ({
+const aged = (dump: PolicyDump, hours: number): PolicyDump => ({
   ...dump,
   generated: new Date(NOW.getTime() - hours * 3600000).toISOString(),
   expires: new Date(NOW.getTime() + 12 * 3600000).toISOString(),
 });
 
-const fresh = (dump) => aged(dump, 2);
+const fresh = (dump: PolicyDump) => aged(dump, 2);
 
-function frame(title, note, build) {
+function frame(title: string, note: string, build: () => HTMLElement) {
   const wrap = document.createElement('section');
   wrap.className = 'cell';
   const h = document.createElement('h2');
@@ -40,20 +45,28 @@ function frame(title, note, build) {
   return wrap;
 }
 
-function page(dump, { zone, locale, state, chosen } = {}) {
-  const el = document.createElement('request-page');
+interface Stance {
+  zone?: string;
+  locale?: string;
+  state?: PageState;
+  chosen?: boolean;
+}
+
+function page(dump: PolicyDump | null, { zone, locale, state, chosen }: Stance = {}) {
+  const el = document.createElement('request-page') as RequestPage;
   el.dump = dump;
   el.now = NOW;
   if (zone) el.zone = zone;
   if (locale) el.locale = locale;
+  const first = dump?.slots[0];
   if (state) {
     el.state = state;
     el._email = 'alex@example.com';
-    if (chosen !== false) {
+    if (chosen !== false && first) {
       el._chosen = {
-        slot: dump.slots[0],
-        start: new Date(dump.slots[0].s),
-        end: new Date(dump.slots[0].e),
+        slot: first,
+        start: new Date(first.s),
+        end: new Date(first.e),
         time: '10:00 AM',
         endTime: '10:30 AM',
         ownerTime: null,
@@ -64,7 +77,8 @@ function page(dump, { zone, locale, state, chosen } = {}) {
 }
 
 const grid = document.getElementById('sheet');
-const add = (...nodes) => grid.append(...nodes);
+if (!grid) throw new Error('gallery.html has no #sheet');
+const add = (...nodes: HTMLElement[]) => grid.append(...nodes);
 
 add(
   ...ZONES.map(([zone, locale, note]) =>
@@ -127,7 +141,7 @@ add(
   ),
   frame('No page there', 'The only page a stranger sees cold', () => page(null)),
   frame('One slot just asked for', 'Held renders as taken, not as gone (§4b)', () =>
-    page({ ...fresh(example), held: [example.slots[0].s] }, { zone: 'America/Denver' }),
+    page({ ...fresh(example), held: example.slots.slice(0, 1).map((s) => s.s) }, { zone: 'America/Denver' }),
   ),
   frame('Nothing offered', 'Absence of a slot is not evidence of a meeting', () =>
     page({ ...fresh(example), slots: [] }, { zone: 'America/Denver' }),

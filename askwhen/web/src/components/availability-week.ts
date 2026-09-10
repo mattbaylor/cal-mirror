@@ -1,6 +1,6 @@
 import { LitElement, html, css, nothing } from 'lit';
-import { tokens, base } from '../styles.js';
-import './slot-button.js';
+import { tokens, base } from '../styles.ts';
+import './slot-button.ts';
 import {
   dayHeading,
   dayKey,
@@ -9,7 +9,10 @@ import {
   startOfLocalDay,
   weekDayKeys,
   weekStartKey,
-} from '../format.js';
+  type Day,
+  type Entry,
+} from '../format.ts';
+import type { Slot } from '../generated/policy-dump.ts';
 
 /**
  * A week of offers, in the requester's own timezone.
@@ -21,7 +24,17 @@ import {
  * meeting, and a page that quietly omits days invites the opposite reading.
  */
 export class AvailabilityWeek extends LitElement {
-  static properties = {
+  slots: Slot[] = [];
+  zone = 'UTC';
+  ownerZone?: string;
+  ownerName = '';
+  locale?: string;
+  now?: Date;
+  selected?: string;
+  held: string[] = [];
+  _weekStart: string | null = null;
+
+  static override properties = {
     slots: { type: Array },
     zone: { type: String },
     ownerZone: { type: String },
@@ -33,14 +46,7 @@ export class AvailabilityWeek extends LitElement {
     _weekStart: { state: true },
   };
 
-  constructor() {
-    super();
-    this.slots = [];
-    this.held = [];
-    this._weekStart = null;
-  }
-
-  static styles = [
+  static override styles = [
     tokens,
     base,
     css`
@@ -125,35 +131,37 @@ export class AvailabilityWeek extends LitElement {
   ];
 
   /** Local day-keys that have at least one offer, in order. */
-  get #daysWithSlots() {
+  get #daysWithSlots(): string[] {
     const zone = this.zone;
     return [...new Set(this.slots.map((s) => dayKey(new Date(s.s), zone)))].sort();
   }
 
-  get #weekStart() {
+  get #weekStart(): string {
     if (this._weekStart) return this._weekStart;
     const first = this.#daysWithSlots[0];
     const anchor = first || dayKey(this.now ?? new Date(), this.zone);
     return weekStartKey(anchor, this.zone);
   }
 
-  #weekBounds() {
+  #weekBounds(): { first: string | null; last: string | null } {
     const days = this.#daysWithSlots;
-    if (!days.length) return { first: null, last: null };
+    const first = days[0];
+    const last = days[days.length - 1];
+    if (!first || !last) return { first: null, last: null };
     return {
-      first: weekStartKey(days[0], this.zone),
-      last: weekStartKey(days[days.length - 1], this.zone),
+      first: weekStartKey(first, this.zone),
+      last: weekStartKey(last, this.zone),
     };
   }
 
-  #step(direction) {
+  #step(direction: 1 | -1) {
     const keys = weekDayKeys(this.#weekStart, this.zone);
-    const pivot = direction > 0 ? keys[6] : keys[0];
+    const pivot = (direction > 0 ? keys[6] : keys[0]) ?? this.#weekStart;
     const anchor = startOfLocalDay(pivot, this.zone).getTime() + direction * 36 * 3600000;
     this._weekStart = weekStartKey(dayKey(new Date(anchor), this.zone), this.zone);
   }
 
-  render() {
+  override render() {
     if (!this.slots.length) {
       return html`<p class="none">
         No times are being offered at the moment. That is all this page knows — it says
@@ -163,7 +171,7 @@ export class AvailabilityWeek extends LitElement {
 
     const now = this.now ?? new Date();
     const locale = this.locale;
-    const grouped = new Map(
+    const grouped = new Map<string, Day>(
       groupByDay(this.slots, this.zone, { locale, ownerZone: this.ownerZone }).map((d) => [d.key, d]),
     );
     // Days already gone are not offers, and a page that opens on two lines of
@@ -202,10 +210,12 @@ export class AvailabilityWeek extends LitElement {
     `;
   }
 
-  #rangeLabel(keys, locale) {
-    if (!keys.length) return '';
-    const from = startOfLocalDay(keys[0], this.zone);
-    const to = startOfLocalDay(keys[keys.length - 1], this.zone);
+  #rangeLabel(keys: string[], locale?: string): string {
+    const firstKey = keys[0];
+    const lastKey = keys[keys.length - 1];
+    if (!firstKey || !lastKey) return '';
+    const from = startOfLocalDay(firstKey, this.zone);
+    const to = startOfLocalDay(lastKey, this.zone);
     // formatRange, not two formats joined by a dash. Hand-assembling this puts
     // the month on whichever side English happens to want it, and gets every
     // other locale — and the month boundary — wrong.
@@ -216,7 +226,7 @@ export class AvailabilityWeek extends LitElement {
     }).formatRange(from, to);
   }
 
-  #renderDay(key, day, now, locale, held) {
+  #renderDay(key: string, day: Day | undefined, now: Date, locale: string | undefined, held: Set<string>) {
     const midnight = startOfLocalDay(key, this.zone);
     const heading = dayHeading(midnight, this.zone, locale);
     const relative = relativeDayName(midnight, this.zone, now);
@@ -248,9 +258,9 @@ export class AvailabilityWeek extends LitElement {
     `;
   }
 
-  #pick(entry) {
+  #pick(entry: Entry) {
     this.dispatchEvent(
-      new CustomEvent('slot-chosen', { detail: entry, bubbles: true, composed: true }),
+      new CustomEvent<Entry>('slot-chosen', { detail: entry, bubbles: true, composed: true }),
     );
   }
 }

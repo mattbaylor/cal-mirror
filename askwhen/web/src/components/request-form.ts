@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from 'lit';
-import { tokens, base } from '../styles.js';
+import { tokens, base } from '../styles.ts';
 
 // Deliberately permissive. The confirmation email is what actually proves an
 // address, so a stricter pattern here only rejects valid addresses — plus
@@ -7,6 +7,16 @@ import { tokens, base } from '../styles.js';
 const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
 
 const NOTE_LIMIT = 500;
+
+/** What the form hands up. `trapped` means the honeypot was filled. */
+export interface RequestDetail {
+  name: string;
+  email: string;
+  note: string;
+  trapped: boolean;
+}
+
+type Errors = { name?: string; email?: string };
 
 /**
  * Who is asking, and what for.
@@ -22,7 +32,15 @@ const NOTE_LIMIT = 500;
  * third-party script to load one.
  */
 export class RequestForm extends LitElement {
-  static properties = {
+  ownerName = '';
+  dayLabel = '';
+  time = '';
+  minutes = 0;
+  busy = false;
+  _errors: Errors = {};
+  _noteLength = 0;
+
+  static override properties = {
     ownerName: { type: String },
     dayLabel: { type: String },
     time: { type: String },
@@ -32,13 +50,7 @@ export class RequestForm extends LitElement {
     _noteLength: { state: true },
   };
 
-  constructor() {
-    super();
-    this._errors = {};
-    this._noteLength = 0;
-  }
-
-  static styles = [
+  static override styles = [
     tokens,
     base,
     css`
@@ -145,7 +157,7 @@ export class RequestForm extends LitElement {
     `,
   ];
 
-  render() {
+  override render() {
     return html`
       <form novalidate @submit=${this.#submit}>
         <div>
@@ -192,7 +204,7 @@ export class RequestForm extends LitElement {
             name="note"
             maxlength=${NOTE_LIMIT}
             aria-describedby="note-count"
-            @input=${(e) => (this._noteLength = e.target.value.length)}
+            @input=${(e: Event) => (this._noteLength = (e.target as HTMLTextAreaElement).value.length)}
           ></textarea>
           <p class="count" id="note-count">${NOTE_LIMIT - this._noteLength} characters left</p>
         </div>
@@ -213,11 +225,13 @@ export class RequestForm extends LitElement {
     `;
   }
 
-  #field(id) {
-    return this.renderRoot.querySelector(`#${id}`);
+  #field(id: 'name' | 'email' | 'note' | 'website'): HTMLInputElement | HTMLTextAreaElement {
+    const el = this.renderRoot.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${id}`);
+    if (!el) throw new Error(`request-form: no #${id} in its own template`);
+    return el;
   }
 
-  #submit(event) {
+  #submit(event: Event) {
     event.preventDefault();
 
     const name = this.#field('name').value.trim();
@@ -225,13 +239,13 @@ export class RequestForm extends LitElement {
     const note = this.#field('note').value.trim();
     const trap = this.#field('website').value;
 
-    const errors = {};
+    const errors: Errors = {};
     if (!name) errors.name = 'Please add a name, so they know who is asking.';
     if (!email) errors.email = 'Please add an email — it is how you get an answer.';
     else if (!LOOKS_LIKE_EMAIL.test(email)) errors.email = 'That does not look like an email address.';
     this._errors = errors;
 
-    const firstBad = Object.keys(errors)[0];
+    const firstBad = (['name', 'email'] as const).find((k) => errors[k]);
     if (firstBad) {
       this.#field(firstBad).focus();
       return;
@@ -240,7 +254,7 @@ export class RequestForm extends LitElement {
     // A filled trap is silently accepted and goes nowhere. Telling a bot it was
     // caught only teaches whoever wrote it to stop filling the field.
     this.dispatchEvent(
-      new CustomEvent('request-submitted', {
+      new CustomEvent<RequestDetail>('request-submitted', {
         detail: { name, email, note, trapped: trap.length > 0 },
         bubbles: true,
         composed: true,

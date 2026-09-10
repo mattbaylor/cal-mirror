@@ -6,6 +6,10 @@
 // checkable by reading the artifact instead of trusting the toolchain.
 //
 // `docs/` stays hand-written and build-step-free. The two do not meet.
+//
+// TypeScript since 10 Sept 2026. esbuild strips the types; it does not check
+// them — `npm run typecheck` (tsc --noEmit) does, and `check` runs it first,
+// so a type error fails the build in CI rather than shipping silently.
 
 import { build } from 'esbuild';
 import { cp, mkdir, rm } from 'node:fs/promises';
@@ -19,8 +23,8 @@ await mkdir(here('dist'), { recursive: true });
 
 await build({
   entryPoints: {
-    app: here('src/main.js'),
-    gallery: here('src/gallery.js'),
+    app: here('src/main.ts'),
+    gallery: here('src/gallery.ts'),
   },
   outdir: here('dist'),
   bundle: true,

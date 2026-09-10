@@ -1,15 +1,24 @@
-import { LitElement, html, css, nothing } from 'lit';
-import { tokens, base } from '../styles.js';
-import './availability-week.js';
-import './request-form.js';
-import './request-state.js';
-import { dayHeading, freshness, isExpired, requesterZone, upcoming } from '../format.js';
-import { submitRequest } from '../service.js';
+import { LitElement, html, css, nothing, type TemplateResult } from 'lit';
+import { tokens, base } from '../styles.ts';
+import './availability-week.ts';
+import './request-form.ts';
+import './request-state.ts';
+import { dayHeading, freshness, isExpired, requesterZone, upcoming, type Entry } from '../format.ts';
+import type { PolicyDump, Slot } from '../generated/policy-dump.ts';
+import { submitRequest, type Submission, type SubmitResult } from '../service.ts';
+import type { RequestDetail } from './request-form.ts';
+import type { RequestStateName } from './request-state.ts';
 
 const STEPS = ['Pick a time', 'Say who you are', 'Confirm your email', 'They answer'];
 // Which step a state panel sits under. Held sends you back to the times; a
 // failed send is still "say who you are"; everything else is the answer.
-const STEP_FOR = { held: 0, failed: 1, 'confirm-your-email': 2 };
+const STEP_FOR: Partial<Record<RequestStateName, number>> = { held: 0, failed: 1, 'confirm-your-email': 2 };
+
+/** The picker's states plus every end state. */
+export type PageState = 'picking' | 'form' | RequestStateName;
+
+/** The call that sends a request; injectable so the gallery and tests can stand in for the service. */
+export type Submit = (slug: string, body: Submission) => Promise<SubmitResult>;
 
 /**
  * The whole request page.
@@ -24,7 +33,17 @@ const STEP_FOR = { held: 0, failed: 1, 'confirm-your-email': 2 };
  * happens in production.
  */
 export class RequestPage extends LitElement {
-  static properties = {
+  dump: PolicyDump | null = null;
+  zone?: string;
+  locale?: string;
+  now?: Date;
+  state: PageState = 'picking';
+  submit?: Submit;
+  _chosen: Entry | null = null;
+  _email = '';
+  _sending = false;
+
+  static override properties = {
     dump: { type: Object },
     zone: { type: String },
     locale: { type: String },
@@ -37,15 +56,7 @@ export class RequestPage extends LitElement {
     _sending: { state: true },
   };
 
-  constructor() {
-    super();
-    this.state = 'picking';
-    this._chosen = null;
-    this._email = '';
-    this._sending = false;
-  }
-
-  static styles = [
+  static override styles = [
     tokens,
     base,
     css`
@@ -219,15 +230,15 @@ export class RequestPage extends LitElement {
     `,
   ];
 
-  get #zone() {
+  get #zone(): string {
     return requesterZone(this.zone);
   }
 
-  get #now() {
+  get #now(): Date {
     return this.now ?? new Date();
   }
 
-  render() {
+  override render() {
     if (!this.dump) return this.#renderMissing();
 
     const dump = this.dump;
@@ -256,12 +267,13 @@ export class RequestPage extends LitElement {
       case 'failed':
       case 'unavailable':
         return this.#shell(dump, this.#renderState(name), STEP_FOR[this.state] ?? 3);
+      case 'picking':
       default:
         return this.#shell(dump, this.#renderPicking(dump, live, name), 0);
     }
   }
 
-  #shell(dump, body, step) {
+  #shell(dump: PolicyDump, body: TemplateResult, step: number | null) {
     const now = this.#now;
     const fresh = freshness(dump.generated, now);
     const name = dump.display?.name || 'this person';
@@ -297,7 +309,7 @@ export class RequestPage extends LitElement {
     `;
   }
 
-  #renderPath(current, name) {
+  #renderPath(current: number, name: string) {
     const labels = [...STEPS];
     labels[3] = `${name} answers`;
     return html`
@@ -316,7 +328,7 @@ export class RequestPage extends LitElement {
     `;
   }
 
-  #renderPicking(dump, live, name) {
+  #renderPicking(dump: PolicyDump, live: Slot[], name: string) {
     const zone = this.#zone;
     return html`
       <h2 class="lede">Pick a time that suits you</h2>
@@ -340,8 +352,9 @@ export class RequestPage extends LitElement {
     `;
   }
 
-  #renderForm(name) {
+  #renderForm(name: string) {
     const chosen = this._chosen;
+    if (!chosen) return this.#renderPicking(this.dump as PolicyDump, [], name);
     const heading = dayHeading(chosen.start, this.#zone, this.locale);
     return html`
       <h2 class="lede">Tell ${name} who is asking</h2>
@@ -349,7 +362,7 @@ export class RequestPage extends LitElement {
       <div class="chosen">
         <div class="when">${heading} at ${chosen.time}</div>
         <div class="sub">
-          ${this.dump.meeting?.minutes} minutes${chosen.ownerTime
+          ${this.dump?.meeting?.minutes} minutes${chosen.ownerTime
             ? ` · ${chosen.ownerTime} where ${name} is`
             : ''}
         </div>
@@ -363,7 +376,7 @@ export class RequestPage extends LitElement {
     `;
   }
 
-  #renderState(name) {
+  #renderState(name: string) {
     const chosen = this._chosen;
     return html`
       <request-state
@@ -395,29 +408,32 @@ export class RequestPage extends LitElement {
     `;
   }
 
-  #chooseSlot(event) {
+  #chooseSlot(event: CustomEvent<Entry>) {
     this._chosen = event.detail;
     this.state = 'form';
     this.#announce();
   }
 
-  async #submit(event) {
+  async #submit(event: CustomEvent<RequestDetail>) {
+    const dump = this.dump;
+    const chosen = this._chosen;
+    if (!dump || !chosen) return;
     // A trapped submission goes up like any other and the service drops it,
     // so the page looks identical to a bot either way.
     this._email = event.detail.email;
     // The service takes the slot's start; it looks the end up in the dump.
-    const body = { ...event.detail, slot: this._chosen?.slot?.s };
+    const body: Submission = { ...event.detail, slot: chosen.slot.s };
     this._sending = true;
-    const result = await (this.submit ?? submitRequest)(this.dump.slug, body);
+    const result = await (this.submit ?? submitRequest)(dump.slug, body);
     this._sending = false;
     if (result.ok) {
       this.state = 'confirm-your-email';
     } else {
       // held and slot both mean "not that time"; the rest mean "not right now".
-      if (result.reason === 'held' && this._chosen?.slot?.s) {
+      if (result.reason === 'held') {
         // The dump we hold predates that hold. Show it the way a fresh
         // fetch would, without making one.
-        this.dump = { ...this.dump, held: [...(this.dump.held ?? []), this._chosen.slot.s] };
+        this.dump = { ...dump, held: [...(dump.held ?? []), chosen.slot.s] };
       }
       this.state = result.reason === 'held' || result.reason === 'slot' ? 'held'
         : result.reason === 'gone' ? 'unavailable'
@@ -436,8 +452,8 @@ export class RequestPage extends LitElement {
    *  without doing this leaves a keyboard user where the old content was. */
   #announce() {
     this.updateComplete.then(() => {
-      const target = this.renderRoot.querySelector('h2.lede, request-state');
-      if (target && 'focus' in target) {
+      const target = this.renderRoot.querySelector<HTMLElement>('h2.lede, request-state');
+      if (target) {
         target.setAttribute('tabindex', '-1');
         target.focus({ preventScroll: false });
       }

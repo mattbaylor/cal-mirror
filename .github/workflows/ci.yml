@@ -85,18 +85,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          # 24: the tests are TypeScript and run under Node's own type
+          # stripping, which is unflagged from 22.18 and settled by 24.
+          node-version: '24'
           cache: npm
           cache-dependency-path: askwhen/web/package-lock.json
       - name: Install
         working-directory: askwhen/web
         run: npm ci
+      - name: Types from the schema, then tsc
+        working-directory: askwhen/web
+        run: npm run typecheck
+      - name: The generated types are the committed ones
+        # gen-types.mjs writes src/generated/ from the schema. If the schema
+        # changed and the commit did not carry the regenerated file, the
+        # editor and the build would disagree about the dump's shape.
+        working-directory: askwhen/web
+        run: git diff --exit-code -- src/generated/
       - name: Timezone and DST tests
         working-directory: askwhen/web
         run: npm test
       - name: Build
         working-directory: askwhen/web
-        run: npm run build
+        run: node build.mjs
       - name: Prove the page reaches nothing off-origin
         working-directory: askwhen/web
         run: node test/no-network.mjs

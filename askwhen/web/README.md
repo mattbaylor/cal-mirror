@@ -11,7 +11,7 @@ page, and the copy here should never drift back.
 
 ```
 npm install
-npm run check     # build, then the tests, then the no-network assertion
+npm run check     # types from the schema, tsc, build, tests, the no-network assertion
 npm run build     # dist/index.html + dist/app.js + the contact sheet
 ```
 
@@ -35,20 +35,46 @@ turn dynamic `import()` into a network request the grep could not see.
 `docs/` at the repo root stays hand-written and build-step-free. The two do not
 meet.
 
+## TypeScript
+
+Since 10 September 2026 (Matt: "I was expecting TypeScript"). Strict, and
+checked rather than merely stripped: `npm run typecheck` runs `tsc --noEmit`
+over `src/` and `test/`, and `check` runs it before anything else, so a type
+error fails CI rather than shipping as a runtime surprise. esbuild does the
+emitting; Node runs the tests directly with its own type stripping, so there
+is still no test runner and no build step in front of them.
+
+**The dump's type is generated from the schema**, not written by hand:
+`gen-types.mjs` turns `schema/policy-dump.schema.json` into
+`src/generated/policy-dump.ts`. That is the part worth more than a language
+preference. A hand-written type beside the schema is a second copy that can
+quietly disagree — and the disagreement would be silent, because both would
+compile. Generated, a field added to the schema fails to type-check here until
+the code handles it, and a field the code reaches for that the schema does not
+have is a compile error. The output is committed so editors see it; CI
+regenerates and diffs, so it cannot go stale.
+
+`useDefineForClassFields` is off in `tsconfig.json`: Lit's reactive
+properties are accessors on the prototype, and with define semantics a class
+field would shadow them. One setting, rather than `declare` on forty fields.
+
 ## Layout
 
 ```
-src/format.js            every timezone question, pure and exhaustively tested
-src/dump.js              where a dump comes from — fetch on the site, bundled on file://
-src/service.js           the two same-origin calls, and the only file that makes them
-src/styles.js            shared tokens; the palette the marketing site uses
-src/components/          request-page, availability-week, slot-button,
-                         request-form, request-state
-src/main.js              the entry point: slug in, page out
-src/gallery.js           the contact sheet
-test/format.test.mjs     the three-timezone and DST claims
-test/service.test.mjs    the service contract, against a stand-in for it
-test/no-network.mjs      the privacy claim, asserted against the built bundle
+src/format.ts                    every timezone question, pure and exhaustively tested
+src/generated/policy-dump.ts     the dump's type, from the schema — DO NOT EDIT
+src/slug.ts                      which page the URL names; pure
+src/dump.ts                      where a dump comes from — fetch on the site, bundled on file://
+src/service.ts                   the two same-origin calls, and the only file that makes them
+src/styles.ts                    shared tokens; the palette the marketing site uses
+src/components/                  request-page, availability-week, slot-button,
+                                 request-form, request-state
+src/main.ts                      the entry point: slug in, page out
+src/gallery.ts                   the contact sheet
+gen-types.mjs                    schema → src/generated
+test/format.test.ts              the three-timezone and DST claims
+test/service.test.ts             the service contract, against a stand-in for it
+test/no-network.mjs              the privacy claim, asserted against the built bundle
 ```
 
 ## What step 2 does and does not do
