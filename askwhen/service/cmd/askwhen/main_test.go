@@ -185,3 +185,20 @@ func TestReadSecretReportsAMissingFile(t *testing.T) {
 		t.Fatal("a missing secret file was not reported")
 	}
 }
+
+func TestTheBareDomainGoesToTheProductSite(t *testing.T) {
+	h := testRoutes(t)
+	w := do(h, http.MethodGet, "/", nil)
+	if w.Code != http.StatusMovedPermanently || w.Header().Get("Location") != "https://calendarmirror.com/" {
+		t.Fatalf("/ -> %d %s", w.Code, w.Header().Get("Location"))
+	}
+	if !strings.Contains(w.Header().Get("Cache-Control"), "max-age=86400") {
+		t.Fatalf("a permanent redirect with no cache bound is a decision nobody can undo: %q", w.Header().Get("Cache-Control"))
+	}
+	// Only the root. A slug-shaped path is a page, and must not be sent away.
+	for _, p := range []string{"/x7f2k9", "/p/x7f2k9.json", "/healthz"} {
+		if w := do(h, http.MethodGet, p, nil); w.Code == http.StatusMovedPermanently {
+			t.Fatalf("%s was redirected", p)
+		}
+	}
+}
