@@ -37,6 +37,16 @@ public enum AcceptOutcome: Equatable, Sendable {
     case writtenButNotResolved(eventIdentifier: String, AskwhenError)
 }
 
+/// What the coordinator needs from a calendar, and all it may see of one.
+/// `MirrorEngine` conforms; this protocol exists so the coordinator stays
+/// EventKit-free and builds into the menu-bar app with the rest of the pure
+/// Kit (see build-ui.sh, which compiles everything but `MirrorEngine.swift`).
+public protocol CalendarAccess: AnyObject {
+    func busyIntervals(in calendars: [CalRef], from: Date, to: Date) -> [BusyInterval]
+    func writeAcceptedEvent(requestID: String, title: String, location: String?, notes: String?,
+                            start: Date, end: Date, into ref: CalRef) throws -> String
+}
+
 /// The device side of the dead drop, in the order the architecture (§6) lists:
 /// publish, collect, resolve. Holds no state of its own — everything it
 /// remembers is in the `RequestPageConfig` it is handed, so the caller saves
@@ -45,7 +55,7 @@ public enum AcceptOutcome: Equatable, Sendable {
 /// One instance per app, like `MirrorEngine`. Not thread-safe; the caller
 /// serialises calls the way it serialises syncs.
 public final class RequestPageCoordinator: @unchecked Sendable {
-    private let engine: MirrorEngine
+    private let engine: CalendarAccess
     private let client: AskwhenClient
     private let tokens: TokenStore
     /// Where the engine holds its calendar events. Only a pure caller — a test,
@@ -53,7 +63,7 @@ public final class RequestPageCoordinator: @unchecked Sendable {
     public typealias BusySource = (_ calendars: [CalRef], _ from: Date, _ to: Date) -> [BusyInterval]
     private let busySource: BusySource
 
-    public init(engine: MirrorEngine, client: AskwhenClient = AskwhenClient(), tokens: TokenStore,
+    public init(engine: CalendarAccess, client: AskwhenClient = AskwhenClient(), tokens: TokenStore,
                 busySource: BusySource? = nil) {
         self.engine = engine
         self.client = client

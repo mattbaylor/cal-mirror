@@ -1328,7 +1328,14 @@ do {
     let t = FakeTransport()
     let tokens = InMemoryTokenStore()
     nonisolated(unsafe) var busy: [BusyInterval] = []
-    let coord = RequestPageCoordinator(engine: MirrorEngine(),
+    // Never reached: every path exercised here stops before a calendar write,
+    // and busy intervals come from the closure. A stub keeps EventKit out.
+    final class NoCalendar: CalendarAccess {
+        func busyIntervals(in: [CalRef], from: Date, to: Date) -> [BusyInterval] { [] }
+        func writeAcceptedEvent(requestID: String, title: String, location: String?, notes: String?,
+                                start: Date, end: Date, into ref: CalRef) throws -> String { fatalError("not in cmk-check") }
+    }
+    let coord = RequestPageCoordinator(engine: NoCalendar(),
                                        client: AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t),
                                        tokens: tokens, busySource: { _, _, _ in busy })
     var page = RequestPageConfig(policy: reqPolicy(weekdays: [.wed]), displayName: "Matt Baylor",

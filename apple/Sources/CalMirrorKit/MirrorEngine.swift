@@ -35,7 +35,7 @@ public struct MirrorResult: Identifiable, Sendable {
 /// `@unchecked Sendable`: the store and `lastOwned` are touched only during a
 /// sync, and callers serialize syncs (the Store's `!syncing` guard), so the one
 /// long-lived engine can be handed to a background task safely.
-public final class MirrorEngine: @unchecked Sendable {
+public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
     private let store = EKEventStore()
     /// Owned-copy count from each mirror's last successful sync, used by
     /// `SnapshotGuard` to veto reconciling against a collapsed/stale view.
