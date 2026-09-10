@@ -28,6 +28,7 @@ import (
 
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/api"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/mail"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/store"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/tlsauth"
 )
@@ -65,6 +66,9 @@ type config struct {
 	pepper       []byte
 	origin       string
 	trustedProxy string
+	postalURL    string
+	postalKey    string
+	mailFrom     string
 }
 
 func loadConfig() (config, error) {
@@ -98,6 +102,16 @@ func loadConfig() (config, error) {
 	}
 	c.pepper = []byte(pepper)
 
+	// Postal, by API rather than SMTP. The key is a server credential held in
+	// Infisical as postal_api_key and mounted as a file, like the others.
+	c.postalURL = envOr("AW_POSTAL_URL", "https://dlvr.rehosted.us")
+	c.mailFrom = envOr("AW_MAIL_FROM", "askwhen.me <no-reply@askwhen.me>")
+	key, err := readSecret("AW_POSTAL_API_KEY_FILE", "AW_POSTAL_API_KEY")
+	if err != nil {
+		return c, err
+	}
+	c.postalKey = key
+
 	// Not fatal, and deliberately so: the service is useful without custom
 	// domains, and refusing to start would take the whole product down over a
 	// tier feature. tlsauth already refuses everything when the secret is empty,
@@ -115,6 +129,9 @@ func run(log *slog.Logger) error {
 	}
 	if len(cfg.pepper) == 0 {
 		log.Warn("no pepper configured; every write path will refuse")
+	}
+	if cfg.postalKey == "" {
+		log.Warn("no Postal API key configured; confirmation links will be logged, not sent")
 	}
 
 	ctx := context.Background()
@@ -171,6 +188,19 @@ func run(log *slog.Logger) error {
 	}
 }
 
+// deliverer sends through Postal when a key is configured, and otherwise logs
+// the link so the loop can still be exercised by hand on a box without one.
+func deliverer(cfg config, log *slog.Logger) func(context.Context, string, string) error {
+	if cfg.postalKey == "" {
+		return func(ctx context.Context, to, url string) error {
+			log.Info("deliver (no Postal key): confirmation link", "url", url)
+			return nil
+		}
+	}
+	p := &mail.Postal{BaseURL: cfg.postalURL, APIKey: cfg.postalKey, From: cfg.mailFrom}
+	return p.Confirmation
+}
+
 func routes(st *store.Store, cfg config, log *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
@@ -215,13 +245,8 @@ func routes(st *store.Store, cfg config, log *slog.Logger) http.Handler {
 		RatePerIP:      10,
 		RateWindow:     time.Hour,
 		TrustedProxy:   cfg.trustedProxy,
-		// Step 5 supplies real delivery. Until then the confirmation link is
-		// logged, which is enough to exercise the whole loop by hand.
-		Deliver: func(ctx context.Context, to, url string) error {
-			log.Info("deliver (stub): confirmation link", "url", url)
-			return nil
-		},
-		Logger: log,
+		Deliver:        deliverer(cfg, log),
+		Logger:         log,
 	})
 
 	return mux

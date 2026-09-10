@@ -1,5 +1,17 @@
 # Mail — the failure that looks like nobody wanting to meet you
 
+> **Superseded in most particulars, 10 Sept 2026.** `dlvr` is Postal, and the
+> service talks to it over Postal's HTTP API rather than SMTP. The domain is set
+> up in Postal (org `askwhen.me`, server `main`) and Postal generated the DKIM
+> key and selector itself — there is no `openssl` ceremony. The DNS records are
+> live and verified by Postal: SPF uses `include:spf.dlvr.rehosted.us -all`
+> (the loop was fixed on 4 Sept), the return path is Postal's own
+> `psrp.askwhen.me → rp.dlvr.rehosted.us`, MX points at Postal, and DMARC
+> reports go to `dmarc@thebaylors.org` with the cross-domain authorisation
+> record in that zone. The *reasoning* below — alignment, why the signing key is
+> not on the app host, why `From:` is `askwhen.me` — is still right. The
+> procedure is not, and most of this file is procedure.
+>
 > **Read [`verified.md`](verified.md) first.** As of 2 Sept 2026 the live DNS
 > says two steps here are already done, and that `rehosted.us`'s own SPF record
 > contains a self-referential include which evaluates to `permerror`. This
