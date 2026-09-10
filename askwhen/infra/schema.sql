@@ -206,10 +206,14 @@ CREATE TABLE IF NOT EXISTS request (
 -- address left to resend to, and the requester never learns they were accepted.
 -- 48 hours is the smallest window that keeps delivery honest; it is a ceiling,
 -- not a target, and the sweeper purges earlier when delivery confirms.
+-- Both sides pass through datetime(), and that is not decoration. The columns
+-- hold RFC 3339 ("2026-09-12T17:20:15Z") while datetime() emits SQLite's own
+-- form ("2026-09-12 17:20:15"); compared as strings, 'T' sorts after ' ' and
+-- every resolve tripped the ceiling. Found by the first resolve test that ran.
 CREATE TRIGGER IF NOT EXISTS request_purge_ceiling_insert
 BEFORE INSERT ON request
 WHEN NEW.resolved_at IS NOT NULL
-     AND NEW.purge_after > datetime(NEW.resolved_at, '+48 hours')
+     AND datetime(NEW.purge_after) > datetime(NEW.resolved_at, '+48 hours')
 BEGIN
   SELECT RAISE(ABORT, 'purge_after exceeds the 48h ceiling for a resolved request');
 END;
@@ -217,7 +221,7 @@ END;
 CREATE TRIGGER IF NOT EXISTS request_purge_ceiling_update
 BEFORE UPDATE ON request
 WHEN NEW.resolved_at IS NOT NULL
-     AND NEW.purge_after > datetime(NEW.resolved_at, '+48 hours')
+     AND datetime(NEW.purge_after) > datetime(NEW.resolved_at, '+48 hours')
 BEGIN
   SELECT RAISE(ABORT, 'purge_after exceeds the 48h ceiling for a resolved request');
 END;

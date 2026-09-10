@@ -659,3 +659,40 @@ func TestOnlyOfferedSlotsCanBeAskedFor(t *testing.T) {
 		t.Fatalf("request table is gone: %v", err)
 	}
 }
+
+func TestThe48HourCeilingWorksWithRFC3339Timestamps(t *testing.T) {
+	// The trigger compares purge_after against resolved_at + 48h. The columns
+	// hold RFC 3339 and datetime() emits SQLite's own format; compared as
+	// strings the 'T' sorts after the ' ' and every resolve was refused. Both
+	// sides now pass through datetime(). This pins that.
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+
+	base := time.Date(2026, 9, 10, 17, 0, 0, 0, time.UTC)
+	insert := func(id string, resolved, purge time.Time) error {
+		_, err := s.DB().Exec(`
+			INSERT INTO request (id, slug, slot_start, slot_end, state, created_at,
+			                     resolved_at, hold_until, purge_after)
+			VALUES (?, 'x7f2k9', ?, '2026-09-12T16:30:00Z', 'accepted', ?, ?, ?, ?)`,
+			id, "2026-09-12T"+id+":00:00Z", base.Format(time.RFC3339),
+			resolved.Format(time.RFC3339), base.Add(time.Hour).Format(time.RFC3339),
+			purge.Format(time.RFC3339))
+		return err
+	}
+
+	// Exactly at the ceiling: allowed.
+	if err := insert("10", base, base.Add(48*time.Hour)); err != nil {
+		t.Fatalf("purge_after at exactly +48h was refused: %v", err)
+	}
+	// Under it: allowed.
+	if err := insert("11", base, base.Add(47*time.Hour)); err != nil {
+		t.Fatalf("purge_after at +47h was refused: %v", err)
+	}
+	// Over it: refused, which is the whole point of the trigger.
+	err := insert("12", base, base.Add(48*time.Hour+time.Second))
+	if err == nil || !strings.Contains(err.Error(), "48h ceiling") {
+		t.Fatalf("purge_after at +48h1s was not refused by the ceiling: %v", err)
+	}
+	_ = ctx
+}
