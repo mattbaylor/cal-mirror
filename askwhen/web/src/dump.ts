@@ -7,14 +7,15 @@
 // answer instead. Nothing above this file changes either way: the components
 // take a parsed dump and have no opinion about how it arrived.
 
-import example from '../../schema/policy-dump.example.json';
-import { fetchDump } from './service.js';
-import { DEFAULT_SLUG, slugFromLocation } from './slug.js';
-import denverDst from '../test/fixtures/dst-america-denver.json';
-import aucklandDst from '../test/fixtures/dst-pacific-auckland.json';
+import example from '../../schema/policy-dump.example.json' with { type: 'json' };
+import type { PolicyDump } from './generated/policy-dump.ts';
+import { fetchDump } from './service.ts';
+import { DEFAULT_SLUG, slugFromLocation, type LocationLike } from './slug.ts';
+import denverDst from '../test/fixtures/dst-america-denver.json' with { type: 'json' };
+import aucklandDst from '../test/fixtures/dst-pacific-auckland.json' with { type: 'json' };
 
-const BUNDLED = new Map(
-  [example, denverDst, aucklandDst].map((dump) => [dump.slug, dump]),
+const BUNDLED = new Map<string, PolicyDump>(
+  ([example, denverDst, aucklandDst] as PolicyDump[]).map((dump) => [dump.slug, dump]),
 );
 
 export { DEFAULT_SLUG, slugFromLocation };
@@ -26,7 +27,7 @@ if (example.slug !== DEFAULT_SLUG) {
 }
 
 /** Every slug the filesystem fallback can render. */
-export function bundledSlugs() {
+export function bundledSlugs(): string[] {
   return [...BUNDLED.keys()];
 }
 
@@ -37,7 +38,7 @@ export function bundledSlugs() {
  * is the common case and must never say *why* it is missing. Lapsed, deleted,
  * expired and never-existed all look identical from out here, deliberately.
  */
-export async function loadDump(slug, loc = globalThis.location) {
+export async function loadDump(slug: string, loc: LocationLike | undefined = globalThis.location): Promise<PolicyDump | null> {
   if (loc?.protocol === 'file:') return BUNDLED.get(slug) ?? null;
   return fetchDump(slug);
 }

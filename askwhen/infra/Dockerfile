@@ -18,11 +18,11 @@
 # request.
 
 # --------------------------------------------------------------- the Lit app
-FROM node:22-alpine AS web
+FROM node:24-alpine AS web
 
 # WORKDIR is /src/web, not /src, so that `schema/` can sit beside it exactly as
 # it does in the repository. The bundle imports the example dump as
-# `../../schema/policy-dump.example.json` (web/src/dump.js), and a build layout
+# `../../schema/policy-dump.example.json` (web/src/dump.ts), and a build layout
 # that does not mirror the source layout means that path resolves here and not
 # there — or the reverse, which is worse because it fails only in CI.
 WORKDIR /src/web

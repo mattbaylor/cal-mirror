@@ -27,16 +27,19 @@ import {
   weekDayKeys,
   weekStartKey,
   zoneLabel,
-} from '../src/format.js';
+} from '../src/format.ts';
+import type { PolicyDump } from '../src/generated/policy-dump.ts';
+import type { Day } from '../src/format.ts';
 
-const read = (p) => JSON.parse(readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8'));
+const read = (p: string): PolicyDump =>
+  JSON.parse(readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8')) as PolicyDump;
 
 const EXAMPLE = read('../../schema/policy-dump.example.json');
 const DENVER_DST = read('./fixtures/dst-america-denver.json');
 const AUCKLAND_DST = read('./fixtures/dst-pacific-auckland.json');
 
 const EN = 'en-US';
-const times = (days) => days.map((d) => [d.key, d.entries.map((e) => e.time)]);
+const times = (days: Day[]) => days.map((d) => [d.key, d.entries.map((e) => e.time)]);
 
 // ---------------------------------------------------------------- day keying
 
@@ -132,13 +135,13 @@ test('fall back: the ambiguous pair really are an hour apart', () => {
   const [mdt, , mst] = days[1].entries;
   assert.equal(mdt.time, '1:00 AM MDT');
   assert.equal(mst.time, '1:00 AM MST');
-  assert.equal(mst.start - mdt.start, 3600000);
+  assert.equal(mst.start.getTime() - mdt.start.getTime(), 3600000);
 });
 
 test('fall back: the day is 25 hours long and nothing spills into the next', () => {
   const start = startOfLocalDay('2026-11-01', 'America/Denver');
   const next = startOfLocalDay('2026-11-02', 'America/Denver');
-  assert.equal((next - start) / 3600000, 25);
+  assert.equal((next.getTime() - start.getTime()) / 3600000, 25);
   const days = groupByDay(DENVER_DST.slots, 'America/Denver', { locale: EN });
   assert.equal(days.length, 2);
   assert.equal(days[1].entries.length, 6);
@@ -147,7 +150,7 @@ test('fall back: the day is 25 hours long and nothing spills into the next', () 
 test('spring forward: a 23-hour day, and no false ambiguity', () => {
   const start = startOfLocalDay('2026-09-27', 'Pacific/Auckland');
   const next = startOfLocalDay('2026-09-28', 'Pacific/Auckland');
-  assert.equal((next - start) / 3600000, 23);
+  assert.equal((next.getTime() - start.getTime()) / 3600000, 23);
 
   const days = groupByDay(AUCKLAND_DST.slots, 'Pacific/Auckland', { locale: EN });
   assert.deepEqual(times(days), [
@@ -226,5 +229,5 @@ test('day headings and relative names follow the requester, not the owner', () =
 test('time labels respect the locale, not a hardcoded 12-hour clock', () => {
   const instant = new Date('2026-09-02T20:00:00Z');
   assert.equal(timeLabel(instant, 'America/Denver', 'en-US'), '2:00 PM');
-  assert.equal(timeLabel(instant, 'en-GB' && 'Europe/London', 'en-GB'), '21:00');
+  assert.equal(timeLabel(instant, 'Europe/London', 'en-GB'), '21:00');
 });

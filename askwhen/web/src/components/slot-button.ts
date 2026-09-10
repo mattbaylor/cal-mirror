@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'lit';
-import { tokens, base } from '../styles.js';
+import { tokens, base } from '../styles.ts';
 
 /**
  * One offerable interval.
@@ -10,7 +10,16 @@ import { tokens, base } from '../styles.js';
  * reader user arriving at "10:00 AM" in a list of forty has no other context.
  */
 export class SlotButton extends LitElement {
-  static properties = {
+  time = '';
+  endTime = '';
+  ownerTime: string | null = null;
+  ownerName = '';
+  dayLabel = '';
+  selected = false;
+  disabled = false;
+  held = false;
+
+  static override properties = {
     time: { type: String },
     endTime: { type: String },
     ownerTime: { type: String },
@@ -21,7 +30,7 @@ export class SlotButton extends LitElement {
     held: { type: Boolean, reflect: true },
   };
 
-  static styles = [
+  static override styles = [
     tokens,
     base,
     css`
@@ -74,7 +83,7 @@ export class SlotButton extends LitElement {
     `,
   ];
 
-  render() {
+  override render() {
     const label = this.held
       ? `${this.dayLabel} at ${this.time} — just asked for, no longer available`
       : `Ask for ${this.dayLabel} at ${this.time}${this.endTime ? ` until ${this.endTime}` : ''}`;

@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from 'lit';
-import { tokens, base } from '../styles.js';
+import { tokens, base } from '../styles.ts';
 
 /**
  * Where a request got to.
@@ -9,7 +9,25 @@ import { tokens, base } from '../styles.js';
  * deliberately not congratulatory — nothing has been agreed yet, and a page
  * that celebrates at this point is making the promise the product refuses to.
  */
-const STATES = {
+/** Every end state the page can land on. The union is the contract. */
+export type RequestStateName =
+  | 'confirm-your-email'
+  | 'submitted'
+  | 'accepted'
+  | 'declined'
+  | 'expired'
+  | 'held'
+  | 'failed'
+  | 'unavailable';
+
+interface Spec {
+  icon: string;
+  title: string;
+  body: (o: { ownerName: string }) => string;
+  tone: 'wait' | 'good' | 'plain';
+}
+
+const STATES: Record<RequestStateName, Spec> = {
   'confirm-your-email': {
     icon: '✉️',
     title: 'Check your email',
@@ -69,7 +87,14 @@ const STATES = {
 };
 
 export class RequestState extends LitElement {
-  static properties = {
+  state: RequestStateName | string = 'unavailable';
+  ownerName = '';
+  dayLabel = '';
+  time = '';
+  email = '';
+  canRetry = false;
+
+  static override properties = {
     state: { type: String },
     ownerName: { type: String },
     dayLabel: { type: String },
@@ -78,7 +103,7 @@ export class RequestState extends LitElement {
     canRetry: { type: Boolean },
   };
 
-  static styles = [
+  static override styles = [
     tokens,
     base,
     css`
@@ -145,8 +170,8 @@ export class RequestState extends LitElement {
     `,
   ];
 
-  render() {
-    const spec = STATES[this.state] ?? STATES.unavailable;
+  override render() {
+    const spec = STATES[this.state as RequestStateName] ?? STATES.unavailable;
     const owner = { ownerName: this.ownerName || 'They' };
 
     return html`

@@ -20,14 +20,27 @@
  * same: there is no page to show. A transient failure is the one of those a
  * reload fixes, and the requester will try that anyway.
  */
-export async function fetchDump(slug) {
+import type { PolicyDump } from './generated/policy-dump.ts';
+
+export type SubmitReason = 'held' | 'slot' | 'rate' | 'gone' | 'failed';
+export type SubmitResult = { ok: true } | { ok: false; reason: SubmitReason };
+
+export interface Submission {
+  slot: string;
+  name: string;
+  email: string;
+  note?: string;
+  trapped?: boolean;
+}
+
+export async function fetchDump(slug: string): Promise<PolicyDump | null> {
   try {
     const res = await fetch(`/p/${slug}.json`, {
       headers: { accept: 'application/json' },
       cache: 'no-cache',
     });
     if (!res.ok) return null;
-    return await res.json();
+    return (await res.json()) as PolicyDump;
   } catch {
     return null;
   }
@@ -45,7 +58,10 @@ export async function fetchDump(slug) {
  * Never throws: the page has a state for every one of these, and an exception
  * would leave it on the form with a disabled button.
  */
-export async function submitRequest(slug, { slot, name, email, note, trapped }) {
+export async function submitRequest(
+  slug: string,
+  { slot, name, email, note, trapped }: Submission,
+): Promise<SubmitResult> {
   try {
     const res = await fetch(`/v1/pages/${slug}/requests`, {
       method: 'POST',
@@ -55,9 +71,9 @@ export async function submitRequest(slug, { slot, name, email, note, trapped }) 
     if (res.status === 202) return { ok: true };
     if (res.status === 404) return { ok: false, reason: 'gone' };
     if (res.status === 429) return { ok: false, reason: 'rate' };
-    let body = null;
+    let body: { reason?: string } | null = null;
     try {
-      body = await res.json();
+      body = (await res.json()) as { reason?: string };
     } catch {
       /* not JSON; fall through */
     }

@@ -5,14 +5,19 @@
   "type": "module",
   "description": "The askwhen.me request page. One app, N pages; a slug selects a dump.",
   "scripts": {
-    "build": "node build.mjs",
-    "test": "node --test 'test/*.test.mjs'",
-    "check": "npm run build && npm test && node test/no-network.mjs"
+    "types": "node gen-types.mjs",
+    "typecheck": "npm run types && tsc && tsc -p tsconfig.test.json",
+    "build": "npm run types && node build.mjs",
+    "test": "node --test 'test/*.test.ts'",
+    "check": "npm run typecheck && node build.mjs && npm test && node test/no-network.mjs"
   },
   "dependencies": {
     "lit": "^3.3.0"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "@types/node": "^22.20.2",
+    "esbuild": "^0.25.0",
+    "json-schema-to-typescript": "^16.0.0",
+    "typescript": "^7.0.2"
   }
 }

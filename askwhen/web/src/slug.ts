@@ -17,7 +17,10 @@ export const DEFAULT_SLUG = 'x7f2k9';
  * Opened from the filesystem there is no service to ask, so the example slug
  * shows a real page rather than the 404.
  */
-export function slugFromLocation(loc = globalThis.location) {
+/** The slice of `Location` this reads; a test passes a literal. */
+export type LocationLike = { protocol?: string; pathname?: string; search?: string };
+
+export function slugFromLocation(loc: LocationLike | undefined = globalThis.location): string {
   const segment = (loc?.pathname ?? '').split('/').filter(Boolean).pop();
   if (segment && /^[a-z0-9]{4,32}$/i.test(segment)) return segment;
   const query = new URLSearchParams(loc?.search ?? '').get('p');

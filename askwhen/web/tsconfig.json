@@ -1,0 +1,25 @@
+{
+  // Type-checking only. esbuild does the emitting (build.mjs), and Node strips
+  // types itself for the tests, so nothing here writes a file.
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": false,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    // Lit's reactive properties are accessors installed on the prototype.
+    // With define semantics a class field would shadow them; `declare` on
+    // every field is the alternative, and one setting beats forty keywords.
+    "useDefineForClassFields": false
+  },
+  "include": ["src/**/*.ts"]
+}

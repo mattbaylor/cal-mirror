@@ -6,19 +6,24 @@
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { fetchDump, submitRequest } from '../src/service.js';
+import { fetchDump, submitRequest } from '../src/service.ts';
 
-let calls;
+// What service.ts actually passes: a plain headers object and a string body.
+type Init = { method?: string; headers: Record<string, string>; body: string; cache?: string };
+type Call = { url: string; init: Init };
+type Answer = { ok: boolean; status: number; headers: Map<string, string>; json: () => Promise<unknown> };
+
+let calls: Call[] = [];
 const realFetch = globalThis.fetch;
 
-function answer(status, body, headers = {}) {
+function answer(status: number, body: unknown, headers: Record<string, string> = {}): Answer {
   return {
     ok: status >= 200 && status < 300,
     status,
     headers: new Map(Object.entries(headers)),
     json: async () => {
       if (typeof body !== 'string') return body;
-      return JSON.parse(body);
+      return JSON.parse(body) as unknown;
     },
   };
 }
@@ -30,13 +35,15 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
-function stub(...answers) {
-  globalThis.fetch = async (url, init) => {
-    calls.push({ url, init });
+function stub(...answers: (Answer | Error)[]) {
+  // The stand-in answers with the four fields service.ts reads; it is not a
+  // whole Response and does not pretend to be.
+  globalThis.fetch = (async (url: string, init: Partial<Init> = {}) => {
+    calls.push({ url, init: { headers: {}, body: '', ...init } });
     const a = answers.shift();
     if (a instanceof Error) throw a;
     return a;
-  };
+  }) as unknown as typeof fetch;
 }
 
 test('fetchDump asks for /p/{slug}.json on this origin and returns the document', async () => {
@@ -103,8 +110,9 @@ test('every status the service returns becomes a reason the page has a state for
 });
 
 test('slugFromLocation: a path slug, a query slug, the host sentinel, or the example on file://', async () => {
-  const { slugFromLocation, DEFAULT_SLUG } = await import('../src/slug.js');
-  const at = (protocol, pathname, search = '') => slugFromLocation({ protocol, pathname, search });
+  const { slugFromLocation, DEFAULT_SLUG } = await import('../src/slug.ts');
+  const at = (protocol: string, pathname: string, search = '') =>
+    slugFromLocation({ protocol, pathname, search });
   assert.equal(at('https:', '/x7f2k9'), 'x7f2k9');
   assert.equal(at('https:', '/x7f2k9/'), 'x7f2k9');
   assert.equal(at('https:', '/', '?p=x7f2k9'), 'x7f2k9');
