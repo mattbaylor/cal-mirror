@@ -151,6 +151,37 @@ the one place the architecture is more accurate rather than less.
 owner already chose — minutes on macOS, the background-refresh interval on iOS.
 One nominated publisher per owner; the others still collect and answer.
 
+**Built, 10 Sept 2026** — `apple/Sources/CalMirrorKit/Booking/`:
+
+- `RequestPageConfig` inside `Config`: slug, policy, display, the two calendar
+  choices, and the publish/poll state. Lenient like `Mirror`; absent on every
+  config that predates it. **The write token is not in it** — `TokenStore`,
+  Keychain in the apps, memory in tests.
+- `PolicyDump.make` is the one publish site, and pins `meeting.minutes` to
+  `policy.slotMinutes` and `display.tz` to `policy.timeZone` — the two
+  carried-forward items from step 1.
+- `PublishPlanner`: PUT only when the offers changed (a content fingerprint
+  with the timestamps pinned, since the wire bytes never repeat) or twelve
+  hours have passed (half the service's dump TTL). A sync cycle that changes
+  nothing sends nothing.
+- `RequestChecker`: the re-check at accept. Overlap with the buffered span, or
+  an all-day event on the day, is a conflict; the owner's own minimum notice is
+  not. Conflicts come with the nearest open alternatives.
+- `AskwhenClient`: the six calls, behind a `Transport` so `cmk-check` exercises
+  every status the service returns without a network. 404 is one answer for
+  three causes, on purpose.
+- `RequestPageCoordinator`: create → publish → collect → accept/decline, in the
+  architecture's order. Accept re-checks, writes (idempotent on the request
+  id, tagged `x-askwhen:` so mirrors copy it like any real event), then
+  resolves; a resolve that fails after the write says so and is safe to retry.
+- `MirrorEngine.busyIntervals` is where the privacy boundary is crossed:
+  title, location, attendees, calendar and account stop there.
+
+**Not built, on purpose:** the UI — the two checkboxes, the settings screen,
+the notification and its Accept/Decline, the conflict sheet — and the entitlement
+hash from StoreKit. Those are look-and-feel and product decisions; the Kit
+exposes everything they need and `cmk-check` covers the rest (385 checks).
+
 ### 5 · Email, double opt-in, proof of work
 
 Double opt-in is the real spam defence and costs nothing extra: the address was

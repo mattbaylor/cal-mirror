@@ -345,6 +345,9 @@ public struct Config: Codable, Equatable, Sendable {
     /// and nobody's existing setup should shift under them on upgrade.
     public var dedupeDestinations: Bool
     public var mirrors: [Mirror]
+    /// The owner's request page, if they have one. Absent on every config that
+    /// predates it, and absent in the file until one is set up.
+    public var requestPage: RequestPageConfig?
 
     /// The floor realtime pins the schedule to. Once changes drive the cycles,
     /// the interval is only a backstop for missed notifications, and it stops
@@ -357,10 +360,10 @@ public struct Config: Codable, Equatable, Sendable {
     /// never silently changes how an existing setup syncs.
     public init(paused: Bool = false, intervalSeconds: Int = 900,
                 realtime: Bool = true, dedupeDestinations: Bool = false,
-                mirrors: [Mirror] = []) {
+                mirrors: [Mirror] = [], requestPage: RequestPageConfig? = nil) {
         self.paused = paused; self.intervalSeconds = intervalSeconds
         self.realtime = realtime; self.dedupeDestinations = dedupeDestinations
-        self.mirrors = mirrors
+        self.mirrors = mirrors; self.requestPage = requestPage
     }
 
     public init(from decoder: Decoder) throws {
@@ -372,6 +375,9 @@ public struct Config: Codable, Equatable, Sendable {
         // realtime, this changes what a calendar ends up containing.
         dedupeDestinations = try c.decodeIfPresent(Bool.self, forKey: .dedupeDestinations) ?? false
         mirrors = try c.decodeIfPresent([Mirror].self, forKey: .mirrors) ?? []
+        // Malformed is treated as absent rather than failing the whole config:
+        // the mirrors must keep syncing whatever state the page block is in.
+        requestPage = try? c.decodeIfPresent(RequestPageConfig.self, forKey: .requestPage)
     }
 
     /// What the scheduler should use as its floor, given the mode.
