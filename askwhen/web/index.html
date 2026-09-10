@@ -8,11 +8,12 @@
          opt-in the owner makes deliberately. See design/decisions.md. -->
     <meta name="robots" content="noindex,nofollow" />
     <title>Ask for a time</title>
-    <!-- Everything this page can do, it does from its own origin. Stated here
-         so it is enforced, not merely intended. -->
+    <!-- Everything this page can do, it does from its own origin: two fetches,
+         both to this host, and nothing else. Stated here so it is enforced,
+         not merely intended; the service sends the same policy as a header. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'"
     />
     <style>
       html,

@@ -45,6 +45,20 @@ const STATES = {
       `Nobody got to it before it lapsed, so the time has been released. Asking again is the whole fix — ${o.ownerName} will see it fresh.`,
     tone: 'plain',
   },
+  held: {
+    icon: '🫣',
+    title: 'Someone just asked for that time',
+    body: () =>
+      'Two people wanted the same slot and the other one got there first. It is held for them while they confirm; the rest of the week is still open.',
+    tone: 'plain',
+  },
+  failed: {
+    icon: '📡',
+    title: 'That did not go through',
+    body: () =>
+      'Nothing was sent. It is probably the connection; trying again in a moment usually does it.',
+    tone: 'plain',
+  },
   unavailable: {
     icon: '🌙',
     title: 'Not currently taking requests',

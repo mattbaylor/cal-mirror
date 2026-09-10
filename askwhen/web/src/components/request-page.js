@@ -4,8 +4,12 @@ import './availability-week.js';
 import './request-form.js';
 import './request-state.js';
 import { dayHeading, freshness, isExpired, requesterZone, upcoming } from '../format.js';
+import { submitRequest } from '../service.js';
 
 const STEPS = ['Pick a time', 'Say who you are', 'Confirm your email', 'They answer'];
+// Which step a state panel sits under. Held sends you back to the times; a
+// failed send is still "say who you are"; everything else is the answer.
+const STEP_FOR = { held: 0, failed: 1, 'confirm-your-email': 2 };
 
 /**
  * The whole request page.
@@ -26,8 +30,11 @@ export class RequestPage extends LitElement {
     locale: { type: String },
     now: { type: Object },
     state: { type: String, reflect: true },
+    /** Injectable for tests and the gallery; defaults to the real call. */
+    submit: { attribute: false },
     _chosen: { state: true },
     _email: { state: true },
+    _sending: { state: true },
   };
 
   constructor() {
@@ -35,6 +42,7 @@ export class RequestPage extends LitElement {
     this.state = 'picking';
     this._chosen = null;
     this._email = '';
+    this._sending = false;
   }
 
   static styles = [
@@ -244,7 +252,10 @@ export class RequestPage extends LitElement {
       case 'accepted':
       case 'declined':
       case 'expired':
-        return this.#shell(dump, this.#renderState(name), this.state === 'confirm-your-email' ? 2 : 3);
+      case 'held':
+      case 'failed':
+      case 'unavailable':
+        return this.#shell(dump, this.#renderState(name), STEP_FOR[this.state] ?? 3);
       default:
         return this.#shell(dump, this.#renderPicking(dump, live, name), 0);
     }
@@ -344,6 +355,7 @@ export class RequestPage extends LitElement {
       </div>
       <request-form
         .ownerName=${name}
+        .busy=${this._sending}
         @request-submitted=${this.#submit}
         @request-cancelled=${this.#restart}
       ></request-form>
@@ -359,7 +371,7 @@ export class RequestPage extends LitElement {
         .email=${this._email}
         .dayLabel=${chosen ? dayHeading(chosen.start, this.#zone, this.locale) : ''}
         .time=${chosen?.time ?? ''}
-        ?canRetry=${this.state === 'declined' || this.state === 'expired'}
+        ?canRetry=${['declined', 'expired', 'held', 'failed'].includes(this.state)}
         @request-restart=${this.#restart}
       ></request-state>
     `;
@@ -388,20 +400,24 @@ export class RequestPage extends LitElement {
     this.#announce();
   }
 
-  #submit(event) {
-    // Step 2 has no service. A trapped submission is accepted here and dropped,
-    // so the page looks identical either way; step 3 is where it stops going
-    // anywhere at all.
+  async #submit(event) {
+    // A trapped submission goes up like any other and the service drops it,
+    // so the page looks identical to a bot either way.
     this._email = event.detail.email;
-    this.state = 'confirm-your-email';
+    // The service takes the slot's start; it looks the end up in the dump.
+    const body = { ...event.detail, slot: this._chosen?.slot?.s };
+    this._sending = true;
+    const result = await (this.submit ?? submitRequest)(this.dump.slug, body);
+    this._sending = false;
+    if (result.ok) {
+      this.state = 'confirm-your-email';
+    } else {
+      // held and slot both mean "not that time"; the rest mean "not right now".
+      this.state = result.reason === 'held' || result.reason === 'slot' ? 'held'
+        : result.reason === 'gone' ? 'unavailable'
+        : 'failed';
+    }
     this.#announce();
-    this.dispatchEvent(
-      new CustomEvent('request-ready', {
-        detail: { ...event.detail, slot: this._chosen?.slot },
-        bubbles: true,
-        composed: true,
-      }),
-    );
   }
 
   #restart() {

@@ -1,10 +1,14 @@
 // The claim that matters most, checked against the artifact rather than the
-// intent: this page talks to nobody.
+// intent: this page talks to nobody but the host it came from.
 //
-// Step 2 is "done when it ... makes no network request of any kind", and a
-// README cannot enforce that. Grepping the built bundle can. It runs on every
-// build, so the first line that reaches for the network fails here rather than
-// in a privacy policy.
+// Step 2 was "makes no network request of any kind", and this file enforced
+// that literally. Step 3 gave the page two calls to make — the dump and the
+// submission — so the claim is now the one that was always meant: nothing
+// leaves for a third party. A README cannot enforce that. Grepping the built
+// bundle can: every `fetch(` must target a same-origin path literal, every
+// other way to start a request is still forbidden, and no absolute URL may
+// appear at all. It runs on every build, so the first line that reaches for
+// somebody else's server fails here rather than in a privacy policy.
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +19,6 @@ const dist = fileURLToPath(new URL('../dist', import.meta.url));
 // Every way a page can start a request. `import(` is here because a dynamic
 // import of a chunk is a network fetch wearing different clothes.
 const FORBIDDEN = [
-  [/\bfetch\s*\(/, 'fetch()'],
   [/XMLHttpRequest/, 'XMLHttpRequest'],
   [/\bWebSocket\b/, 'WebSocket'],
   [/EventSource/, 'EventSource'],
@@ -37,6 +40,16 @@ for (const file of readdirSync(dist)) {
 
   for (const [pattern, label] of FORBIDDEN) {
     if (pattern.test(source)) problems.push(`${file}: uses ${label}`);
+  }
+
+  // fetch() is allowed exactly one shape: a path literal on this origin as
+  // its first argument — `fetch("/p/...")`, `fetch(\`/v1/...\`)`. A variable, a
+  // computed string or anything starting other than "/" is a request whose
+  // destination this check cannot read, and so is refused.
+  for (const call of source.match(/\bfetch\s*\([^)]{0,40}/g) ?? []) {
+    if (!/^fetch\s*\(\s*["'`]\/(?!\/)/.test(call)) {
+      problems.push(`${file}: fetch whose target is not a same-origin path literal: ${call}`);
+    }
   }
 
   for (const match of source.match(URL_PATTERN) ?? []) {
