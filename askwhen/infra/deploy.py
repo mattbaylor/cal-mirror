@@ -138,6 +138,10 @@ def preflight():
 # ---------------------------------------------------------------------- steps
 
 def build():
+    # Debian ships buildx 0.13 and compose 2.40 wants 0.17 before it will hand
+    # a build to bake. The classic path is fine for one Dockerfile; opting out
+    # here beats a note telling the next person to set a variable.
+    os.environ.setdefault("COMPOSE_BAKE", "false")
     act("build the app image", COMPOSE + ["build"])
 
 
