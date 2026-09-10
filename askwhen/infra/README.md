@@ -163,6 +163,7 @@ head -c 32 /dev/urandom | base64 > secrets/pepper
 openssl rand -hex 32 > secrets/tls_auth_secret
 
 chmod 600 secrets/*
+chown 65532:65532 secrets/*   # the container's uid; compose keeps host ownership
 ```
 
 `secrets/` is gitignored at the repository root. `deploy.py preflight` checks

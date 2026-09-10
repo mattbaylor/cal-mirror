@@ -101,14 +101,21 @@ def preflight():
         if not os.path.exists(path):
             fail(f"secrets/{name} missing — see README.md, Secrets")
             continue
-        mode = os.stat(path).st_mode & 0o777
+        st = os.stat(path)
+        mode = st.st_mode & 0o777
         if mode & 0o077:
             # Not fatal to Docker, fatal to the claim that this host is careful.
             fail(f"secrets/{name} is mode {mode:o} — chmod 600")
-        elif os.path.getsize(path) == 0:
+        elif st.st_uid != 65532:
+            # Compose bind-mounts file secrets with the host's ownership, and
+            # the container runs as 65532. A root-owned 600 file is exactly as
+            # unreadable to it as a missing one, and the log line says only
+            # "permission denied". Found the hard way, 10 Sept 2026.
+            fail(f"secrets/{name} is owned by uid {st.st_uid} — chown 65532:65532")
+        elif st.st_size == 0:
             fail(f"secrets/{name} is empty")
         else:
-            ok(f"secrets/{name} present, mode {mode:o}")
+            ok(f"secrets/{name} present, mode {mode:o}, uid 65532")
 
     # The only check here that catches a mistake you cannot undo by editing a
     # file: a secret committed to a repository that gets pushed. git
