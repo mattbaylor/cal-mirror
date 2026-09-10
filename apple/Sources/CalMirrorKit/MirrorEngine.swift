@@ -172,6 +172,60 @@ public final class MirrorEngine: @unchecked Sendable {
         return removed
     }
 
+    // MARK: Request page
+
+    /// Everything in the blocking calendars between two instants, reduced to
+    /// the three facts derivation may see. This is the boundary the privacy
+    /// claim is made at: title, location, attendees, calendar and account stop
+    /// here. Free-marked and cancelled events do not block — the owner said so
+    /// on the event itself. Heartbeat banners and mirror copies are skipped;
+    /// the source they copy is already counted, and the banner is not a meeting.
+    public func busyIntervals(in calendars: [CalRef], from: Date, to: Date) -> [BusyInterval] {
+        let cals = calendars.compactMap(findCalendar)
+        guard !cals.isEmpty else { return [] }
+        let evs = store.events(matching: store.predicateForEvents(withStart: from, end: to, calendars: cals))
+        return evs.compactMap { ev in
+            guard let start = ev.startDate, let end = ev.endDate else { return nil }
+            if ev.availability == .free || ev.status == .canceled { return nil }
+            if let sc = ev.url?.scheme, sc.hasPrefix(Markers.heartbeatScheme) { return nil }
+            if let me = ev.attendees?.first(where: { $0.isCurrentUser }), me.participantStatus == .declined { return nil }
+            return BusyInterval(start: start, end: end, isAllDay: ev.isAllDay)
+        }
+    }
+
+    /// The URL scheme an accepted request's event carries, so a second accept
+    /// of the same request finds the event it already wrote instead of writing
+    /// twice. Not an `x-calmirror` prefix on purpose: those mark copies the
+    /// mirrors own and skip as sources, and an accepted request is a real event
+    /// that mirrors should copy like any other.
+    public static let requestScheme = "x-askwhen"
+
+    /// Write the accepted request into the owner's request calendar. Idempotent
+    /// on `requestID`: if an event tagged with it already exists there, that is
+    /// returned untouched. Returns the event identifier.
+    public func writeAcceptedEvent(requestID: String, title: String, location: String?, notes: String?,
+                                   start: Date, end: Date, into ref: CalRef) throws -> String {
+        guard let cal = findCalendar(ref) else { throw RequestPageError.noRequestCalendar }
+        guard cal.allowsContentModifications else { throw RequestPageError.calendarReadOnly(cal.title) }
+        let tag = URL(string: "\(Self.requestScheme):\(requestID)")
+        let window = store.predicateForEvents(withStart: start.addingTimeInterval(-86400),
+                                              end: end.addingTimeInterval(86400), calendars: [cal])
+        if let existing = store.events(matching: window).first(where: { $0.url == tag }) {
+            return existing.eventIdentifier
+        }
+        let ev = EKEvent(eventStore: store)
+        ev.calendar = cal
+        ev.title = title
+        ev.location = location
+        ev.notes = notes
+        ev.startDate = start
+        ev.endDate = end
+        ev.url = tag
+        ev.availability = .busy
+        try store.save(ev, span: .thisEvent, commit: true)
+        return ev.eventIdentifier
+    }
+
     // MARK: - Internals
 
     private func findCalendar(_ ref: CalRef) -> EKCalendar? {

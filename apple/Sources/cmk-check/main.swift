@@ -1126,5 +1126,276 @@ do {
     check(!text.contains("["), "and a day carries no list of anything that could name an event")
 }
 
+
+// MARK: - Device client (step 4)
+
+print("RequestPageConfig:")
+do {
+    // A config that predates the page decodes to nil, and a malformed block
+    // must not take the mirrors down with it.
+    let old = try! JSONDecoder().decode(Config.self, from: json)
+    check(old.requestPage == nil, "absent requestPage → nil")
+    let bad = """
+    { "mirrors": [], "requestPage": { "policy": 42, "blocking": "nope" } }
+    """.data(using: .utf8)!
+    let lenient = try! JSONDecoder().decode(Config.self, from: bad)
+    check(lenient.requestPage != nil && lenient.requestPage!.policy == RequestPolicy() && lenient.requestPage!.blocking.isEmpty,
+          "malformed fields fall back to defaults rather than failing the config")
+
+    var page = RequestPageConfig(slug: "x7f2k9", policy: reqPolicy(), displayName: "Matt Baylor",
+                                 blurb: "30 minutes.", meetingTitle: "Chat with Matt",
+                                 blocking: [CalRef(title: "Work"), CalRef(title: "Home", account: "iCloud")],
+                                 requestCalendar: CalRef(title: "Requests"),
+                                 lastPublishedFingerprint: "abc", lastPublishedAt: mtn(2026, 9, 2, 10),
+                                 queueETag: "W/\"7\"")
+    let cfg = Config(mirrors: [], requestPage: page)
+    let again = try! JSONDecoder().decode(Config.self, from: JSONEncoder().encode(cfg))
+    check(again == cfg, "requestPage round-trips through Config, timestamps included")
+    check(page.isReady, "a page with slug, name and a request calendar is ready")
+    page.requestCalendar = nil
+    check(!page.isReady, "no request calendar → not ready (nowhere to put an acceptance)")
+    page.requestCalendar = CalRef(title: "Requests"); page.slug = ""
+    check(!page.isReady, "no slug → not ready (not created yet)")
+    let text = String(decoding: try! JSONEncoder().encode(Config()), as: UTF8.self)
+    check(!text.contains("requestPage"), "a config with no page does not write the key")
+}
+
+print("PolicyDump.make:")
+do {
+    let page = RequestPageConfig(slug: "x7f2k9", policy: reqPolicy(slotMinutes: 45, align: 15, weekdays: [.wed]),
+                                 displayName: "Matt Baylor", meetingTitle: "Chat", meetingLocation: nil,
+                                 blocking: [], requestCalendar: CalRef(title: "R"))
+    let dump = PolicyDump.make(from: page, busy: [], now: wed)
+    check(dump.meeting.minutes == 45, "meeting.minutes is policy.slotMinutes — one number, written once")
+    check(dump.display.tz == "America/Denver", "display.tz is the policy's zone, not the device's")
+    check(dump.expires == wed.addingTimeInterval(86400), "expires is 24h out, matching the service's ceiling")
+    check(dump.isSchemaValid, "the built dump passes the device-side schema check")
+    check(!dump.slots.isEmpty, "and carries slots")
+
+    let a = PolicyDump.make(from: page, busy: [], now: wed)
+    let b = PolicyDump.make(from: page, busy: [], now: wed.addingTimeInterval(60))
+    check(try! a.encoded() != (try! b.encoded()), "two derivations a minute apart differ on the wire")
+    check(a.contentFingerprint() == b.contentFingerprint(), "but fingerprint the same — timestamps are pinned")
+    let c = PolicyDump.make(from: page, busy: [BusyInterval(start: mtn(2026, 9, 2, 10), end: mtn(2026, 9, 2, 11))], now: wed)
+    check(a.contentFingerprint() != c.contentFingerprint(), "a meeting that removes an offer changes the fingerprint")
+    check(a.contentFingerprint().count == 64, "fingerprint is SHA-256 hex")
+}
+
+print("PublishPlanner:")
+do {
+    let t0 = wed
+    check(PublishPlanner.decide(fingerprint: "f", lastFingerprint: nil, lastPublishedAt: nil, now: t0)
+          == .publish(reason: .firstPublish), "never published → publish")
+    check(PublishPlanner.decide(fingerprint: "f", lastFingerprint: "f", lastPublishedAt: t0, now: t0.addingTimeInterval(600))
+          == .skip, "same offers ten minutes later → skip")
+    check(PublishPlanner.decide(fingerprint: "g", lastFingerprint: "f", lastPublishedAt: t0, now: t0.addingTimeInterval(600))
+          == .publish(reason: .offersChanged), "different offers → publish")
+    check(PublishPlanner.decide(fingerprint: "f", lastFingerprint: "f", lastPublishedAt: t0, now: t0.addingTimeInterval(13 * 3600))
+          == .publish(reason: .refresh), "same offers thirteen hours later → refresh before the service expires it")
+    check(PublishPlanner.refreshAfter == 12 * 3600, "refresh is half the 24h dump TTL")
+}
+
+print("RequestChecker:")
+do {
+    let policy = reqPolicy(bufferMinutes: 15, weekdays: [.wed])
+    let slot = Slot(start: mtn(2026, 9, 2, 10), end: mtn(2026, 9, 2, 11))
+    let now = mtn(2026, 9, 2, 6)
+    check(RequestChecker.check(slot: slot, policy: policy, busy: [], now: now) == .clear, "empty calendar → clear")
+    check(RequestChecker.check(slot: slot, policy: policy,
+                               busy: [BusyInterval(start: mtn(2026, 9, 2, 10, 30), end: mtn(2026, 9, 2, 10, 45))],
+                               now: now) != .clear, "a meeting inside the slot → conflict")
+    check(RequestChecker.check(slot: slot, policy: policy,
+                               busy: [BusyInterval(start: mtn(2026, 9, 2, 11, 10), end: mtn(2026, 9, 2, 12))],
+                               now: now) != .clear, "a meeting 10 minutes after, inside the 15-minute buffer → conflict")
+    check(RequestChecker.check(slot: slot, policy: policy,
+                               busy: [BusyInterval(start: mtn(2026, 9, 2, 11, 20), end: mtn(2026, 9, 2, 12))],
+                               now: now) == .clear, "a meeting 20 minutes after, outside the buffer → clear")
+    check(RequestChecker.check(slot: slot, policy: policy,
+                               busy: [BusyInterval(start: mtn(2026, 9, 2), end: mtn(2026, 9, 3), isAllDay: true)],
+                               now: now) != .clear, "an all-day event on the day → conflict")
+    check(RequestChecker.check(slot: slot, policy: policy,
+                               busy: [BusyInterval(start: mtn(2026, 9, 3), end: mtn(2026, 9, 4), isAllDay: true)],
+                               now: now) == .clear, "an all-day event the next day → clear")
+    check(RequestChecker.check(slot: slot, policy: reqPolicy(minNoticeHours: 48, weekdays: [.wed]), busy: [], now: now) == .clear,
+          "inside the owner's own minimum notice is a choice, not a conflict")
+
+    // Alternatives: nearest first, never the conflicted slot itself.
+    let v = RequestChecker.check(slot: slot, policy: policy,
+                                 busy: [BusyInterval(start: mtn(2026, 9, 2, 10), end: mtn(2026, 9, 2, 11))], now: now)
+    if case .conflict(let alts) = v {
+        check(alts.count == 3, "three alternatives by default")
+        check(!alts.contains(slot), "none of them is the slot that clashed")
+        // 9–10 and 11–12 both touch the 15-minute buffer round the 10–11 meeting,
+        // so the nearest open slot is 12:00, then 13:00, then 14:00.
+        check(alts.map { mtnCal.component(.hour, from: $0.start) } == [12, 13, 14],
+              "nearest open slots first, buffer respected: \(alts.map { mtnCal.component(.hour, from: $0.start) })")
+        check(alts.map(\.start) == alts.map(\.start).sorted { abs($0.timeIntervalSince(slot.start)) < abs($1.timeIntervalSince(slot.start)) },
+              "ordered by distance from the requested time")
+    } else { check(false, "expected a conflict") }
+}
+
+print("IncomingRequest:")
+do {
+    // Exactly what the service's queue returned on 10 Sept 2026.
+    let body = """
+    {"requests":[{"id":"d582f93a2877c32ea5dff31b6259869e","slot_start":"2026-09-13T16:00:00Z","slot_end":"2026-09-13T16:30:00Z","name":"Ada Lovelace","email":"ada@example.com","note":"one to accept; one to decline","hold_until":"2026-09-11T17:49:24Z"},{"id":"c2847d668bbcfb62cc2551e4788b0754","slot_start":"2026-09-13T17:00:00Z","slot_end":"2026-09-13T17:30:00Z","name":"Bob","email":"bob@example.com","hold_until":"2026-09-11T17:49:24Z"}]}
+    """.data(using: .utf8)!
+    struct Reply: Decodable { let requests: [IncomingRequest] }
+    let r = try! JSONDecoder().decode(Reply.self, from: body).requests
+    check(r.count == 2, "both decode")
+    check(r[0].id == "d582f93a2877c32ea5dff31b6259869e" && r[0].name == "Ada Lovelace" && r[0].note == "one to accept; one to decline",
+          "fields land where they should")
+    check(iso(r[0].slot.start) == "2026-09-13T16:00:00Z" && iso(r[0].slot.end) == "2026-09-13T16:30:00Z", "slot timestamps parse")
+    check(r[1].note == nil, "an omitted note is nil, not empty")
+    let again = try! JSONDecoder().decode(IncomingRequest.self, from: JSONEncoder().encode(r[0]))
+    check(again == r[0], "round-trips")
+}
+
+// A stand-in for the service: records every request, answers from a script.
+final class FakeTransport: Transport, @unchecked Sendable {
+    struct Call { let method: String; let path: String; let headers: [String: String]; let body: Data? }
+    var calls: [Call] = []
+    var answers: [(status: Int, headers: [String: String], body: String)] = []
+    func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        calls.append(Call(method: request.httpMethod ?? "", path: request.url?.path ?? "",
+                          headers: request.allHTTPHeaderFields ?? [:], body: request.httpBody))
+        let a = answers.isEmpty ? (status: 500, headers: [:], body: "") : answers.removeFirst()
+        let resp = HTTPURLResponse(url: request.url!, statusCode: a.status, httpVersion: "HTTP/1.1", headerFields: a.headers)!
+        return (a.body.data(using: .utf8)!, resp)
+    }
+}
+func run<T>(_ body: @escaping () async throws -> T) -> Result<T, Error> {
+    // cmk-check is synchronous top-level code; bridge the async client with a
+    // semaphore rather than pulling in a test runner for one section.
+    let sem = DispatchSemaphore(value: 0)
+    nonisolated(unsafe) var out: Result<T, Error>!
+    Task.detached { do { out = .success(try await body()) } catch { out = .failure(error) }; sem.signal() }
+    sem.wait()
+    return out
+}
+
+print("AskwhenClient:")
+do {
+    let t = FakeTransport()
+    let c = AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t)
+
+    t.answers = [(201, [:], #"{"slug":"x7f2k9","write_token":"tok_123"}"#)]
+    let created = try! run { try await c.createPage(entitlementHash: String(repeating: "ab", count: 32),
+                                                    display: .init(name: "Matt", tz: "America/Denver")) }.get()
+    check(created.slug == "x7f2k9" && created.writeToken == "tok_123", "create parses slug and token")
+    check(t.calls[0].method == "POST" && t.calls[0].path == "/v1/pages" && t.calls[0].headers["Authorization"] == nil,
+          "create is POST /v1/pages with no bearer")
+    check(String(decoding: t.calls[0].body!, as: UTF8.self).contains(#""entitlement_hash":"abab"#), "and carries the entitlement hash")
+
+    t.answers = [(204, ["ETag": "\"deadbeef\""], "")]
+    let etag = try! run { try await c.publish(Data("{\"v\":1}".utf8), slug: "x7f2k9", token: "tok_123") }.get()
+    check(etag == "\"deadbeef\"", "publish returns the ETag")
+    check(t.calls[1].method == "PUT" && t.calls[1].path == "/v1/pages/x7f2k9" && t.calls[1].headers["Authorization"] == "Bearer tok_123",
+          "publish is PUT /v1/pages/{slug} with the bearer")
+    check(t.calls[1].body == Data("{\"v\":1}".utf8), "and sends the dump bytes verbatim")
+
+    t.answers = [(304, [:], "")]
+    check((try? run { try await c.queue(slug: "x7f2k9", token: "tok_123", ifNoneMatch: "W/\"3\"") }.get()) == .unchanged,
+          "304 → unchanged")
+    check(t.calls[2].headers["If-None-Match"] == "W/\"3\"", "the ETag went up as If-None-Match")
+    t.answers = [(200, ["ETag": "W/\"4\""], #"{"requests":[]}"#)]
+    check((try? run { try await c.queue(slug: "x7f2k9", token: "tok_123", ifNoneMatch: nil) }.get()) == .changed([], etag: "W/\"4\""),
+          "200 → the requests and the new ETag")
+
+    t.answers = [(204, [:], "")]
+    _ = try! run { try await c.resolve(requestID: "r1", slug: "x7f2k9", decision: .decline, token: "tok_123") }.get()
+    check(t.calls[4].method == "POST" && t.calls[4].path == "/v1/requests/r1/resolve", "resolve is POST /v1/requests/{id}/resolve")
+    check(String(decoding: t.calls[4].body!, as: UTF8.self) == #"{"decision":"decline","slug":"x7f2k9"}"#
+          || String(decoding: t.calls[4].body!, as: UTF8.self) == #"{"slug":"x7f2k9","decision":"decline"}"#,
+          "with slug and decision in the body")
+
+    t.answers = [(404, [:], "404 page not found")]
+    check((run { try await c.resolve(requestID: "r1", slug: "x7f2k9", decision: .accept, token: "bad") }.failure as? AskwhenError) == .notFound,
+          "404 → notFound, whichever of token/page/request it was")
+    t.answers = [(400, [:], "too many slots")]
+    check((run { try await c.publish(Data(), slug: "x7f2k9", token: "tok_123") }.failure as? AskwhenError) == .rejected("too many slots"),
+          "400 → rejected with the service's words")
+    t.answers = [(503, [:], "unavailable")]
+    check((run { try await c.publish(Data(), slug: "x7f2k9", token: "tok_123") }.failure as? AskwhenError) == .unavailable,
+          "503 → unavailable")
+    t.answers = [(200, [:], "not json")]
+    check((run { try await c.queue(slug: "x7f2k9", token: "tok_123", ifNoneMatch: nil) }.failure as? AskwhenError) == .malformed,
+          "a 200 that is not the contract → malformed")
+}
+
+print("RequestPageCoordinator:")
+do {
+    let t = FakeTransport()
+    let tokens = InMemoryTokenStore()
+    nonisolated(unsafe) var busy: [BusyInterval] = []
+    let coord = RequestPageCoordinator(engine: MirrorEngine(),
+                                       client: AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t),
+                                       tokens: tokens, busySource: { _, _, _ in busy })
+    var page = RequestPageConfig(policy: reqPolicy(weekdays: [.wed]), displayName: "Matt Baylor",
+                                 meetingTitle: "Chat", blocking: [CalRef(title: "Work")],
+                                 requestCalendar: CalRef(title: "Requests"))
+
+    check((try? run { try await coord.publishIfNeeded(page: &page, now: wed) }.get()) == .notReady,
+          "no slug → not ready, and nothing was sent (\(t.calls.count) calls)")
+
+    t.answers = [(201, [:], #"{"slug":"x7f2k9","write_token":"tok_123"}"#)]
+    _ = try! run { try await coord.create(page: &page, entitlementHash: String(repeating: "ab", count: 32)) }.get()
+    check(page.slug == "x7f2k9" && (try? tokens.token(for: "x7f2k9")) == "tok_123", "create sets the slug and stores the token")
+
+    t.answers = [(204, ["ETag": "\"a\""], "")]
+    let first = try! run { try await coord.publishIfNeeded(page: &page, now: wed) }.get()
+    if case .published(let n, let why) = first { check(n > 0 && why == .firstPublish, "first cycle publishes (\(n) slots)") }
+    else { check(false, "first cycle should publish, got \(first)") }
+    check(page.lastPublishedFingerprint != nil && page.lastPublishedAt == wed, "and records what it sent")
+    check(t.calls.last?.method == "PUT", "as a PUT")
+    let sent = try! JSONDecoder().decode(PolicyDump.self, from: t.calls.last!.body!)
+    check(sent.meeting.minutes == 60 && sent.display.name == "Matt Baylor", "of a schema-shaped dump")
+
+    let calls = t.calls.count
+    check((try? run { try await coord.publishIfNeeded(page: &page, now: wed.addingTimeInterval(300)) }.get()) == .unchanged
+          && t.calls.count == calls, "five minutes later, same offers → nothing sent")
+
+    busy = [BusyInterval(start: mtn(2026, 9, 2, 10), end: mtn(2026, 9, 2, 11))]
+    t.answers = [(204, ["ETag": "\"b\""], "")]
+    let second = try! run { try await coord.publishIfNeeded(page: &page, now: wed.addingTimeInterval(600)) }.get()
+    if case .published(_, let why) = second { check(why == .offersChanged, "a meeting landing → republished for changed offers") }
+    else { check(false, "expected a publish, got \(second)") }
+
+    t.answers = [(200, ["ETag": "W/\"1\""],
+                  #"{"requests":[{"id":"r1","slot_start":"2026-09-02T16:00:00Z","slot_end":"2026-09-02T17:00:00Z","name":"Ada","email":"ada@example.com","hold_until":"2026-09-03T00:00:00Z"}]}"#)]
+    let q = try! run { try await coord.collect(page: &page) }.get()
+    check(q?.count == 1 && page.queueETag == "W/\"1\"", "collect returns the queue and keeps the ETag")
+    t.answers = [(304, [:], "")]
+    check((try? run { try await coord.collect(page: &page) }.get()) == nil, "an idle poll returns nil")
+    check(t.calls.last?.headers["If-None-Match"] == "W/\"1\"", "and sent the ETag")
+
+    // 16:00Z is 10:00 Denver — where the meeting now is. Accept must refuse
+    // before writing anything or telling the service.
+    let req = q![0]
+    let before = t.calls.count
+    let verdict = try! run { try await coord.accept(req, page: &page, now: mtn(2026, 9, 2, 6)) }.get()
+    if case .conflict(let alts) = verdict { check(!alts.isEmpty, "accept re-checks the calendar and reports the conflict with alternatives") }
+    else { check(false, "expected conflict, got \(verdict)") }
+    check(t.calls.count == before, "and made no call to the service")
+
+    t.answers = [(204, [:], "")]
+    _ = try! run { try await coord.decline(req, page: &page) }.get()
+    check(t.calls.last?.path == "/v1/requests/r1/resolve" && page.queueETag == nil,
+          "decline resolves and drops the queue ETag so the next poll is not a 304")
+    t.answers = [(404, [:], "")]
+    check((try? run { try await coord.decline(req, page: &page) }.get()) != nil, "declining something already gone is not an error")
+
+    try! tokens.remove(for: "x7f2k9")
+    check((run { try await coord.collect(page: &page) }.failure as? RequestPageError) == .noToken,
+          "a page whose token is gone says so rather than 404-looping")
+
+    try! tokens.store("tok_123", for: "x7f2k9")
+    t.answers = [(404, [:], "")]
+    _ = try! run { try await coord.delete(page: &page) }.get()
+    check(page.slug.isEmpty && (try? tokens.token(for: "x7f2k9")) == nil, "delete forgets slug and token, even on a 404")
+}
+
+extension Result { var failure: Failure? { if case .failure(let e) = self { return e }; return nil } }
+
 print(failures == 0 ? "\nALL CHECKS PASSED" : "\n\(failures) CHECK(S) FAILED")
 exit(failures == 0 ? 0 : 1)
