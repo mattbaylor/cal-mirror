@@ -131,12 +131,20 @@ func isAllDigits(s string) bool {
 }
 
 // InZone reports whether host is the zone itself or anything under it.
-//
-// Our own names are refused by the on-demand path on purpose. `askwhen.me` has
-// an ordinary certificate and `*.askwhen.me` has a DNS-01 wildcard; both are
-// configured in the Caddyfile. If on-demand could mint them too, a stray row in
-// the domain table would start a second, competing order for a name that
-// already has a certificate — spending rate limit to arrive back where we were.
 func InZone(host, zone string) bool {
 	return host == zone || strings.HasSuffix(host, "."+zone)
+}
+
+// Reserved reports whether host is one of our own names that already has a
+// certificate by ordinary means — the apex and `www`, named in the edge
+// Caddyfile. If on-demand could mint those too, a stray row in the domain
+// table would start a second, competing order for a name that already has a
+// certificate — spending rate limit to arrive back where we were.
+//
+// Other names under the zone are *not* reserved here: the subdomain tier rides
+// on-demand (10 Sept 2026), gated by the same lookup as custom domains. The
+// labels a customer may not claim are the API's business (api.Domains), not
+// the gate's — the gate only sees hosts that are already in the table.
+func Reserved(host, zone string) bool {
+	return host == zone || host == "www."+zone
 }

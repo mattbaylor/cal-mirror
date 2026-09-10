@@ -53,28 +53,28 @@ func (s *Store) Migrate(ctx context.Context, schemaSQL string) error {
 	return nil
 }
 
-// AuthorizedCustomDomain reports whether a custom domain may have a certificate
-// issued for it. It is the query behind Caddy's on-demand TLS gate.
+// AuthorizedDomain reports whether a hostname may have a certificate issued
+// for it. It is the query behind Caddy's on-demand TLS gate.
 //
-// Three conditions, and each rules out a different way of getting a certificate
-// we did not mean to issue:
+// Two tiers take the on-demand path, and each has its own condition:
 //
-//   - kind = 'custom' — subdomains of our own zone are covered by the DNS-01
-//     wildcard and must never take the on-demand path.
-//   - verified_at IS NOT NULL — the customer's CNAME has actually been observed
-//     pointing here. An order for a name that does not resolve to us fails, and
-//     a failed order still spends rate limit.
-//   - the join to page — the owner still exists. Foreign keys would cascade a
-//     deletion, but only on connections where the pragma is on, so the join is
-//     the belt to that braces.
-func (s *Store) AuthorizedCustomDomain(ctx context.Context, host string) (bool, error) {
+//   - kind = 'custom' needs verified_at IS NOT NULL — the customer's CNAME has
+//     actually been observed pointing here. An order for a name that does not
+//     resolve to us fails, and a failed order still spends rate limit.
+//   - kind = 'subdomain' needs nothing more than the row: `*.askwhen.me`
+//     resolves to the edge by a wildcard A record we own, so the only question
+//     is whether anyone has claimed the label. (Decided 10 Sept 2026, in place
+//     of a DNS-01 wildcard certificate — see infra/edge/upgrade-plan.md.)
+//
+// The join to page is the belt to the cascade's braces: foreign keys only fire
+// on connections where the pragma is on.
+func (s *Store) AuthorizedDomain(ctx context.Context, host string) (bool, error) {
 	const q = `
 		SELECT 1
 		FROM domain d
 		JOIN page p ON p.slug = d.slug
 		WHERE d.host = ?
-		  AND d.kind = 'custom'
-		  AND d.verified_at IS NOT NULL
+		  AND (d.kind = 'subdomain' OR d.verified_at IS NOT NULL)
 		LIMIT 1`
 
 	var one int
@@ -83,9 +83,121 @@ func (s *Store) AuthorizedCustomDomain(ctx context.Context, host string) (bool, 
 	case err == sql.ErrNoRows:
 		return false, nil
 	case err != nil:
-		return false, fmt.Errorf("authorized custom domain: %w", err)
+		return false, fmt.Errorf("authorized domain: %w", err)
 	}
 	return true, nil
+}
+
+// ------------------------------------------------------------------ domains
+
+// Domain is one claimed hostname.
+type Domain struct {
+	Host       string
+	Slug       string
+	Kind       string // "subdomain" | "custom"
+	VerifiedAt string // RFC 3339, or "" while unverified
+	CreatedAt  string
+}
+
+// ErrDomainTaken means another page already claims that host.
+var ErrDomainTaken = errors.New("domain claimed by another page")
+
+// ClaimDomain records a host for a page. Claiming a host the page already
+// holds is a no-op; claiming one another page holds is refused, and the
+// refusal is the same whether that page belongs to this owner or not — the
+// service cannot tell, and does not want to be able to.
+func (s *Store) ClaimDomain(ctx context.Context, host, slug, kind string) error {
+	var owner string
+	err := s.db.QueryRowContext(ctx, `SELECT slug FROM domain WHERE host = ?`, host).Scan(&owner)
+	switch {
+	case err == nil && owner == slug:
+		return nil
+	case err == nil:
+		return ErrDomainTaken
+	case err != sql.ErrNoRows:
+		return fmt.Errorf("claim domain: %w", err)
+	}
+	_, err = s.db.ExecContext(ctx,
+		`INSERT INTO domain (host, slug, kind, created_at) VALUES (?, ?, ?, ?)`,
+		host, slug, kind, nowRFC3339())
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return ErrDomainTaken
+		}
+		if strings.Contains(err.Error(), "FOREIGN KEY") {
+			return ErrNoPage
+		}
+		return fmt.Errorf("claim domain: %w", err)
+	}
+	return nil
+}
+
+// ReleaseDomain drops a host, scoped to the page in the WHERE so a token for
+// one page cannot release another's. False means there was nothing to do.
+func (s *Store) ReleaseDomain(ctx context.Context, host, slug string) (bool, error) {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM domain WHERE host = ? AND slug = ?`, host, slug)
+	if err != nil {
+		return false, fmt.Errorf("release domain: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	return n == 1, nil
+}
+
+// Domains lists a page's hosts, oldest first.
+func (s *Store) Domains(ctx context.Context, slug string) ([]Domain, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT host, slug, kind, verified_at, created_at FROM domain
+		WHERE slug = ? ORDER BY created_at, host`, slug)
+	if err != nil {
+		return nil, fmt.Errorf("domains: %w", err)
+	}
+	defer rows.Close()
+	return scanDomains(rows)
+}
+
+// UnverifiedCustomDomains is the checker's work list: every custom host
+// nobody has yet observed pointing at us.
+func (s *Store) UnverifiedCustomDomains(ctx context.Context) ([]Domain, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT host, slug, kind, verified_at, created_at FROM domain
+		WHERE kind = 'custom' AND verified_at IS NULL ORDER BY created_at`)
+	if err != nil {
+		return nil, fmt.Errorf("unverified domains: %w", err)
+	}
+	defer rows.Close()
+	return scanDomains(rows)
+}
+
+// SlugForHost answers "whose page is this hostname?" for a request that
+// arrived by a custom or sub- domain rather than by /{slug}. Only hosts the
+// gate would issue for count: an unverified custom domain has no certificate
+// and no business being served over plain HTTP on the internal network either.
+func (s *Store) SlugForHost(ctx context.Context, host string) (string, error) {
+	var slug string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT d.slug FROM domain d JOIN page p ON p.slug = d.slug
+		WHERE d.host = ? AND (d.kind = 'subdomain' OR d.verified_at IS NOT NULL)`, host).Scan(&slug)
+	if err == sql.ErrNoRows {
+		return "", ErrNoPage
+	}
+	if err != nil {
+		return "", fmt.Errorf("slug for host: %w", err)
+	}
+	return slug, nil
+}
+
+func scanDomains(rows *sql.Rows) ([]Domain, error) {
+	out := []Domain{}
+	for rows.Next() {
+		var d Domain
+		var verified sql.NullString
+		if err := rows.Scan(&d.Host, &d.Slug, &d.Kind, &verified, &d.CreatedAt); err != nil {
+			return nil, fmt.Errorf("domains: %w", err)
+		}
+		d.VerifiedAt = verified.String
+		out = append(out, d)
+	}
+	return out, rows.Err()
 }
 
 // --------------------------------------------------------------- versioning

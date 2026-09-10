@@ -63,8 +63,9 @@ func testRoutesAndStore(t *testing.T) (http.Handler, *store.Store) {
 		t.Fatal(err)
 	}
 
-	cfg := config{zone: "askwhen.me", tlsSecret: "s3cret"}
-	return routes(st, cfg, nil, shell, log), st
+	cfg := config{zone: "askwhen.me", tlsSecret: "s3cret", trustedProxy: "172.16.1.4",
+		edgeTarget: "edge.askwhen.me", edgeIPs: []string{"64.111.22.170"}}
+	return routes(st, cfg, nil, shell, domainsAPI(st, cfg, log), log), st
 }
 
 func do(h http.Handler, method, target string, hdr map[string]string) *httptest.ResponseRecorder {
@@ -155,18 +156,42 @@ func TestMissingAndMalformedSlugsLookIdentical(t *testing.T) {
 func TestTLSAuthorizeIsMountedAndGated(t *testing.T) {
 	h := testRoutes(t)
 
+	// As Caddy's ask arrives: from the proxy's own address, with no headers.
+	fromEdge := func(target string, hdr map[string]string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodGet, target, nil)
+		r.RemoteAddr = "172.16.1.4:51234"
+		for k, v := range hdr {
+			r.Header.Set(k, v)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w
+	}
+
 	// No secret: refused, and indistinguishable from the endpoint not existing.
-	if w := do(h, http.MethodGet, "/internal/tls-authorize?domain=ask.example.com", nil); w.Code != http.StatusNotFound {
+	if w := fromEdge("/internal/tls-authorize?domain=ask.example.com", nil); w.Code != http.StatusNotFound {
 		t.Fatalf("unauthenticated status = %d, want 404", w.Code)
 	}
 	// Correct secret, unknown domain: still refused, but by policy this time.
-	if w := do(h, http.MethodGet, "/internal/tls-authorize?domain=ask.example.com&key=s3cret", nil); w.Code != http.StatusNotFound {
+	if w := fromEdge("/internal/tls-authorize?domain=ask.example.com&key=s3cret", nil); w.Code != http.StatusNotFound {
 		t.Fatalf("unknown domain status = %d, want 404", w.Code)
 	}
 	// A malformed host is a different answer, which proves the handler is really
 	// wired rather than everything falling through to a blanket 404.
-	if w := do(h, http.MethodGet, "/internal/tls-authorize?domain=*.example.com&key=s3cret", nil); w.Code != http.StatusBadRequest {
+	if w := fromEdge("/internal/tls-authorize?domain=*.example.com&key=s3cret", nil); w.Code != http.StatusBadRequest {
 		t.Fatalf("malformed host status = %d, want 400 — the gate is not mounted", w.Code)
+	}
+
+	// The perimeter (edge.md, not-optional thing 1). The same malformed probe,
+	// which the gate itself answers 400, gets a blanket 404 when it did not
+	// come straight from the proxy — from anywhere else, or proxied through it
+	// on a stranger's behalf, which is what X-Forwarded-For means.
+	if w := do(h, http.MethodGet, "/internal/tls-authorize?domain=*.example.com&key=s3cret", nil); w.Code != http.StatusNotFound {
+		t.Fatalf("from a non-proxy address: %d, want 404", w.Code)
+	}
+	if w := fromEdge("/internal/tls-authorize?domain=*.example.com&key=s3cret",
+		map[string]string{"X-Forwarded-For": "203.0.113.9"}); w.Code != http.StatusNotFound {
+		t.Fatalf("proxied through the edge: %d, want 404", w.Code)
 	}
 }
 
@@ -215,7 +240,10 @@ func TestReadSecretReportsAMissingFile(t *testing.T) {
 
 func TestTheBareDomainGoesToTheProductSite(t *testing.T) {
 	h := testRoutes(t)
-	w := do(h, http.MethodGet, "/", nil)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Host = "askwhen.me"
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
 	if w.Code != http.StatusMovedPermanently || w.Header().Get("Location") != "https://calendarmirror.com/" {
 		t.Fatalf("/ -> %d %s", w.Code, w.Header().Get("Location"))
 	}
@@ -314,5 +342,64 @@ func TestHeldSlotsRideWithTheDumpAndMoveTheETag(t *testing.T) {
 	// And the new representation revalidates.
 	if w2 := do(h, http.MethodGet, "/p/x7f2k9.json", map[string]string{"If-None-Match": w.Header().Get("ETag")}); w2.Code != http.StatusNotModified {
 		t.Fatalf("revalidating the held representation got %d", w2.Code)
+	}
+}
+
+func TestACustomerHostServesItsPageAtTheRoot(t *testing.T) {
+	h, st := testRoutesAndStore(t)
+	ctx := context.Background()
+	if err := st.ClaimDomain(ctx, "ask.example.com", "x7f2k9", "custom"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.ClaimDomain(ctx, "matt.askwhen.me", "x7f2k9", "subdomain"); err != nil {
+		t.Fatal(err)
+	}
+
+	withHost := func(host, path string, hdr map[string]string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		r.Host = host
+		for k, v := range hdr {
+			r.Header.Set(k, v)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w
+	}
+
+	// Our own names redirect at the root. A customer's serves the page.
+	for _, ours := range []string{"askwhen.me", "www.askwhen.me", "ASKWHEN.ME:443"} {
+		if w := withHost(ours, "/", nil); w.Code != http.StatusMovedPermanently {
+			t.Fatalf("%s/ -> %d, want 301", ours, w.Code)
+		}
+	}
+	// A custom domain nobody has verified is not served: the edge would not
+	// have a certificate for it, so a request by that name is not a customer.
+	if w := withHost("ask.example.com", "/", nil); w.Code != http.StatusNotFound {
+		t.Fatalf("unverified custom host served: %d", w.Code)
+	}
+	if err := st.MarkDomainVerified(ctx, "ask.example.com"); err != nil {
+		t.Fatal(err)
+	}
+	for _, theirs := range []string{"ask.example.com", "Ask.Example.COM:443", "matt.askwhen.me"} {
+		w := withHost(theirs, "/", nil)
+		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "Ask for a time") {
+			t.Fatalf("%s/ -> %d %q", theirs, w.Code, w.Body.String())
+		}
+		// And the page finds its dump by Host.
+		d := withHost(theirs, "/p/host.json", nil)
+		if d.Code != http.StatusOK || !strings.Contains(d.Body.String(), `"slug":"x7f2k9"`) {
+			t.Fatalf("%s/p/host.json -> %d %s", theirs, d.Code, d.Body.String())
+		}
+	}
+	// A host nobody claimed gets nothing, on either route.
+	if w := withHost("nobody.example.com", "/", nil); w.Code != http.StatusNotFound {
+		t.Fatalf("unknown host served: %d", w.Code)
+	}
+	if w := withHost("nobody.example.com", "/p/host.json", nil); w.Code != http.StatusNotFound {
+		t.Fatalf("unknown host's dump: %d", w.Code)
+	}
+	// "host" never collides with a slug, and is not one.
+	if w := withHost("askwhen.me", "/p/host.json", nil); w.Code != http.StatusNotFound {
+		t.Fatalf("/p/host.json on our own name: %d", w.Code)
 	}
 }

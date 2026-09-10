@@ -101,3 +101,18 @@ test('every status the service returns becomes a reason the page has a state for
   stub(new TypeError('Failed to fetch'));
   assert.deepEqual(await submitRequest('x7f2k9', body), { ok: false, reason: 'failed' });
 });
+
+test('slugFromLocation: a path slug, a query slug, the host sentinel, or the example on file://', async () => {
+  const { slugFromLocation, DEFAULT_SLUG } = await import('../src/slug.js');
+  const at = (protocol, pathname, search = '') => slugFromLocation({ protocol, pathname, search });
+  assert.equal(at('https:', '/x7f2k9'), 'x7f2k9');
+  assert.equal(at('https:', '/x7f2k9/'), 'x7f2k9');
+  assert.equal(at('https:', '/', '?p=x7f2k9'), 'x7f2k9');
+  // A customer's hostname: the root is the page, and the service resolves it by Host.
+  assert.equal(at('https:', '/'), 'host');
+  assert.equal(at('http:', ''), 'host');
+  // From disk there is no service; show the example.
+  assert.equal(at('file:', '/Users/matt/dist/index.html'), DEFAULT_SLUG);
+  // Never a real slug: the service reserves it, and the length rule keeps them apart.
+  assert.ok('host'.length < 6);
+});

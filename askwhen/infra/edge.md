@@ -47,6 +47,28 @@ The properties that matter, each with a test behind it:
 | Normalises case and trailing dot before the lookup | The database stores one spelling and the query is exact. |
 | An unset secret refuses **everything** | A deployment that forgot to configure it is closed, not open. |
 
+## What changed on 10 September 2026
+
+Step 6 is built. Three facts this document did not have:
+
+- **Subdomains ride on-demand too.** `*.askwhen.me` is a DNS wildcard **A**
+  record at the edge (created; resolves), not a DNS-01 wildcard certificate,
+  which this Caddy cannot order anyway. The gate says yes to a subdomain the
+  moment it is claimed — we own the DNS, there is nothing to verify — and to a
+  custom domain once its CNAME has been observed. `tlsauth` now reserves only
+  the apex and `www`.
+- **`edge.askwhen.me` is the CNAME target** customers are told, and
+  `64.111.22.170` is what an apex may point at instead. The service verifies
+  against both (`AW_EDGE_TARGET`, `AW_EDGE_IPS`), on the owner's GET and on a
+  five-minute timer.
+- **`/internal/*` is now perimeter-checked**, not only secret-checked: admitted
+  only from `172.16.1.4` with no `X-Forwarded-*` header, which is how Caddy's
+  own `ask` looks and how a proxied public request does not.
+
+The service is deployed with all of this. What is **not** done is the last
+step below: `on_demand` is not enabled on `caddy-dc`. That flip is Matt's, per
+"three things that are not optional", 3.
+
 ## The block to paste into `caddy-dc`
 
 The secret is in the query string because that is the only channel Caddy offers.
@@ -67,10 +89,20 @@ In the global options block:
 ```caddyfile
 {
 	on_demand_tls {
-		ask http://172.16.1.41:8080/internal/tls-authorize?key={$AW_TLS_AUTH_SECRET}
+		ask http://172.16.1.41:8080/internal/tls-authorize?key=<tls_auth_secret>
+		# 2.6.2's own throttle, independent of the gate: at most this many
+		# issuance attempts in the window, however many names ask.
+		interval 2m
+		burst 5
 	}
 }
 ```
+
+The secret is written into the Caddyfile itself rather than read from the
+environment: `/opt/caddy/docker-compose.yaml` passes no environment through,
+and changing that means recreating the container that fronts everyone's
+sites. The Caddyfile is already the file that holds this proxy's other
+credentials, and the same people can read it either way.
 
 and the site block, last so it matches only what nothing else claimed:
 

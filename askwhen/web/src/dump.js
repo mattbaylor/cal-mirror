@@ -7,8 +7,9 @@
 // answer instead. Nothing above this file changes either way: the components
 // take a parsed dump and have no opinion about how it arrived.
 
-import { fetchDump } from './service.js';
 import example from '../../schema/policy-dump.example.json';
+import { fetchDump } from './service.js';
+import { DEFAULT_SLUG, slugFromLocation } from './slug.js';
 import denverDst from '../test/fixtures/dst-america-denver.json';
 import aucklandDst from '../test/fixtures/dst-pacific-auckland.json';
 
@@ -16,7 +17,13 @@ const BUNDLED = new Map(
   [example, denverDst, aucklandDst].map((dump) => [dump.slug, dump]),
 );
 
-export const DEFAULT_SLUG = example.slug;
+export { DEFAULT_SLUG, slugFromLocation };
+
+// The constant in slug.js is a copy of the example's slug, kept out of that
+// file so it stays importable without a JSON loader. This is the check.
+if (example.slug !== DEFAULT_SLUG) {
+  throw new Error(`slug.js DEFAULT_SLUG is ${DEFAULT_SLUG}; the example is ${example.slug}`);
+}
 
 /** Every slug the filesystem fallback can render. */
 export function bundledSlugs() {
@@ -33,18 +40,4 @@ export function bundledSlugs() {
 export async function loadDump(slug, loc = globalThis.location) {
   if (loc?.protocol === 'file:') return BUNDLED.get(slug) ?? null;
   return fetchDump(slug);
-}
-
-/**
- * The slug from the URL. `askwhen.me/x7f2k9` — one path segment, nothing else.
- *
- * Falls back to the example so opening the built file directly, with no path at
- * all, shows a real page rather than the 404.
- */
-export function slugFromLocation(loc = globalThis.location) {
-  const segment = (loc?.pathname ?? '').split('/').filter(Boolean).pop();
-  if (segment && /^[a-z0-9]{4,32}$/i.test(segment)) return segment;
-  const query = new URLSearchParams(loc?.search ?? '').get('p');
-  if (query && /^[a-z0-9]{4,32}$/i.test(query)) return query;
-  return DEFAULT_SLUG;
 }
