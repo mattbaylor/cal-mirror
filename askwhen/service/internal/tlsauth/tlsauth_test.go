@@ -19,7 +19,7 @@ type fakeLookup struct {
 	err   error
 }
 
-func (f *fakeLookup) AuthorizedCustomDomain(ctx context.Context, host string) (bool, error) {
+func (f *fakeLookup) AuthorizedDomain(ctx context.Context, host string) (bool, error) {
 	f.calls.Add(1)
 	return f.ok, f.err
 }
@@ -64,19 +64,32 @@ func TestDecide(t *testing.T) {
 		}
 	})
 
-	t.Run("refuses our own zone without consulting the database", func(t *testing.T) {
-		// askwhen.me and *.askwhen.me have their own certificates in the
+	t.Run("refuses the apex and www without consulting the database", func(t *testing.T) {
+		// askwhen.me and www.askwhen.me have their own certificates in the
 		// Caddyfile. On-demand must not start a competing order for a name that
 		// already has one.
 		f := &fakeLookup{ok: true}
 		a := newAuth(f, nil)
-		for _, ours := range []string{"askwhen.me", "matt.askwhen.me", "a.b.askwhen.me"} {
+		for _, ours := range []string{"askwhen.me", "www.askwhen.me", "WWW.askwhen.me."} {
 			if d, _ := a.Decide(context.Background(), ours); d != Deny {
 				t.Errorf("Decide(%q) = %v, want Deny", ours, d)
 			}
 		}
 		if n := f.calls.Load(); n != 0 {
-			t.Fatalf("lookup called %d times for our own zone, want 0", n)
+			t.Fatalf("lookup called %d times for our own names, want 0", n)
+		}
+	})
+
+	t.Run("a subdomain of our zone goes to the lookup like any other host", func(t *testing.T) {
+		// The subdomain tier rides on-demand. Whether matt.askwhen.me gets a
+		// certificate is the domain table's answer, not the zone's.
+		f := &fakeLookup{ok: true}
+		if d, _ := newAuth(f, nil).Decide(context.Background(), "matt.askwhen.me"); d != Allow {
+			t.Fatalf("claimed subdomain: %v, want Allow", d)
+		}
+		g := &fakeLookup{ok: false}
+		if d, _ := newAuth(g, nil).Decide(context.Background(), "nobody.askwhen.me"); d != Deny {
+			t.Fatalf("unclaimed subdomain: %v, want Deny", d)
 		}
 	})
 }
@@ -175,7 +188,7 @@ func TestHandlerStatusCodes(t *testing.T) {
 	}{
 		{"verified domain", &fakeLookup{ok: true}, "ask.example.com", http.StatusOK},
 		{"unknown domain", &fakeLookup{ok: false}, "ask.example.com", http.StatusNotFound},
-		{"our own zone", &fakeLookup{ok: true}, "matt.askwhen.me", http.StatusNotFound},
+		{"our own apex", &fakeLookup{ok: true}, "askwhen.me", http.StatusNotFound},
 		{"malformed", &fakeLookup{ok: true}, "*.example.com", http.StatusBadRequest},
 		{"missing parameter", &fakeLookup{ok: true}, "", http.StatusBadRequest},
 		{"database error", &fakeLookup{err: errors.New("boom")}, "ask.example.com", http.StatusServiceUnavailable},
@@ -259,7 +272,7 @@ func TestHandlerNormalizesBeforeLookup(t *testing.T) {
 
 type lookupFunc func(context.Context, string) (bool, error)
 
-func (f lookupFunc) AuthorizedCustomDomain(ctx context.Context, host string) (bool, error) {
+func (f lookupFunc) AuthorizedDomain(ctx context.Context, host string) (bool, error) {
 	return f(ctx, host)
 }
 

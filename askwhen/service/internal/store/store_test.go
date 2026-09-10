@@ -88,14 +88,14 @@ func TestMigrateIsIdempotent(t *testing.T) {
 	}
 }
 
-func TestAuthorizedCustomDomain(t *testing.T) {
+func TestAuthorizedDomain(t *testing.T) {
 	ctx := context.Background()
 	s := openTestStore(t)
 
 	addPage(t, s, "x7f2k9")
 	addDomain(t, s, "ask.example.com", "x7f2k9", "custom", true)
 	addDomain(t, s, "pending.example.com", "x7f2k9", "custom", false)
-	addDomain(t, s, "matt.askwhen.me", "x7f2k9", "subdomain", true)
+	addDomain(t, s, "matt.askwhen.me", "x7f2k9", "subdomain", false)
 
 	for _, tc := range []struct {
 		name string
@@ -109,10 +109,12 @@ func TestAuthorizedCustomDomain(t *testing.T) {
 		// spends rate limit.
 		{"an unverified custom domain is not", "pending.example.com", false},
 
-		// Covered by the DNS-01 wildcard. If on-demand could mint these too, a
-		// stray row would start a competing order for a name that already has
-		// a certificate.
-		{"a subdomain is not, even when verified", "matt.askwhen.me", false},
+		// Subdomains ride the same on-demand path (10 Sept 2026): a wildcard A
+		// record points every *.askwhen.me at the edge, so the only question is
+		// whether the label is claimed. No verification step, because we own
+		// the DNS.
+		{"a claimed subdomain is authorized without verification", "matt.askwhen.me", true},
+		{"an unclaimed subdomain is not", "nobody.askwhen.me", false},
 
 		{"an unclaimed host is not", "evil.example.com", false},
 
@@ -123,12 +125,12 @@ func TestAuthorizedCustomDomain(t *testing.T) {
 		{"nor does it tolerate a trailing dot", "ask.example.com.", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := s.AuthorizedCustomDomain(ctx, tc.host)
+			got, err := s.AuthorizedDomain(ctx, tc.host)
 			if err != nil {
 				t.Fatalf("lookup: %v", err)
 			}
 			if got != tc.want {
-				t.Fatalf("AuthorizedCustomDomain(%q) = %v, want %v", tc.host, got, tc.want)
+				t.Fatalf("AuthorizedDomain(%q) = %v, want %v", tc.host, got, tc.want)
 			}
 		})
 	}
@@ -150,7 +152,7 @@ func TestDeletingThePageWithdrawsItsDomains(t *testing.T) {
 	addPage(t, s, "x7f2k9")
 	addDomain(t, s, "ask.example.com", "x7f2k9", "custom", true)
 
-	if ok, err := s.AuthorizedCustomDomain(ctx, "ask.example.com"); err != nil || !ok {
+	if ok, err := s.AuthorizedDomain(ctx, "ask.example.com"); err != nil || !ok {
 		t.Fatalf("precondition: got %v, %v; want true, nil", ok, err)
 	}
 
@@ -167,7 +169,7 @@ func TestDeletingThePageWithdrawsItsDomains(t *testing.T) {
 			"which means PRAGMA foreign_keys is not on for this connection", domains)
 	}
 
-	if ok, err := s.AuthorizedCustomDomain(ctx, "ask.example.com"); err != nil || ok {
+	if ok, err := s.AuthorizedDomain(ctx, "ask.example.com"); err != nil || ok {
 		t.Fatalf("after deletion: got %v, %v; want false, nil", ok, err)
 	}
 }
@@ -444,7 +446,7 @@ func TestVerificationIsWhatOpensTheGate(t *testing.T) {
 	addPage(t, s, "x7f2k9")
 	addDomain(t, s, "ask.example.com", "x7f2k9", "custom", false)
 
-	if ok, _ := s.AuthorizedCustomDomain(ctx, "ask.example.com"); ok {
+	if ok, _ := s.AuthorizedDomain(ctx, "ask.example.com"); ok {
 		t.Fatal("an unverified domain was authorized")
 	}
 
@@ -452,7 +454,7 @@ func TestVerificationIsWhatOpensTheGate(t *testing.T) {
 		t.Fatalf("mark verified: %v", err)
 	}
 
-	if ok, err := s.AuthorizedCustomDomain(ctx, "ask.example.com"); err != nil || !ok {
+	if ok, err := s.AuthorizedDomain(ctx, "ask.example.com"); err != nil || !ok {
 		t.Fatalf("after verification: got %v, %v; want true, nil", ok, err)
 	}
 }

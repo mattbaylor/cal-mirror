@@ -17,7 +17,7 @@ import (
 // the case that matters most, because getting it wrong turns the gate into a
 // door.
 type Lookup interface {
-	AuthorizedCustomDomain(ctx context.Context, host string) (bool, error)
+	AuthorizedDomain(ctx context.Context, host string) (bool, error)
 }
 
 // Decision is what the handler turns into a status code. Named rather than a
@@ -128,7 +128,7 @@ func (a *Authorizer) Decide(ctx context.Context, raw string) (Decision, string) 
 	if err != nil {
 		return Malformed, ""
 	}
-	if a.cfg.Zone != "" && InZone(host, a.cfg.Zone) {
+	if a.cfg.Zone != "" && Reserved(host, a.cfg.Zone) {
 		return Deny, host
 	}
 	if a.denied(host) {
@@ -138,7 +138,7 @@ func (a *Authorizer) Decide(ctx context.Context, raw string) (Decision, string) 
 	ctx, cancel := context.WithTimeout(ctx, a.cfg.Timeout)
 	defer cancel()
 
-	ok, err := a.lookup.AuthorizedCustomDomain(ctx, host)
+	ok, err := a.lookup.AuthorizedDomain(ctx, host)
 	if err != nil {
 		// Fail closed, and do not cache it. A database that is briefly unwell
 		// must not turn into a refusal that outlives the outage, and it must

@@ -54,6 +54,11 @@ services:
       # every write token in existence.
       AW_TLS_AUTH_SECRET_FILE: "/run/secrets/tls_auth_secret"
       AW_ZONE: "askwhen.me"
+      # Where a custom domain is supposed to point (§7): the CNAME target a
+      # customer is told, and the edge's public address for an apex that
+      # cannot carry a CNAME. Both are checked before the gate will issue.
+      AW_EDGE_TARGET: "edge.askwhen.me"
+      AW_EDGE_IPS: "64.111.22.170"
 
       # Retention, from architecture §10. Here rather than compiled in, because
       # these are the numbers a regulator or a customer will ask about and they

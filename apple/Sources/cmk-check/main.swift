@@ -1319,6 +1319,19 @@ do {
           || String(decoding: t.calls[4].body!, as: UTF8.self) == #"{"slug":"x7f2k9","decision":"decline"}"#,
           "with slug and decision in the body")
 
+    t.answers = [(201, [:], #"{"host":"ask.example.com","kind":"custom","verified":false,"check":"not-found","advice":"Create a CNAME for ask.example.com pointing at edge.askwhen.me.","point":"edge.askwhen.me"}"#)]
+    let claimed = try! run { try await c.claimDomain("ask.example.com", slug: "x7f2k9", token: "tok_123") }.get()
+    check(t.calls.last?.method == "PUT" && t.calls.last?.path == "/v1/pages/x7f2k9/domains/ask.example.com",
+          "claimDomain is PUT /v1/pages/{slug}/domains/{host}")
+    check(claimed.kind == "custom" && !claimed.verified && claimed.point == "edge.askwhen.me" && claimed.advice?.contains("CNAME") == true,
+          "and hands back what the customer has to set up")
+    t.answers = [(200, [:], #"{"domains":[{"host":"matt.askwhen.me","kind":"subdomain","verified":true}],"point":"edge.askwhen.me"}"#)]
+    let listed = try! run { try await c.domains(slug: "x7f2k9", token: "tok_123") }.get()
+    check(listed.count == 1 && listed[0].verified && listed[0].check == nil, "domains lists them; a subdomain is verified with nothing to check")
+    t.answers = [(204, [:], "")]
+    _ = try! run { try await c.releaseDomain("matt.askwhen.me", slug: "x7f2k9", token: "tok_123") }.get()
+    check(t.calls.last?.method == "DELETE" && t.calls.last?.path == "/v1/pages/x7f2k9/domains/matt.askwhen.me", "releaseDomain is DELETE")
+
     t.answers = [(404, [:], "404 page not found")]
     check((run { try await c.resolve(requestID: "r1", slug: "x7f2k9", decision: .accept, token: "bad") }.failure as? AskwhenError) == .notFound,
           "404 → notFound, whichever of token/page/request it was")

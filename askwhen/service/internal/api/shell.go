@@ -52,6 +52,13 @@ func (s *Shell) Page(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	s.Root(w, r)
+}
+
+// Root serves the shell with no slug in the path — the root of a customer's
+// hostname, where the page finds its dump by Host (/p/host.json). The caller
+// has already decided the host is one of ours to serve.
+func (s *Shell) Root(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
 	h.Set("Content-Type", "text/html; charset=utf-8")
 	// Revalidate rather than cache: the document is tiny, and a stale shell

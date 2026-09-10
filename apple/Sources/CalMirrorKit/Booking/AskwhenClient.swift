@@ -186,6 +186,46 @@ public struct AskwhenClient: Sendable {
         guard resp.statusCode == 204 else { throw failure(resp, data) }
     }
 
+    // MARK: Domains (§7, the $35 and $70 tiers)
+
+    /// A hostname claimed for a page, and where it stands.
+    public struct ClaimedDomain: Codable, Equatable, Sendable {
+        public let host: String
+        /// "subdomain" (ours; nothing to set up) or "custom" (theirs; a CNAME).
+        public let kind: String
+        /// True once the edge will issue a certificate for it.
+        public let verified: Bool
+        /// For an unverified custom domain: the last DNS answer and what to do.
+        public let check: String?
+        public let advice: String?
+        /// The CNAME target to tell the customer — edge.askwhen.me.
+        public let point: String?
+    }
+
+    /// Claims `host` for the page. A subdomain of askwhen.me comes back
+    /// verified; a custom domain comes back with what the customer has to set.
+    public func claimDomain(_ host: String, slug: String, token: String) async throws -> ClaimedDomain {
+        let (data, resp) = try await exchange(request("PUT", "/v1/pages/\(slug)/domains/\(host)", token: token))
+        guard resp.statusCode == 201 || resp.statusCode == 200 else { throw failure(resp, data) }
+        guard let d = try? JSONDecoder().decode(ClaimedDomain.self, from: data) else { throw AskwhenError.malformed }
+        return d
+    }
+
+    public func releaseDomain(_ host: String, slug: String, token: String) async throws {
+        let (data, resp) = try await exchange(request("DELETE", "/v1/pages/\(slug)/domains/\(host)", token: token))
+        guard resp.statusCode == 204 else { throw failure(resp, data) }
+    }
+
+    /// The page's hostnames, each checked against DNS on the way — so asking
+    /// "is it working yet?" is what makes it start working.
+    public func domains(slug: String, token: String) async throws -> [ClaimedDomain] {
+        let (data, resp) = try await exchange(request("GET", "/v1/pages/\(slug)/domains", token: token))
+        guard resp.statusCode == 200 else { throw failure(resp, data) }
+        struct Reply: Decodable { let domains: [ClaimedDomain] }
+        guard let r = try? JSONDecoder().decode(Reply.self, from: data) else { throw AskwhenError.malformed }
+        return r.domains
+    }
+
     // MARK: Plumbing
 
     private func request(_ method: String, _ path: String, token: String?) -> URLRequest {

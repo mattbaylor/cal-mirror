@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/api"
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/domainverify"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/mail"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/store"
@@ -72,6 +73,10 @@ type config struct {
 	mailFrom     string
 	// The built web app: index.html and app.js. /web in the image.
 	webDir string
+	// Where a custom domain is supposed to point: the CNAME target, and the
+	// edge's public address for an apex that cannot carry a CNAME.
+	edgeTarget string
+	edgeIPs    []string
 }
 
 func loadConfig() (config, error) {
@@ -86,6 +91,8 @@ func loadConfig() (config, error) {
 		// the proxy or lets a requester pick their own bucket.
 		trustedProxy: envOr("AW_TRUSTED_PROXY", "172.16.1.4"),
 		webDir:       envOr("AW_WEB", "/web"),
+		edgeTarget:   envOr("AW_EDGE_TARGET", "edge.askwhen.me"),
+		edgeIPs:      strings.Fields(strings.ReplaceAll(envOr("AW_EDGE_IPS", "64.111.22.170"), ",", " ")),
 	}
 
 	// Read from a file rather than an environment variable so the value does not
@@ -168,9 +175,13 @@ func run(log *slog.Logger) error {
 		return fmt.Errorf("web app (AW_WEB=%s): %w", cfg.webDir, err)
 	}
 
+	// A customer who set their CNAME and went to bed should wake up verified.
+	domains := domainsAPI(st, cfg, log)
+	go api.DomainChecker(sweepCtx, domains, 5*time.Minute)
+
 	srv := &http.Server{
 		Addr:    cfg.listen,
-		Handler: routes(st, cfg, post, shell, log),
+		Handler: routes(st, cfg, post, shell, domains, log),
 
 		// A request is a name, an email, a note and a slot. Nothing here should
 		// take long, and an unbounded read is how a slow-loris ties up a service
@@ -258,7 +269,16 @@ func notifier(p *mail.Postal, log *slog.Logger) api.Notifier {
 	return p
 }
 
-func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, log *slog.Logger) http.Handler {
+func domainsAPI(st *store.Store, cfg config, log *slog.Logger) *api.Domains {
+	return &api.Domains{
+		Owner:  &api.Owner{Store: st, Pepper: cfg.pepper, Logger: log},
+		Zone:   cfg.zone,
+		Verify: domainverify.Config{Target: cfg.edgeTarget, EdgeIPs: cfg.edgeIPs},
+		Logger: log,
+	}
+}
+
+func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, domains *api.Domains, log *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -271,9 +291,26 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, lo
 	// site (Matt, 10 Sept 2026). 301 as asked, but with a one-day cache rather
 	// than a browser's default forever, so a landing page here later — "what is
 	// this link I was sent?" — does not fight a redirect cached in 2026.
+	//
+	// On a customer's own hostname — ask.example.com, matt.askwhen.me — the
+	// root *is* the page: the shell is served and fetches /p/host.json, which
+	// resolves by Host. No redirect there; that would send a stranger holding
+	// a customer's link to our marketing site.
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=86400")
-		http.Redirect(w, r, "https://calendarmirror.com/", http.StatusMovedPermanently)
+		host := hostOf(r)
+		if host == cfg.zone || host == "www."+cfg.zone || host == "" {
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+			http.Redirect(w, r, "https://calendarmirror.com/", http.StatusMovedPermanently)
+			return
+		}
+		if _, err := st.SlugForHost(r.Context(), host); err != nil {
+			// Unknown host, or the database is unwell. One answer: the edge
+			// would not have issued a certificate for a host we do not know,
+			// so this is somebody poking the internal port by name.
+			http.NotFound(w, r)
+			return
+		}
+		shell.Root(w, r)
 	})
 
 	// The request page itself: one document and one script for every slug.
@@ -283,11 +320,14 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, lo
 	mux.HandleFunc("GET /{slug}", shell.Page)
 	mux.HandleFunc("GET /app.js", shell.Script)
 
-	mux.Handle("GET /internal/tls-authorize", tlsauth.New(st, tlsauth.Config{
+	// The gate is reachable from the edge and nothing else (edge.md, "three
+	// things that are not optional", 1). The secret in the query string is
+	// defence in depth; this is the perimeter.
+	mux.Handle("GET /internal/tls-authorize", internalOnly(cfg.trustedProxy, tlsauth.New(st, tlsauth.Config{
 		Zone:   cfg.zone,
 		Secret: cfg.tlsSecret,
 		Logger: log,
-	}))
+	})))
 
 	// `{slug}.json` is not a legal ServeMux pattern — a wildcard has to be a
 	// whole path segment — so the suffix is stripped here rather than the public
@@ -295,6 +335,13 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, lo
 	mux.HandleFunc("GET /p/{file}", func(w http.ResponseWriter, r *http.Request) {
 		serveDump(w, r, st, log)
 	})
+
+	// The owner's hostnames. Claiming is cheap; what it buys is a row the
+	// on-demand TLS gate will say yes to (custom, once verified) and a Host
+	// the root route will serve.
+	mux.HandleFunc("GET /v1/pages/{slug}/domains", domains.List)
+	mux.HandleFunc("PUT /v1/pages/{slug}/domains/{host}", domains.Claim)
+	mux.HandleFunc("DELETE /v1/pages/{slug}/domains/{host}", domains.Release)
 
 	// Double opt-in. GET renders, POST confirms — see internal/api/confirm.go
 	// for why that split is not decoration.
@@ -353,6 +400,15 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, lo
 func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slog.Logger) {
 	file := r.PathValue("file")
 	slug, ok := strings.CutSuffix(file, ".json")
+	if ok && slug == "host" {
+		// The page for whichever hostname this arrived on. "host" is four
+		// characters and a slug is at least six, so nothing can collide.
+		var err error
+		if slug, err = st.SlugForHost(r.Context(), hostOf(r)); err != nil {
+			http.NotFound(w, r)
+			return
+		}
+	}
 	if !ok || !validSlug(slug) {
 		// §4c: never distinguish never-existed from lapsed, deleted or expired.
 		http.NotFound(w, r)
@@ -404,6 +460,42 @@ func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slo
 	// §8: noindex by default. The page opts in per slug; the dump never does.
 	w.Header().Set("X-Robots-Tag", "noindex")
 	w.Write(body)
+}
+
+// internalOnly admits a request only when it came straight from the proxy's
+// own address and was not forwarded on somebody's behalf.
+//
+// Two checks, because one is not enough: a public request for /internal/…
+// that the edge proxies through arrives from the same 172.16.1.4 as Caddy's
+// own `ask`. What tells them apart is that Caddy's ask sets no headers at all
+// (verified against ondemand.go), while a proxied request always carries
+// X-Forwarded-For. Refuses with the same 404 as an unknown page, so the
+// existence of the endpoint is not learnable from outside.
+func internalOnly(proxy string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			ip = r.RemoteAddr
+		}
+		if proxy == "" || ip != proxy ||
+			r.Header.Get("X-Forwarded-For") != "" || r.Header.Get("X-Forwarded-Host") != "" ||
+			r.Header.Get("X-Forwarded-Proto") != "" {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// hostOf is the request's Host, lowercased, without a port, without a
+// trailing dot — the spelling the domain table stores. Caddy forwards the
+// customer's Host unchanged.
+func hostOf(r *http.Request) string {
+	h := strings.ToLower(strings.TrimSuffix(r.Host, "."))
+	if i := strings.LastIndex(h, ":"); i > 0 && !strings.Contains(h[i:], "]") {
+		h = h[:i]
+	}
+	return strings.TrimPrefix(strings.TrimSuffix(h, "]"), "[")
 }
 
 // servedETag is the validator for dump-plus-holds: strong, and different
