@@ -1,8 +1,8 @@
 # askwhen.me — the whole deployment.
 #
-# Two containers on one host (64.111.22.172). Mail is not here: it is submitted
-# to dlvr.rehosted.us over the network, so the DKIM private key never exists on
-# this machine. See mail.md for why that separation is worth a network hop.
+# Runs on CT 112 (172.16.1.41) behind caddy-dc. Mail is not here: it goes to
+# Postal on dlvr.rehosted.us over its API, so the DKIM private key never exists
+# on this machine. See mail.md for why that separation is worth a network hop.
 #
 #   docker compose -f infra/compose.yml build
 #   docker compose -f infra/compose.yml up -d
@@ -32,17 +32,14 @@ services:
       # is a request nobody can confirm.
       AW_ORIGIN: "https://askwhen.me"
 
-      # Mail. Submission to dlvr, not direct-to-MX from this host — 64.111.22.172
-      # has no reverse DNS as a sender and would be greylisted on sight.
-      AW_SMTP_HOST: "dlvr.rehosted.us"
-      AW_SMTP_PORT: "587"
-      AW_SMTP_USER: "askwhen@dlvr.rehosted.us"
-      AW_SMTP_PASSWORD_FILE: "/run/secrets/smtp_password"
+      # Mail, through Postal's HTTP API rather than SMTP (Matt, 10 Sept 2026).
+      # One HTTPS call from a binary that already has an HTTP client; no SMTP
+      # library, no STARTTLS, and the credential is a bearer key rather than a
+      # password. Postal owns the return path (psrp.askwhen.me) and sees every
+      # bounce itself, so there is no envelope sender to configure here.
+      AW_POSTAL_URL: "https://dlvr.rehosted.us"
+      AW_POSTAL_API_KEY_FILE: "/run/secrets/postal_api_key"
       AW_MAIL_FROM: "askwhen.me <no-reply@askwhen.me>"
-      # The envelope sender, which is what SPF actually checks — not the From:
-      # header. Bounces land here and the service needs them to know a .ics was
-      # never delivered.
-      AW_MAIL_RETURN_PATH: "bounces@askwhen.me"
 
       # Pepper for the write-token, confirm-token and rate-limit-key hashes
       # (schema.sql). Rotating it invalidates every write token in existence,
@@ -74,7 +71,7 @@ services:
       AW_POW: "off"
 
     secrets:
-      - smtp_password
+      - postal_api_key
       - pepper
       - tls_auth_secret
 
@@ -154,8 +151,10 @@ services:
         max-file: "3"
 
 secrets:
-  smtp_password:
-    file: ./secrets/smtp_password
+  # From Infisical: postal_api_key. A Postal *server* credential of type API,
+  # created in the askwhen.me organisation's `main` server.
+  postal_api_key:
+    file: ./secrets/postal_api_key
   pepper:
     file: ./secrets/pepper
   # openssl rand -hex 32 > infra/secrets/tls_auth_secret
