@@ -168,6 +168,9 @@ type dumpEnvelope struct {
 		S string `json:"s"`
 		E string `json:"e"`
 	} `json:"slots"`
+	// The service's own field, added on the way out. A device that sends it
+	// is either confused or trying to fake a hold, and neither is published.
+	Held json.RawMessage `json:"held"`
 }
 
 // Publish stores a new dump. The bytes are stored as received; what is checked
@@ -203,6 +206,10 @@ func (o *Owner) Publish(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(env.Slots) > 500 {
 		http.Error(w, "too many slots", http.StatusBadRequest)
+		return
+	}
+	if env.Held != nil {
+		http.Error(w, "held is set by the service, not the device", http.StatusBadRequest)
 		return
 	}
 	name := strings.TrimSpace(env.Display.Name)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/api"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
@@ -19,6 +21,12 @@ import (
 const dump = `{"v":1,"slug":"x7f2k9","slots":[]}`
 
 func testRoutes(t *testing.T) http.Handler {
+	t.Helper()
+	h, _ := testRoutesAndStore(t)
+	return h
+}
+
+func testRoutesAndStore(t *testing.T) (http.Handler, *store.Store) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -56,7 +64,7 @@ func testRoutes(t *testing.T) http.Handler {
 	}
 
 	cfg := config{zone: "askwhen.me", tlsSecret: "s3cret"}
-	return routes(st, cfg, nil, shell, log)
+	return routes(st, cfg, nil, shell, log), st
 }
 
 func do(h http.Handler, method, target string, hdr map[string]string) *httptest.ResponseRecorder {
@@ -87,8 +95,16 @@ func TestServesTheDump(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", w.Code)
 	}
-	if w.Body.String() != dump {
-		t.Fatalf("body = %q, want the stored bytes verbatim", w.Body.String())
+	// The stored document, plus the service's own `held` list and nothing else.
+	var got map[string]json.RawMessage
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if string(got["v"]) != "1" || string(got["slug"]) != `"x7f2k9"` || string(got["slots"]) != "[]" || string(got["held"]) != "[]" {
+		t.Fatalf("body = %s", w.Body.String())
+	}
+	if len(got) != 4 {
+		t.Fatalf("served %d keys, want the stored 3 plus held: %s", len(got), w.Body.String())
 	}
 	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
 		t.Fatalf("Content-Type = %q", ct)
@@ -251,5 +267,52 @@ func TestTheRequestPageIsServedForAnySlugShapedPath(t *testing.T) {
 		if w := do(h, http.MethodGet, p, nil); w.Code != http.StatusNotFound {
 			t.Fatalf("%s -> %d, want 404", p, w.Code)
 		}
+	}
+}
+
+func TestHeldSlotsRideWithTheDumpAndMoveTheETag(t *testing.T) {
+	h, st := testRoutesAndStore(t)
+	first := do(h, http.MethodGet, "/p/x7f2k9.json", nil)
+	etag := first.Header().Get("ETag")
+
+	// Somebody asks for a time. Their hold is live for fifteen minutes.
+	ctx := context.Background()
+	ask := func(id, slot, state string, released bool) {
+		t.Helper()
+		if err := st.CreateRequest(ctx, store.Request{ID: id, Slug: "x7f2k9", SlotStart: slot,
+			SlotEnd: slot[:11] + "17:00:00Z"}, []byte(id), time.Now().Add(15*time.Minute), time.Now().Add(time.Hour)); err != nil {
+			t.Fatal(err)
+		}
+		rel := "NULL"
+		if released {
+			rel = "'2026-09-01T00:00:00Z'"
+		}
+		if _, err := st.DB().Exec(`UPDATE request SET state = ?, hold_released_at = `+rel+` WHERE id = ?`, state, id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ask("r1", "2026-09-12T16:00:00Z", "unconfirmed", false)
+	ask("r2", "2026-09-13T16:00:00Z", "confirmed", false)
+	ask("r3", "2026-09-14T16:00:00Z", "accepted", false)
+	// Released, declined and expired do not hold anything.
+	ask("r4", "2026-09-15T16:00:00Z", "declined", true)
+	ask("r5", "2026-09-16T16:00:00Z", "expired", true)
+
+	// The cached copy is stale now: a hold is part of the representation.
+	w := do(h, http.MethodGet, "/p/x7f2k9.json", map[string]string{"If-None-Match": etag})
+	if w.Code != http.StatusOK {
+		t.Fatalf("a new hold did not move the ETag: got %d", w.Code)
+	}
+	var got struct {
+		Held []string `json:"held"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &got)
+	want := []string{"2026-09-12T16:00:00Z", "2026-09-13T16:00:00Z", "2026-09-14T16:00:00Z"}
+	if strings.Join(got.Held, ",") != strings.Join(want, ",") {
+		t.Fatalf("held = %v, want %v (unconfirmed, confirmed and accepted hold; released do not)", got.Held, want)
+	}
+	// And the new representation revalidates.
+	if w2 := do(h, http.MethodGet, "/p/x7f2k9.json", map[string]string{"If-None-Match": w.Header().Get("ETag")}); w2.Code != http.StatusNotModified {
+		t.Fatalf("revalidating the held representation got %d", w2.Code)
 	}
 }

@@ -45,7 +45,6 @@ Judgement, not access. Roughly in the order it starts costing.
 |---|---|
 | **Overlay: how much setup?** | I would argue **zero** — EventKit permission and nothing else. Every setup step between a stranger and the thing they wanted is one most will not take. |
 | **Timezone picker on the request page** | Browser decides today. Right for almost everyone, silently wrong for the traveller. `format.js` takes the zone as an argument everywhere, so it stays a component rather than a rewrite. |
-| **Held slots on the picker** | The design says a held slot renders as *just asked for* rather than vanishing. The dump carries no hold information, so today it vanishes only once the owner republishes. The cheap fix is the service adding a `held: [starts]` list to `/p/{slug}.json` from its own hold table — privacy-neutral (a hold is already visible as a 409) but a change to the one document that leaves the service, so it is yours to say yes to. |
 | **The *Proposed* entries in `decisions.md`** | My reasoning filed as mine, not as settled. One I would argue hard for: requester text must never share a context with a config-write tool. |
 
 ## Mine, and unblocked
@@ -99,6 +98,10 @@ In the order I would do them.
   delivered by Postal to a real inbox. The pepper was generated on the host that
   day and exists nowhere else; **back it up** (README, "The pepper deserves its
   own paragraph").
+- **Held slots ride with the dump** (Matt, 10 Sept). `held: [starts]` is added
+  by the service on the way out; a device that sends it is refused. The picker
+  strikes them through, and a 409 on submit marks the slot locally without a
+  refetch. `decisions.md`, *Settled*.
 - **The request page is served, and works** ([#74](https://github.com/mattbaylor/cal-mirror/pull/74)).
   `GET /{slug}` and `/app.js` from the image, no slug lookup, `noindex` and
   CSP as headers. The web app makes exactly two same-origin calls now, and

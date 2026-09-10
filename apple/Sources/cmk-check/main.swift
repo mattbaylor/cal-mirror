@@ -987,6 +987,16 @@ do {
     check(dump.isSchemaValid, "the dump satisfies the schema's patterns and ranges")
     check(try JSONDecoder().decode(PolicyDump.self, from: data) == dump, "the dump round-trips through encode/decode")
 
+    // The service adds `held` on the way out (10 Sept 2026). A device that
+    // reads a served dump back must not carry that field into what it next
+    // publishes — the service refuses it — so the decoder drops it and the
+    // encoder has no way to write it.
+    let served = String(data: data, encoding: .utf8)!
+        .replacingOccurrences(of: "\"slots\":", with: "\"held\":[\"2026-09-02T15:00:00Z\"],\"slots\":")
+    let back = try JSONDecoder().decode(PolicyDump.self, from: served.data(using: .utf8)!)
+    check(back == dump, "a served dump with `held` decodes to the same dump")
+    check(!String(data: try back.encoded(), encoding: .utf8)!.contains("held"), "and re-encoding never writes held")
+
     // Dates are formatted by the type, not by whoever configured the encoder —
     // the page reading this has never heard of a DateEncodingStrategy.
     check(String(data: try JSONEncoder().encode(dump), encoding: .utf8)!.contains("2026-09-02T15:00:00Z"),

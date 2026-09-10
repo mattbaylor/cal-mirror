@@ -151,6 +151,32 @@ func (s *Store) Dump(ctx context.Context, slug string) (dump, etag string, err e
 	return dump, etag, nil
 }
 
+// HeldStarts is every slot start currently held on a page, ordered — the same
+// predicate as the request_one_live_hold_per_slot index, so this is exactly the
+// set a new request would 409 against. Served with the dump (§4b: a held slot
+// renders as "just asked for" rather than vanishing); cheap, because the
+// partial index is the whole answer and the dump body is never touched.
+func (s *Store) HeldStarts(ctx context.Context, slug string) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT slot_start FROM request
+		WHERE slug = ? AND hold_released_at IS NULL
+		  AND state IN ('unconfirmed', 'confirmed', 'accepted')
+		ORDER BY slot_start`, slug)
+	if err != nil {
+		return nil, fmt.Errorf("held: %w", err)
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var st string
+		if err := rows.Scan(&st); err != nil {
+			return nil, fmt.Errorf("held: %w", err)
+		}
+		out = append(out, st)
+	}
+	return out, rows.Err()
+}
+
 // QueueVersion reads the counter the triggers maintain.
 //
 // This is the cheap path for the poll that dominates this service's load: one
