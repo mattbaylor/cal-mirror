@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/api"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/store"
 )
@@ -44,8 +45,18 @@ func testRoutes(t *testing.T) http.Handler {
 		t.Fatal(err)
 	}
 
+	// A stand-in for web/dist: the shell is served as-is, so any two files do.
+	web := t.TempDir()
+	os.WriteFile(filepath.Join(web, "index.html"), []byte("<!doctype html><title>Ask for a time</title><script src=\"./app.js\"></script>"), 0o644)
+	os.WriteFile(filepath.Join(web, "app.js"), []byte("console.log('app')"), 0o644)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	shell, err := api.LoadShell(web, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cfg := config{zone: "askwhen.me", tlsSecret: "s3cret"}
-	return routes(st, cfg, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	return routes(st, cfg, nil, shell, log)
 }
 
 func do(h http.Handler, method, target string, hdr map[string]string) *httptest.ResponseRecorder {
@@ -199,6 +210,46 @@ func TestTheBareDomainGoesToTheProductSite(t *testing.T) {
 	for _, p := range []string{"/x7f2k9", "/p/x7f2k9.json", "/healthz"} {
 		if w := do(h, http.MethodGet, p, nil); w.Code == http.StatusMovedPermanently {
 			t.Fatalf("%s was redirected", p)
+		}
+	}
+}
+
+func TestTheRequestPageIsServedForAnySlugShapedPath(t *testing.T) {
+	h := testRoutes(t)
+
+	// A page that exists and one that never did look the same from here; the
+	// app fetches the dump and tells the difference itself (§4c).
+	for _, p := range []string{"/x7f2k9", "/zzzzzzzz"} {
+		w := do(h, http.MethodGet, p, nil)
+		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "Ask for a time") {
+			t.Fatalf("%s -> %d %q", p, w.Code, w.Body.String())
+		}
+		if w.Header().Get("X-Robots-Tag") != "noindex, nofollow" {
+			t.Fatalf("%s is indexable: %q", p, w.Header().Get("X-Robots-Tag"))
+		}
+		csp := w.Header().Get("Content-Security-Policy")
+		if !strings.Contains(csp, "connect-src 'self'") || !strings.Contains(csp, "default-src 'none'") {
+			t.Fatalf("%s CSP = %q", p, csp)
+		}
+		if w.Header().Get("ETag") == "" {
+			t.Fatalf("%s has no ETag", p)
+		}
+	}
+
+	// The script the shell references, resolved from /{slug} to /app.js.
+	w := do(h, http.MethodGet, "/app.js", nil)
+	if w.Code != http.StatusOK || !strings.HasPrefix(w.Header().Get("Content-Type"), "text/javascript") {
+		t.Fatalf("/app.js -> %d %s", w.Code, w.Header().Get("Content-Type"))
+	}
+	et := w.Header().Get("ETag")
+	if w = do(h, http.MethodGet, "/app.js", map[string]string{"If-None-Match": et}); w.Code != http.StatusNotModified {
+		t.Fatalf("revalidating app.js got %d", w.Code)
+	}
+
+	// Not slug-shaped: not a page.
+	for _, p := range []string{"/abc", "/X7F2K9", "/x7f2k9/", "/x7f2k9/extra", "/gallery.html"} {
+		if w := do(h, http.MethodGet, p, nil); w.Code != http.StatusNotFound {
+			t.Fatalf("%s -> %d, want 404", p, w.Code)
 		}
 	}
 }

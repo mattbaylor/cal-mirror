@@ -39,13 +39,15 @@ meet.
 
 ```
 src/format.js            every timezone question, pure and exhaustively tested
-src/dump.js              where a dump comes from — the seam step 3 replaces
+src/dump.js              where a dump comes from — fetch on the site, bundled on file://
+src/service.js           the two same-origin calls, and the only file that makes them
 src/styles.js            shared tokens; the palette the marketing site uses
 src/components/          request-page, availability-week, slot-button,
                          request-form, request-state
 src/main.js              the entry point: slug in, page out
 src/gallery.js           the contact sheet
 test/format.test.mjs     the three-timezone and DST claims
+test/service.test.mjs    the service contract, against a stand-in for it
 test/no-network.mjs      the privacy claim, asserted against the built bundle
 ```
 
@@ -56,10 +58,14 @@ zone, shows the owner's time beside each one when the zones differ, pages a week
 at a time, shows the freshness stoplight, walks the whole flow — pick a time,
 say who you are, confirm your email — and shows every end state.
 
-**Does not.** Touch the network, in any way, at all. There is no service yet, so
-the dump is bundled at build time and a submitted request goes nowhere. That is
-not a stub standing in for a fetch: it is the property being kept honest from the
-first commit, and `npm run check` fails if a later change breaks it.
+**Does not.** Talk to anyone but the host it came from. Since 10 Sept 2026 the
+page makes exactly two calls, both same-origin — `GET /p/{slug}.json` for the
+dump and `POST /v1/pages/{slug}/requests` to submit — and `test/no-network.mjs`
+now asserts that shape against the built bundle: every `fetch(` must target a
+same-origin path literal, every other way to start a request is still
+forbidden, and no absolute URL may appear at all. Opened from the filesystem
+there is no service to ask, so the bundled dumps answer instead; that is what
+keeps the gallery and a `file://` review working.
 
 ## Carried forward to step 3
 

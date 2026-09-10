@@ -69,6 +69,8 @@ type config struct {
 	postalURL    string
 	postalKey    string
 	mailFrom     string
+	// The built web app: index.html and app.js. /web in the image.
+	webDir string
 }
 
 func loadConfig() (config, error) {
@@ -82,6 +84,7 @@ func loadConfig() (config, error) {
 		// from 172.16.1.4 and nowhere else, or the per-IP limit either counts
 		// the proxy or lets a requester pick their own bucket.
 		trustedProxy: envOr("AW_TRUSTED_PROXY", "172.16.1.4"),
+		webDir:       envOr("AW_WEB", "/web"),
 	}
 
 	// Read from a file rather than an environment variable so the value does not
@@ -159,9 +162,14 @@ func run(log *slog.Logger) error {
 	post := mailer(cfg, log)
 	go api.Sweeper(sweepCtx, st, 60*time.Second, ttlConfirmed, notifier(post, log), log)
 
+	shell, err := api.LoadShell(cfg.webDir, log)
+	if err != nil {
+		return fmt.Errorf("web app (AW_WEB=%s): %w", cfg.webDir, err)
+	}
+
 	srv := &http.Server{
 		Addr:    cfg.listen,
-		Handler: routes(st, cfg, post, log),
+		Handler: routes(st, cfg, post, shell, log),
 
 		// A request is a name, an email, a note and a slot. Nothing here should
 		// take long, and an unbounded read is how a slow-loris ties up a service
@@ -249,7 +257,7 @@ func notifier(p *mail.Postal, log *slog.Logger) api.Notifier {
 	return p
 }
 
-func routes(st *store.Store, cfg config, post *mail.Postal, log *slog.Logger) http.Handler {
+func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, log *slog.Logger) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -266,6 +274,13 @@ func routes(st *store.Store, cfg config, post *mail.Postal, log *slog.Logger) ht
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.Redirect(w, r, "https://calendarmirror.com/", http.StatusMovedPermanently)
 	})
+
+	// The request page itself: one document and one script for every slug.
+	// The page fetches its own dump, so no lookup happens here (see api.Shell).
+	// "GET /app.js" is a literal and beats the wildcard; a slug cannot contain
+	// a dot anyway.
+	mux.HandleFunc("GET /{slug}", shell.Page)
+	mux.HandleFunc("GET /app.js", shell.Script)
 
 	mux.Handle("GET /internal/tls-authorize", tlsauth.New(st, tlsauth.Config{
 		Zone:   cfg.zone,

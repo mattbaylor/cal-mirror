@@ -113,6 +113,15 @@ add(
 );
 
 add(
+  frame('Held by someone else', 'Two people asked for the same time; the first is confirming', () =>
+    page(fresh(example), { zone: 'America/Denver', locale: 'en-US', state: 'held' }),
+  ),
+  frame('Did not go through', 'The submission failed before it was recorded', () =>
+    page(fresh(example), { zone: 'America/Denver', locale: 'en-US', state: 'failed' }),
+  ),
+);
+
+add(
   frame('Expired dump', 'Lapse and expiry share one voice, and never say which', () =>
     page({ ...example, expires: '2026-08-31T00:00:00Z' }, { zone: 'America/Denver' }),
   ),
