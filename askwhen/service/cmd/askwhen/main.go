@@ -249,9 +249,9 @@ func deliverer(p *mail.Postal, log *slog.Logger) func(context.Context, string, s
 // not the address: the address is the one thing in the row that is somebody's.
 type logNotifier struct{ log *slog.Logger }
 
-func (l logNotifier) Accepted(_ context.Context, _ string, ev mail.Event) error {
+func (l logNotifier) Accepted(_ context.Context, _ string, ev mail.Event) (string, error) {
 	l.log.Info("notify (no Postal key): accepted", "uid", ev.UID, "when", ev.When())
-	return nil
+	return "", nil
 }
 func (l logNotifier) Declined(_ context.Context, _ string, ev mail.Event) error {
 	l.log.Info("notify (no Postal key): declined", "uid", ev.UID, "when", ev.When())
@@ -339,6 +339,17 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 	// The owner's hostnames. Claiming is cheap; what it buys is a row the
 	// on-demand TLS gate will say yes to (custom, once verified) and a Host
 	// the root route will serve.
+	// Postal's report on the .ics mail. Public — dlvr calls it through the
+	// edge — and authenticated by the signature alone (mail.Verifier, keyed
+	// from the instance's own JWKS). Not under /internal, which the perimeter
+	// check would refuse.
+	mux.Handle("POST /hooks/postal", &api.PostalHook{
+		Store:  st,
+		Verify: &mail.Verifier{BaseURL: cfg.postalURL},
+		Notify: notifier(post, log),
+		Logger: log,
+	})
+
 	mux.HandleFunc("GET /v1/pages/{slug}/domains", domains.List)
 	mux.HandleFunc("PUT /v1/pages/{slug}/domains/{host}", domains.Claim)
 	mux.HandleFunc("DELETE /v1/pages/{slug}/domains/{host}", domains.Release)

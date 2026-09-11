@@ -45,8 +45,9 @@ func (r *recorder) all() []sent {
 	defer r.mu.Unlock()
 	return append([]sent(nil), r.sent...)
 }
-func (r *recorder) Accepted(_ context.Context, to string, ev mail.Event) error {
-	return r.record("accepted", to, ev)
+func (r *recorder) Accepted(_ context.Context, to string, ev mail.Event) (string, error) {
+	err := r.record("accepted", to, ev)
+	return "msg-" + ev.UID + "@dlvr", err
 }
 func (r *recorder) Declined(_ context.Context, to string, ev mail.Event) error {
 	return r.record("declined", to, ev)

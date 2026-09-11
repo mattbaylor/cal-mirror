@@ -80,6 +80,11 @@ var ErrRefused = errors.New("postal refused the message")
 // but a URL whose GET does not confirm anything (see api.Confirm). The HTML
 // part exists only so the link is clickable in clients that hide bare URLs.
 func (p *Postal) Confirmation(ctx context.Context, to, confirmURL string) error {
+	_, err := p.confirmation(ctx, to, confirmURL)
+	return err
+}
+
+func (p *Postal) confirmation(ctx context.Context, to, confirmURL string) (string, error) {
 	plain := strings.Join([]string{
 		"Someone — hopefully you — asked for a time on askwhen.me using this address.",
 		"",
@@ -111,7 +116,9 @@ func (p *Postal) Confirmation(ctx context.Context, to, confirmURL string) error 
 // Accepted tells the requester yes, and carries the event as an .ics so the
 // time lands on their calendar with one tap. The attachment is the point; the
 // prose is there for clients that hide attachments behind a paperclip.
-func (p *Postal) Accepted(ctx context.Context, to string, ev Event) error {
+// The Message-ID comes back so the caller can tie Postal's later report of
+// delivery or failure to the request — see store.RecordDelivery.
+func (p *Postal) Accepted(ctx context.Context, to string, ev Event) (string, error) {
 	when := ev.When()
 	plain := strings.Join([]string{
 		ev.OwnerName + " accepted your request.",
@@ -147,6 +154,11 @@ func (p *Postal) Accepted(ctx context.Context, to string, ev Event) error {
 // Declined says not this time, and says nothing about why, because the
 // service does not know and the owner was not asked to explain.
 func (p *Postal) Declined(ctx context.Context, to string, ev Event) error {
+	_, err := p.declined(ctx, to, ev)
+	return err
+}
+
+func (p *Postal) declined(ctx context.Context, to string, ev Event) (string, error) {
 	when := ev.When()
 	plain := strings.Join([]string{
 		ev.OwnerName + " was not able to take your request for",
@@ -173,6 +185,11 @@ func (p *Postal) Declined(ctx context.Context, to string, ev Event) error {
 // NoResponse closes a request nobody answered in fourteen days. Honest about
 // what happened, and about what it does not mean.
 func (p *Postal) NoResponse(ctx context.Context, to string, ev Event) error {
+	_, err := p.noResponse(ctx, to, ev)
+	return err
+}
+
+func (p *Postal) noResponse(ctx context.Context, to string, ev Event) (string, error) {
 	when := ev.When()
 	plain := strings.Join([]string{
 		"Your request to " + ev.OwnerName + " for",
@@ -200,13 +217,15 @@ func (p *Postal) NoResponse(ctx context.Context, to string, ev Event) error {
 	})
 }
 
-func (p *Postal) send(ctx context.Context, msg sendRequest) error {
+// send hands the message to Postal and returns its Message-ID — the handle
+// its webhooks will use to say what became of it.
+func (p *Postal) send(ctx context.Context, msg sendRequest) (string, error) {
 	if p.APIKey == "" {
-		return errors.New("mail: no Postal API key configured")
+		return "", errors.New("mail: no Postal API key configured")
 	}
 	body, err := json.Marshal(msg)
 	if err != nil {
-		return fmt.Errorf("mail: encode: %w", err)
+		return "", fmt.Errorf("mail: encode: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -215,7 +234,7 @@ func (p *Postal) send(ctx context.Context, msg sendRequest) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
 		strings.TrimRight(p.BaseURL, "/")+"/api/v1/send/message", bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("mail: request: %w", err)
+		return "", fmt.Errorf("mail: request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Server-API-Key", p.APIKey)
@@ -226,21 +245,21 @@ func (p *Postal) send(ctx context.Context, msg sendRequest) error {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("mail: postal unreachable: %w", err)
+		return "", fmt.Errorf("mail: postal unreachable: %w", err)
 	}
 	defer resp.Body.Close()
 
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 	var out sendResponse
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return fmt.Errorf("mail: postal answered %d with unparseable body", resp.StatusCode)
+		return "", fmt.Errorf("mail: postal answered %d with unparseable body", resp.StatusCode)
 	}
 	if out.Status != "success" {
 		// Postal returns HTTP 200 for application-level errors and puts the
 		// verdict in the body, so the status code alone is not the answer.
-		return fmt.Errorf("%w: %s: %s", ErrRefused, out.Data.Code, out.Data.Message)
+		return "", fmt.Errorf("%w: %s: %s", ErrRefused, out.Data.Code, out.Data.Message)
 	}
-	return nil
+	return out.Data.MessageID, nil
 }
 
 func htmlEscape(s string) string {

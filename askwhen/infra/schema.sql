@@ -287,6 +287,32 @@ CREATE INDEX IF NOT EXISTS request_hold_until  ON request (hold_until)
 -- The owner's poll (`GET /v1/pages/{slug}/queue`).
 CREATE INDEX IF NOT EXISTS request_queue ON request (slug, state, confirmed_at);
 
+-- ----------------------------------------------------------------- deliveries
+--
+-- One row per .ics email handed to Postal, so its webhooks can be tied back to
+-- the request they concern. This is what makes "purged once delivery confirms"
+-- (§10) mean delivery rather than the 48-hour ceiling, and what allows the one
+-- resend a bounce is granted. The row dies with its request: the cascade is
+-- the retention policy, and there is nothing here worth keeping longer.
+--
+-- Only accepted requests are tracked. Declined and no-response mail is
+-- fire-and-forget on purpose — there is no artefact to re-deliver, and a row
+-- per notice would be a log of who was told what.
+
+CREATE TABLE IF NOT EXISTS delivery (
+  -- Postal's RFC 5322 Message-ID for the send, as its API returns it and as
+  -- its webhooks name it.
+  message_id  TEXT PRIMARY KEY,
+  request_id  TEXT NOT NULL REFERENCES request (id) ON DELETE CASCADE,
+  -- 1 for the send at accept, 2 for the one resend a hard failure earns.
+  attempt     INTEGER NOT NULL CHECK (attempt IN (1, 2)),
+  -- NULL until Postal reports; then 'delivered' or 'failed'.
+  outcome     TEXT CHECK (outcome IN ('delivered', 'failed')),
+  created_at  TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS delivery_request ON delivery (request_id);
+
 -- --------------------------------------------------------------- rate limits
 --
 -- Per-IP limiting is in the MVP abuse set (§8), which puts the service in the
