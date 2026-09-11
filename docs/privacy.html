@@ -5,7 +5,7 @@
 <script src="redirect.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendar Mirror — Privacy</title>
-<meta name="description" content="Your calendar data is yours. Calendar Mirror collects nothing, has no server, and makes no network requests. Everything happens on your device.">
+<meta name="description" content="Your calendar data is yours. Calendar Mirror collects nothing and makes no network requests. The optional request page runs on a server that never sees your calendar — here is exactly what it holds, and for how long.">
 <link rel="icon" href="icon.png">
 <style>
   :root{ --bg:#0b0e14; --card:#151b28; --line:#232c3d; --tx:#e6edf3; --mut:#93a1b5;
@@ -23,6 +23,9 @@
   h1{font-size:32px;letter-spacing:-.5px;margin:.2em 0 .1em}
   .sub{color:var(--mut);margin:0 0 28px}
   h2{font-size:19px;margin:1.7em 0 .3em;letter-spacing:-.3px}
+  h3{font-size:16px;margin:1.4em 0 .2em;letter-spacing:-.2px}
+  code{font:14px/1 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+  ul{padding-left:22px} li{margin:6px 0}
   .lead{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:22px 0;font-size:17px}
   .lead strong{color:var(--accent2)}
   .foot{color:var(--mut);font-size:13.5px;margin-top:40px;border-top:1px solid var(--line);padding-top:18px}
@@ -33,12 +36,13 @@
 <div class="wrap">
   <div class="brand"><img src="icon.png" alt=""> Calendar Mirror</div>
   <h1>Privacy</h1>
-  <p class="sub">Last updated: August 2026</p>
+  <p class="sub">Last updated: September 2026 — DRAFT for 2.0</p>
 
   <p class="lead"><strong>Your calendar belongs to you — not to me, and not to a
-    server.</strong> Calendar Mirror has no account, no backend, and makes no network
-    requests of its own. It never sends your calendar anywhere. There is nothing
-    for me to collect, because I collect nothing.</p>
+    server.</strong> Calendar Mirror has no account and makes no network requests of
+    its own. It never sends your calendar anywhere. The one optional feature that
+    does use a server — the request page — is built so the server cannot see your
+    calendar either, and this page says exactly what it holds instead.</p>
 
   <h2>What the app does</h2>
   <p>You tell Calendar Mirror which calendar to copy and where to copy it. It reads
@@ -70,9 +74,87 @@
      provider's terms apply. If that matters to you, point Calendar Mirror at a
      local or self-hosted calendar as the destination.</p>
 
+  <h2>The request page (askwhen.me) — optional, and off until you turn it on</h2>
+  <p>Calendar Mirror 2.0 can give you a page at <code>askwhen.me/yourpage</code> where
+     a stranger can ask you for a time. That page needs a server, and this section is
+     the whole of what that server does with data. The design is called a
+     <em>dead drop</em>: your device works out which times to offer and sends only
+     those; the server holds requests until your device collects them. At no point
+     does the server have your calendar, your email address, or a way to contact you.</p>
+
+  <h3>What your device sends about you</h3>
+  <ul>
+    <li>A list of <strong>times you are willing to be asked for</strong> — start and end,
+        nothing else. Not your busy times, not what fills the gaps between them. A gap
+        on the page might be a meeting or might be a rule you set, and the server cannot
+        tell which.</li>
+    <li>The <strong>display name</strong> you chose for the page, and an optional line of
+        text. This is the only identifying thing in the document, and you wrote it
+        knowing it is public.</li>
+    <li>A <strong>meeting title</strong> and length, and your time zone.</li>
+    <li>An anonymous <strong>subscription identifier</strong> from Apple — a number,
+        which Apple does not tie to your name or email in anything they give me. It is
+        stored hashed. There is no account, because there is nothing to put in one.</li>
+  </ul>
+  <p>Your device replaces that list every few hours. If it stops, the page goes dark
+     within a day rather than serving stale times. Delete the page in the app and
+     everything above is deleted at once, along with every request on it.</p>
+
+  <h3>What a requester gives, and how long it stays</h3>
+  <p>Someone asking for a time gives their <strong>name, email address, and an optional
+     note</strong>, and picks a slot. The server holds those only as long as it takes to
+     get an answer to them:</p>
+  <ul>
+    <li><strong>Until they confirm their email — one hour.</strong> Nothing reaches you
+        until they click the link. If they never do, the request is deleted.</li>
+    <li><strong>Until you answer — up to 14 days.</strong> Then they are told nobody
+        answered, and it is deleted.</li>
+    <li><strong>After you answer — until the email reaches them, 48 hours at most.</strong>
+        An accepted request needs their address once more, to send them the calendar
+        file; the moment my mail server reports it delivered, the request is deleted.
+        A declined one is deleted the same way after the reply is sent.</li>
+  </ul>
+  <p>These limits are enforced by the database itself, not by a schedule somebody
+     could forget to run. There is no requester account, no history, and nothing
+     that links one request to another.</p>
+
+  <h3>What the request page does not do</h3>
+  <p>The page loads nothing from anyone else: no fonts, no analytics, no scripts from a
+     third party, no captcha service. It makes exactly two requests, both to
+     askwhen.me. That is checked by the build, which fails if a third appears.
+     Rate limiting exists to stop abuse, but it does not store IP addresses: it stores
+     a keyed hash that rotates daily, after which yesterday's entries cannot be linked
+     to an address even by me.</p>
+
+  <h3>Email</h3>
+  <p>The confirmation, the answer, and the calendar file are sent from
+     <code>no-reply@askwhen.me</code> through a mail server I run myself, on
+     infrastructure I own. Delivery reports come back from it so that "delivered"
+     can mean the request is deleted; nothing about what an email says is logged.
+     The person who asked gets your <strong>display name</strong> and the meeting
+     time. They never get your email address — the server does not have it to give.</p>
+
+  <h3>Custom domains</h3>
+  <p>If you point your own domain at your page, the server stores that hostname
+     and checks, from time to time, that it still points here. That is all it holds
+     about the domain.</p>
+
+  <h3>Payment</h3>
+  <p>The request page is a subscription bought through the App Store. Apple handles
+     payment; I never see a card, a name, or a billing address. Apple tells my
+     server when a subscription starts, renews, or ends, using the same anonymous
+     identifier as above, so a lapsed page can be taken down.</p>
+
+  <h3>Where it runs</h3>
+  <p>On a server I operate in Colorado, United States, behind a reverse proxy that
+     keeps ordinary access logs. <!-- TODO Matt: how long does caddy-dc keep its
+     access logs, and do they hold client IPs? Say so here either way. --></p>
+
   <h2>Changes</h2>
   <p>If this policy ever changes, the update will be here and in the source, which
-     is public. The bar it has to clear is simple: still collect nothing.</p>
+     is public. The bar it has to clear is simple: the app still collects nothing,
+     and the request page still holds nothing longer than it takes to get someone
+     an answer.</p>
 
   <h2>Contact</h2>
   <p>Questions or concerns:
