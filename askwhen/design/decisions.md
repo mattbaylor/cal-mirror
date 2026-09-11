@@ -152,11 +152,11 @@ now three domains with one set of DNS and TLS decisions behind them:
 `rehosted.us` for hosting and mail, plus whatever step 6's custom domains need
 for on-demand issuance.
 
-**Audited 2 Sept 2026, and the move is smaller than `HANDOFF.md` suggests.**
+**Audited 2 Sept 2026, and the move is smaller than the 1 Sept handoff suggested.**
 `docs/` contains **no** absolute URLs to `mattbaylor.github.io` and **no**
 root-absolute paths, so nothing breaks when the path prefix goes from
-`/cal-mirror/` to `/`. The only two references anywhere in the repo are prose, in
-`HANDOFF.md` and in this file. So it is `docs/CNAME`, the DNS records, and
+`/cal-mirror/` to `/`. The only references anywhere in the repo were prose, in
+the (since retired) handoff and in this file. So it is `docs/CNAME`, the DNS records, and
 waiting for the certificate.
 
 **One real bug it surfaces.** `docs/index.html` sets
@@ -418,10 +418,11 @@ labelled with the zone they are in, so a wrong device clock is visible rather
 than hidden. It is not blocking — `format.js` already takes the zone as an
 argument everywhere, so adding a picker later is a component, not a rewrite.
 
-**The confirmation link is a mutating GET, and mail scanners click links.** This
-one has a deadline: see `HANDOFF.md` and `infra/README.md`. It must be answered
-before step 5 sends a single confirmation email, because a link already sitting
-in an inbox cannot be changed.
+**~~The confirmation link is a mutating GET, and mail scanners click links.~~**
+Answered before any email was sent: *Settled*, "The confirmation link: `GET`
+renders, a button `POST`s" (Matt, 10 Sept 2026). Kept here struck through
+because it was the one question with a deadline, and the record should show it
+was met.
 
 New questions will arrive from building — that is expected, and they belong here
 with their reasoning rather than in a commit message nobody reads twice.
