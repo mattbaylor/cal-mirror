@@ -1,9 +1,10 @@
 # Tasks
 
-The living board. `HANDOFF.md` was a snapshot written at a stopping point and is
-now substantially out of date; this file is what to read instead.
+The living board. [`STATUS.md`](STATUS.md) is the narrative — where things
+stand and what is left to ship 2.0 — and is the place to start; this is the
+granular list underneath it.
 
-Last accurate: **11 September 2026, morning.** Anything here that the repo or the
+Last accurate: **11 September 2026, midday.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -50,9 +51,9 @@ Judgement, not access. Roughly in the order it starts costing.
 
 ## Mine, and unblocked
 
-In the order I would do them.
+Everything on the six-step plan is built. What remains on my side waits on
+something of yours — `STATUS.md`, "What is left", items 3, 4, 6, 9 and 13–16.
 
-1. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
 ## Done, so nobody re-derives it
 
 - **askwhen step 3, the service, is complete** ([#60](https://github.com/mattbaylor/cal-mirror/pull/60)
