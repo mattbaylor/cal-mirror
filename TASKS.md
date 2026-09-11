@@ -3,7 +3,7 @@
 The living board. `HANDOFF.md` was a snapshot written at a stopping point and is
 now substantially out of date; this file is what to read instead.
 
-Last accurate: **10 September 2026, night.** Anything here that the repo or the
+Last accurate: **11 September 2026, morning.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -53,13 +53,6 @@ Judgement, not access. Roughly in the order it starts costing.
 In the order I would do them.
 
 1. **Retire `HANDOFF.md`** in favour of this file. It has proved itself.
-2. **Postal webhooks** for bounce and delivery. Today "purged once delivery
-   confirms" means "purged at the 48-hour ceiling", because nothing tells the
-   service a message was delivered or bounced. Postal can POST both; the
-   endpoint would shorten `purge_after` on delivery and resend once on bounce.
-   The address is only kept those 48 hours for this, so until it exists the
-   window buys nothing.
-
 ## Done, so nobody re-derives it
 
 - **askwhen step 3, the service, is complete** ([#60](https://github.com/mattbaylor/cal-mirror/pull/60)
@@ -80,6 +73,14 @@ In the order I would do them.
   delivered by Postal to a real inbox. The pepper was generated on the host that
   day and exists nowhere else; **back it up** (README, "The pepper deserves its
   own paragraph").
+- **Postal webhooks** ([#81](https://github.com/mattbaylor/cal-mirror/pull/81)).
+  "Purged once delivery confirms" means delivery now: Postal reports
+  `MessageSent` to `/hooks/postal`, signed with its instance key and verified
+  against its own JWKS, and the request is swept at the next minute rather
+  than at the 48-hour ceiling. A hard failure or bounce resends the `.ics`
+  once. Proven live 11 Sept: accept → Postal's callback in two seconds →
+  purged 25 seconds later. The webhook is registered in Postal's UI for the
+  `main` server, three events only.
 - **The web app is TypeScript** ([#79](https://github.com/mattbaylor/cal-mirror/pull/79),
   Matt asked 4 Sept). Strict, checked by `tsc` in CI, and the dump's type is
   generated from `schema/policy-dump.schema.json` — committed, and diffed in CI
