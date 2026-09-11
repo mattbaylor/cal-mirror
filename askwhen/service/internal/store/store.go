@@ -694,6 +694,96 @@ func (s *Store) Resolve(ctx context.Context, slug, id, decision string, purgeAft
 	return &out, nil
 }
 
+// --------------------------------------------------------------- deliveries
+
+// RecordDelivery ties a Postal message id to the accepted request whose .ics
+// it carries. attempt is 1 at accept and 2 for the one resend.
+func (s *Store) RecordDelivery(ctx context.Context, messageID, requestID string, attempt int) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO delivery (message_id, request_id, attempt, created_at) VALUES (?, ?, ?, ?)`,
+		messageID, requestID, attempt, nowRFC3339())
+	if err != nil {
+		return fmt.Errorf("record delivery: %w", err)
+	}
+	return nil
+}
+
+// MarkDelivered is "purged once delivery confirms" (§10): Postal says the
+// .ics reached the requester's server, so the request — name, address, note
+// — has done its job and is due for the next sweep. False means the message
+// id is not one of ours, which is not an error: Postal reports on every
+// message the server sends, and only accepted requests are tracked.
+func (s *Store) MarkDelivered(ctx context.Context, messageID string, now time.Time) (bool, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("mark delivered: %w", err)
+	}
+	defer tx.Rollback()
+	var requestID string
+	err = tx.QueryRowContext(ctx, `
+		UPDATE delivery SET outcome = 'delivered'
+		WHERE message_id = ? AND outcome IS NULL
+		RETURNING request_id`, messageID).Scan(&requestID)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("mark delivered: %w", err)
+	}
+	// Only ever earlier, never later: the 48-hour ceiling is a ceiling.
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE request SET purge_after = ?
+		WHERE id = ? AND state = 'accepted' AND purge_after > ?`,
+		now.UTC().Format(time.RFC3339), requestID, now.UTC().Format(time.RFC3339)); err != nil {
+		return false, fmt.Errorf("mark delivered: %w", err)
+	}
+	return true, tx.Commit()
+}
+
+// FailDelivery records that Postal could not deliver a message. If it was the
+// first attempt and the request is still here, the request comes back with
+// its page's display fields so the caller can send once more; otherwise nil.
+// The 48-hour ceiling takes care of what a second failure leaves behind.
+func (s *Store) FailDelivery(ctx context.Context, messageID string) (*Resolved, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("fail delivery: %w", err)
+	}
+	defer tx.Rollback()
+	var requestID string
+	var attempt int
+	err = tx.QueryRowContext(ctx, `
+		UPDATE delivery SET outcome = 'failed'
+		WHERE message_id = ? AND outcome IS NULL
+		RETURNING request_id, attempt`, messageID).Scan(&requestID, &attempt)
+	if err == sql.ErrNoRows {
+		return nil, tx.Commit()
+	}
+	if err != nil {
+		return nil, fmt.Errorf("fail delivery: %w", err)
+	}
+	if attempt != 1 {
+		return nil, tx.Commit()
+	}
+	var out Resolved
+	var name, email, note sql.NullString
+	err = tx.QueryRowContext(ctx, `
+		SELECT r.id, r.slug, r.slot_start, r.slot_end, r.state, r.requester_name,
+		       r.requester_email, r.note, r.hold_until, p.display_name, p.tz
+		FROM request r JOIN page p ON p.slug = r.slug
+		WHERE r.id = ? AND r.state = 'accepted'`, requestID).Scan(
+		&out.ID, &out.Slug, &out.SlotStart, &out.SlotEnd, &out.State,
+		&name, &email, &note, &out.HoldUntil, &out.DisplayName, &out.TZ)
+	if err == sql.ErrNoRows {
+		return nil, tx.Commit()
+	}
+	if err != nil {
+		return nil, fmt.Errorf("fail delivery: %w", err)
+	}
+	out.Name, out.Email, out.Note = name.String, email.String, note.String
+	return &out, tx.Commit()
+}
+
 // Swept is what one pass of the sweeper did, and who it owes an email.
 type Swept struct {
 	// Lapsed is unconfirmed requests whose fifteen minutes ran out. Nobody is

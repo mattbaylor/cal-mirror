@@ -40,7 +40,9 @@ type Owner struct {
 // Notifier is the three ways a request ends, as email. *mail.Postal is the
 // one that sends; tests and keyless boxes substitute one that does not.
 type Notifier interface {
-	Accepted(ctx context.Context, to string, ev mail.Event) error
+	// Accepted returns the sender's message id, so delivery reports can be
+	// tied back to the request. Empty when the sender has none to give.
+	Accepted(ctx context.Context, to string, ev mail.Event) (string, error)
 	Declined(ctx context.Context, to string, ev mail.Event) error
 	NoResponse(ctx context.Context, to string, ev mail.Event) error
 }
@@ -377,7 +379,14 @@ func (o *Owner) Resolve(w http.ResponseWriter, r *http.Request) {
 		ev := eventFor(*res)
 		var err error
 		if state == "accepted" {
-			err = o.Notify.Accepted(r.Context(), res.Email, ev)
+			var msgID string
+			msgID, err = o.Notify.Accepted(r.Context(), res.Email, ev)
+			if err == nil && msgID != "" {
+				// So Postal's report of delivery or failure finds the request.
+				if rerr := o.Store.RecordDelivery(r.Context(), msgID, res.ID, 1); rerr != nil {
+					o.Logger.Error("owner: record delivery", "id", res.ID, "err", rerr)
+				}
+			}
 		} else {
 			err = o.Notify.Declined(r.Context(), res.Email, ev)
 		}

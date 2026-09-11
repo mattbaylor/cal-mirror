@@ -80,8 +80,12 @@ func TestWhenIsInTheOwnersZone(t *testing.T) {
 
 func TestAcceptedCarriesTheICSAsAnAttachment(t *testing.T) {
 	srv, got, _ := fakePostal(t, success)
-	if err := client(srv).Accepted(context.Background(), "ada@example.com", sample()); err != nil {
+	id, err := client(srv).Accepted(context.Background(), "ada@example.com", sample())
+	if err != nil {
 		t.Fatal(err)
+	}
+	if id != "abc@dlvr" {
+		t.Fatalf("message id = %q, want the one Postal returned", id)
 	}
 	if got.Tag != "accepted" || len(got.To) != 1 || got.To[0] != "ada@example.com" {
 		t.Fatalf("to=%v tag=%q", got.To, got.Tag)
