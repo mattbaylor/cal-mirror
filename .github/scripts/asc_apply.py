@@ -171,8 +171,11 @@ def ensure_build(vid, platform):
 
 # -------------------------------------------------------------------- subtitle
 def ensure_subtitle():
-    """Name and subtitle live on the editable appInfo, not on the version."""
+    """Name, subtitle and the privacy policy URL live on the editable appInfo,
+    not on the version. Apple refuses all three on the live one (409
+    INVALID_STATE), so like the marketing URL they ride the next submission."""
     subtitle, name = read("IOS", "subtitle"), read("IOS", "name")
+    privacy = read("IOS", "privacy_policy_url")
     for info in get(f"/v1/apps/{APP}/appInfos?limit=10").get("data", []):
         state = info["attributes"].get("appStoreState") or info["attributes"].get("state")
         if state in ("READY_FOR_SALE", "REPLACED_WITH_NEW_INFO"):
@@ -182,7 +185,7 @@ def ensure_subtitle():
                 continue
             lid, cur = l["id"], l["attributes"]
             print(f"    editable appInfo [{state}]")
-            for k, v in (("name", name), ("subtitle", subtitle)):
+            for k, v in (("name", name), ("subtitle", subtitle), ("privacyPolicyUrl", privacy)):
                 if not v:
                     continue
                 want(k, cur.get(k), v,
@@ -192,25 +195,6 @@ def ensure_subtitle():
             return
     print("    ! no editable appInfo found")
     problems.append("no editable appInfo")
-
-
-def ensure_privacy_url():
-    """The privacy policy URL is app-level, and unlike name and subtitle Apple
-    lets it change on the live listing — so try every appInfo, not just the
-    editable one, and let the API say no if it minds."""
-    url = read("IOS", "privacy_policy_url")
-    if not url:
-        return
-    for info in get(f"/v1/apps/{APP}/appInfos?limit=10").get("data", []):
-        state = info["attributes"].get("appStoreState") or info["attributes"].get("state")
-        for l in get(f"/v1/appInfos/{info['id']}/appInfoLocalizations?limit=20").get("data", []):
-            if l["attributes"].get("locale") != "en-US":
-                continue
-            lid = l["id"]
-            want(f"privacyPolicyUrl [{state}]", l["attributes"].get("privacyPolicyUrl"), url,
-                 lambda lid=lid: call("PATCH", f"/v1/appInfoLocalizations/{lid}",
-                                      {"data": {"type": "appInfoLocalizations", "id": lid,
-                                                "attributes": {"privacyPolicyUrl": url}}}))
 
 
 # ----------------------------------------------------------------- screenshots
@@ -308,8 +292,6 @@ def main():
 
     print("Subtitle / name")
     ensure_subtitle()
-    print("Privacy policy URL")
-    ensure_privacy_url()
 
     for platform, cfg in PLATFORMS.items():
         print(f"\n{platform}")
