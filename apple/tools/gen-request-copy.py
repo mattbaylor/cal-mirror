@@ -79,6 +79,16 @@ def gen_swift(c: dict) -> str:
         out.append(f"        static let {k} = {swift_string(v)}\n")
     out.append("    }\n")
 
+    out.append("\n    enum Live {\n")
+    for k, v in c["live"].items():
+        out.append(f"        static let {k} = {swift_string(v)}\n")
+    out.append("    }\n")
+
+    out.append("\n    enum Offer {\n")
+    for k, v in c["offer"].items():
+        out.append(f"        static let {k} = {swift_string(v)}\n")
+    out.append("    }\n")
+
     pv = c["preview"]
     out.append("\n    enum Preview {\n")
     for k in ("section", "headingOne", "headingMany", "emptyPage", "privacy",
@@ -212,6 +222,53 @@ def gen_sheet(c: dict) -> str:
           + f'</p><p class="cap">{esc(pv["cappedNote"])}</p></div></div>'
           + f'<div class="grp"><p class="cap pad14 priv">{esc(pv["privacy"])}</p></div></div>')
 
+    off, lv = c["offer"], c["live"]
+
+    def offer_screen(trial):
+        price = (off["trialLine"].replace("%@", "{}").format("3 months free", "$19.99")
+                 if trial else off["noTrialLine"].replace("%@", "{}").format("$19.99"))
+        note = "" if trial else f'<p class="cap">{esc(off["noTrialNote"])}</p>'
+        btn = off["buyWithTrial"] if trial else off["buyWithoutTrial"]
+        ups = ""
+        for name, pr, desc in [
+            ("AskWhen.me Custom Subdomain", "$34.99", "Your own name.askwhen.me, and more than one page."),
+            ("AskWhen.me Custom Domain", "$69.99", "Your page on your own domain, and several pages.")]:
+            ups += (f'<div class="row"><div class="rowmain"><span class="t">{esc(name)}</span>'
+                    f'<span class="val">{esc(pr)}</span></div><p class="cap">{esc(desc)}</p></div>')
+        return ('<div class="scr"><div class="nav">' + esc(off["section"]) + "</div>"
+                + '<div class="grp"><div class="pad14">'
+                + f'<h4>{esc(off["heading"])}</h4>'
+                + f'<p class="body sm">{esc(off["lede"])}</p></div></div>'
+                + '<div class="grp"><div class="pad14">'
+                + '<p class="body"><b>AskWhen.me Request Page</b></p>'
+                + '<p class="cap">Anyone can ask you for a time. Your calendar stays put.</p>'
+                + f'<p class="body" style="margin-top:8px"><b>{esc(price)}</b></p>{note}'
+                + f'<div class="btn">{esc(btn)}</div>'
+                + f'<p class="foot">{esc(off["renews"])}</p></div>'
+                + f'<p class="cap pad8 priv">{esc(off["network"])}</p></div>'
+                + '<div class="grp"><div class="hdr">' + esc(off["upgradesHeading"]) + "</div>"
+                + ups + f'<p class="cap pad8">{esc(off["upgradesNote"])}</p></div>'
+                + '<div class="grp">' + row(off["restore"], None, "none") + "</div></div>")
+
+    s7 = offer_screen(True)
+    s7b = offer_screen(False)
+
+    s9 = ('<div class="scr"><div class="nav">' + esc(lv["section"]) + "</div>"
+          + '<div class="grp"><div class="pad14">'
+          + f'<h4>{esc(lv["heading"])}</h4>'
+          + f'<p class="body sm">{esc(lv["lede"])}</p>'
+          + '<p class="mono">askwhen.me/x7f2k9</p>'
+          + f'<div class="btn">{esc(lv["copy"])}</div>'
+          + f'<p class="cap"><span class="link">{esc(lv["openTitle"])}</span> — {esc(lv["openNote"])}</p>'
+          + "</div></div>"
+          + '<div class="grp"><div class="hdr">' + esc(lv["tokenHeading"]) + "</div>"
+          + f'<p class="body sm pad8">{esc(lv["tokenBody"])}</p></div>'
+          + '<div class="grp"><div class="hdr">' + esc(lv["publisherHeading"]) + "</div>"
+          + f'<p class="body sm pad8">{esc(lv["publisherBody"])}</p></div>'
+          + '<div class="grp"><div class="hdr">' + esc(lv["offHeading"]) + "</div>"
+          + f'<p class="body sm pad8">{esc(lv["offBody"])}</p>'
+          + row(lv["turnOff"]) + "</div></div>")
+
     cells = [
         ("1 · The dormant row", "Off by default. Drawing this costs no network.", s1),
         ("2 · What this is", "The opt-in. Names the cost up front so screen 7 is not a surprise.", s2),
@@ -219,6 +276,9 @@ def gen_sheet(c: dict) -> str:
         ("4 · Your page", "The one identifying field, and who titles the event.", s4),
         ("5 · Your day", "Asked as a sentence, not a form. Bounds are product decisions.", s5),
         ("6 · What people see", "Real dates from the real calendar, before anyone else sees them.", s6),
+        ("7 · Publishing", "The first network request of the app's life, and it is to Apple.", s7),
+        ("7b · No trial left", "Apple gives one per person per group. A returning owner must not be promised one.", s7b),
+        ("9 · Your page is live", "Where screen 8 lands. The key warning is said once, here.", s9),
     ]
     body = "".join(
         f'<div class="cell"><h2>{esc(t)}</h2><p>{esc(sub)}</p>{scr}</div>'
@@ -306,10 +366,13 @@ def gen_sheet(c: dict) -> str:
       .slot {{ font-size: 12.5px; padding: 3px 9px; border-radius: 6px;
         border: 1px solid var(--tint); color: var(--tint); }}
       .empty {{ font-size: 12.5px; color: var(--note); font-style: italic; }}
+      .mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 18px;
+        margin: 14px 0 0; word-break: break-all; }}
+      .link {{ color: var(--tint); }}
     </style>
   </head>
   <body>
-    <h1>Request page — setup, screens 1–6</h1>
+    <h1>Request page — setup, screens 1–9</h1>
     <p class="lede">Every frame at 390&nbsp;pt, the iPhone logical width. Light and dark follow
       your system setting — switch it to see both.</p>
     <p class="warn">This is not a screenshot and cannot be: the app is SwiftUI and this is HTML.

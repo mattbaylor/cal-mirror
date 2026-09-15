@@ -15,10 +15,18 @@ import CalMirrorKit
 /// and so adding one is an enum case rather than a re-plumb.
 struct RequestPageSetupView: View {
     @EnvironmentObject var model: Store
-    @State private var step: Step = .explainer
+    @State private var step: Step
+
+    /// An owner returning to a page that exists lands on it, not on the
+    /// explainer — the pitch is over, and re-reading it is not what they came
+    /// for. A page that was configured but never published resumes where the
+    /// flow left off.
+    init(start: Step? = nil, page: RequestPageConfig? = nil) {
+        _step = State(initialValue: start ?? (page?.slug.isEmpty == false ? .live : .explainer))
+    }
 
     enum Step: Int, CaseIterable {
-        case explainer = 2, calendars, display, policy, preview, offer
+        case explainer = 2, calendars, display, policy, preview, offer, live
 
         var title: String {
             switch self {
@@ -28,6 +36,7 @@ struct RequestPageSetupView: View {
             case .policy:    return "Your day"
             case .preview:   return "What people see"
             case .offer:     return "Publishing"
+            case .live:      return "Your page"
             }
         }
     }
@@ -73,12 +82,18 @@ struct RequestPageSetupView: View {
             }
             .formStyle(.grouped)
         case .offer:
-            // The next tranche, and the one screen in this flow permitted to
-            // touch the network. An honest placeholder rather than a plausible
-            // empty screen, which would get reviewed as if it were real.
-            ContentUnavailableView("Not built yet",
-                                   systemImage: "hammer",
-                                   description: Text("Step \(step.rawValue) — \(step.title)."))
+            Form {
+                RequestOfferView(page: model.requestPageBinding,
+                                 subscriptions: model.subscriptions,
+                                 createPage: { await model.createRequestPage(transaction: $0) },
+                                 onPublished: { step = .live })
+            }
+            .formStyle(.grouped)
+        case .live:
+            Form {
+                RequestLiveView(page: model.requestPageBinding, onChange: { model.save() })
+            }
+            .formStyle(.grouped)
         }
     }
 

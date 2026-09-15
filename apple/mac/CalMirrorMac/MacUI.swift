@@ -109,7 +109,7 @@ struct ManageView: View {
         .formStyle(.grouped)
         .frame(minWidth: 640, minHeight: 480)
         .sheet(isPresented: $showingSetup) {
-            NavigationStack { RequestPageSetupView() }
+            NavigationStack { RequestPageSetupView(page: model.config.requestPage) }
                 .environmentObject(model)
                 .frame(minWidth: 560, minHeight: 520)
                 .toolbar { ToolbarItem(placement: .cancellationAction) {

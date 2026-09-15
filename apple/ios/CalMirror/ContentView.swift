@@ -50,7 +50,7 @@ struct ContentView: View {
                 // by default, and drawing it costs no network.
                 Section {
                     NavigationLink {
-                        RequestPageSetupView()
+                        RequestPageSetupView(page: model.config.requestPage)
                     } label: {
                         RequestPageRow(page: model.config.requestPage)
                     }
