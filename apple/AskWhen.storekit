@@ -1,0 +1,190 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "C72EBFA7",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6787358036",
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_compatibilityTimeRate" : {
+      "3" : 6
+    },
+    "_developerTeamID" : "VAAN252QS8",
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 811183174.45126605,
+    "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 15
+  },
+  "subscriptionBundleGroups" : [
+
+  ],
+  "subscriptionGroups" : [
+    {
+      "id" : "22387296",
+      "localizations" : [
+
+      ],
+      "name" : "AskWhen.me",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "billingPlans" : [
+            {
+              "billingPlanType" : "BILLED_UPFRONT",
+              "commitmentDisplayPrice" : "69.99",
+              "displayPrice" : "69.99",
+              "internalID" : "6812424182_BILLED_UPFRONT",
+              "isEnabled" : true
+            }
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "69.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6812424182",
+          "introductoryOffers" : [
+
+          ],
+          "localizations" : [
+            {
+              "description" : "Your page on your own domain, and several pages.",
+              "displayName" : "AskWhen.me Custom Domain",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "me.askwhen.domain.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "AskWhen.me - Custom Domain",
+          "subscriptionGroupID" : "22387296",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "billingPlans" : [
+            {
+              "billingPlanType" : "BILLED_UPFRONT",
+              "commitmentDisplayPrice" : "34.99",
+              "displayPrice" : "34.99",
+              "internalID" : "6812424073_BILLED_UPFRONT",
+              "isEnabled" : true
+            }
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "34.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6812424073",
+          "introductoryOffers" : [
+
+          ],
+          "localizations" : [
+            {
+              "description" : "Your own name.askwhen.me, and more than one page.",
+              "displayName" : "AskWhen.me Custom Subdomain",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "me.askwhen.subdomain.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "AskWhen.me - Custom Subdomain",
+          "subscriptionGroupID" : "22387296",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "billingPlans" : [
+            {
+              "billingPlanType" : "BILLED_UPFRONT",
+              "commitmentDisplayPrice" : "19.99",
+              "displayPrice" : "19.99",
+              "internalID" : "6812415329_BILLED_UPFRONT",
+              "isEnabled" : true
+            }
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "6812415329",
+          "introductoryOffer" : {
+            "billingPlanType" : "BILLED_UPFRONT",
+            "internalID" : "eyJzIjoiNjgxMjQxNTMyOSIsImQiOjE3ODk0NTU2MDAsImkiOiJVUyIsInQiOiIiLCJwIjoiMCJ9",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3M"
+          },
+          "introductoryOffers" : [
+            {
+              "billingPlanType" : "BILLED_UPFRONT",
+              "internalID" : "eyJzIjoiNjgxMjQxNTMyOSIsImQiOjE3ODk0NTU2MDAsImkiOiJVUyIsInQiOiIiLCJwIjoiMCJ9",
+              "numberOfPeriods" : 1,
+              "paymentMode" : "free",
+              "subscriptionPeriod" : "P3M"
+            }
+          ],
+          "localizations" : [
+            {
+              "description" : "Anyone can ask you for a time. Your calendar stays put.",
+              "displayName" : "AskWhen.me Request Page",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "me.askwhen.page.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "AskWhen.me - Request Page",
+          "subscriptionGroupID" : "22387296",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "subscriptionSuiteGroups" : [
+
+  ],
+  "version" : {
+    "major" : 6,
+    "minor" : 3
+  }
+}

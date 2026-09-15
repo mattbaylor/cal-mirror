@@ -47,3 +47,19 @@ targets:
         ENABLE_APP_SANDBOX: YES
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+# The StoreKit configuration for AskWhen.me, synced from App Store Connect
+# (group 22387296; three annual products, the free trial on Request Page
+# only). Attached to the run scheme so the purchase flow works against it —
+# no network, no sandbox account — which is how the UI is built and
+# screenshotted. Regenerate the project after editing this file.
+schemes:
+  CalMirrorMac:
+    build:
+      targets:
+        CalMirrorMac: all
+    run:
+      config: Debug
+      storeKitConfiguration: ../AskWhen.storekit
+    archive:
+      config: Release
