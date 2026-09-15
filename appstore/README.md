@@ -13,9 +13,17 @@ metadata/{ios,mac}/promotional_text.txt      ≤ 170
 metadata/{ios,mac}/description.txt           ≤ 4000
 metadata/{ios,mac}/whats_new.txt             ≤ 4000
 metadata/{ios,mac}/keywords.txt              ≤ 100
+metadata/{ios,mac}/marketing_url.txt         the website
+metadata/{ios,mac}/privacy_policy_url.txt    the privacy page on it
 ```
 
 Upload order matters — the files are numbered in the order they should appear.
+
+## App Privacy
+
+`privacy-labels.md` — the nutrition-label questionnaire answered question by
+question for 2.0, with the reasoning and what a reviewer may ask. Hand-entered
+in App Store Connect; there is no API for it.
 
 ## Listing fields — how to fill them in, and what to avoid
 

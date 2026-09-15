@@ -3,8 +3,6 @@ package api
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -13,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/appstore"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/mail"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/store"
@@ -34,7 +33,25 @@ type Owner struct {
 	// Notify sends the requester the outcome. Nil means log and carry on,
 	// which is a box without a Postal key, never production.
 	Notify Notifier
-	Logger *slog.Logger
+	// Entitle decides whether a signed transaction buys a page. Nil means
+	// create is closed: nothing can be created until Apple can be checked.
+	Entitle *Entitler
+	Logger  *slog.Logger
+}
+
+// Entitler turns the transaction a device presents into a yes or a no.
+type Entitler struct {
+	// Verify checks Apple's signature; appstore.New() in production.
+	Verify interface {
+		DecodeTransaction(jws string) (appstore.Transaction, error)
+	}
+	// BundleID is ours. A genuine transaction for somebody else's app is
+	// still somebody else's.
+	BundleID string
+	// Sandbox is whether Sandbox transactions may create pages. On until
+	// launch, so the flow can be proven with a sandbox tester; off after,
+	// or anyone with a sandbox account for our bundle gets free pages.
+	Sandbox bool
 }
 
 // Notifier is the three ways a request ends, as email. *mail.Postal is the
@@ -78,11 +95,11 @@ func (o *Owner) authenticate(w http.ResponseWriter, r *http.Request, slug string
 // --------------------------------------------------------------- POST /v1/pages
 
 type createRequest struct {
-	// SHA-256 hex of the StoreKit originalTransactionId, computed on the
-	// device. The service stores it to answer "same subscription as before" and
-	// never sees the id itself.
-	EntitlementHash string `json:"entitlement_hash"`
-	Display         struct {
+	// The signed transaction StoreKit hands the device (jwsRepresentation).
+	// Verified here against Apple's root; the entitlement hash the service
+	// stores is derived from it, not trusted from the device.
+	Transaction string `json:"transaction"`
+	Display     struct {
 		Name  string `json:"name"`
 		Blurb string `json:"blurb"`
 		TZ    string `json:"tz"`
@@ -106,9 +123,28 @@ func (o *Owner) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"malformed"}`, http.StatusBadRequest)
 		return
 	}
-	ent, err := hex.DecodeString(in.EntitlementHash)
-	if err != nil || len(ent) != sha256.Size {
-		http.Error(w, `{"error":"entitlement_hash must be 64 hex characters"}`, http.StatusBadRequest)
+	if o.Entitle == nil {
+		// Nothing can be created without Apple's word. Not a 5xx: this is
+		// configuration, and the device should not retry into it.
+		http.Error(w, `{"error":"page creation is not available"}`, http.StatusServiceUnavailable)
+		return
+	}
+	ent, tier, problem := o.Entitle.check(r.Context(), o.Store, in.Transaction, time.Now())
+	if problem != "" {
+		// 402 for a subscription that does not buy this; the device shows
+		// the owner what to do. Never says which of "not ours", "expired" or
+		// "forged" it was to anything but the log.
+		http.Error(w, `{"error":"`+problem+`"}`, http.StatusPaymentRequired)
+		return
+	}
+	held, err := o.Store.PagesFor(r.Context(), ent)
+	if err != nil {
+		o.Logger.Error("owner: pages for", "err", err)
+		http.Error(w, `{"error":"unavailable"}`, http.StatusServiceUnavailable)
+		return
+	}
+	if held >= tier.Pages {
+		http.Error(w, `{"error":"this subscription already has as many pages as it allows"}`, http.StatusPaymentRequired)
 		return
 	}
 	name := strings.TrimSpace(in.Display.Name)
@@ -224,6 +260,12 @@ func (o *Owner) Publish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A lapsed subscription cannot publish. The page still serves — as "not
+	// currently taking requests" — until the grace runs out.
+	if g, err := o.Store.GraceUntil(r.Context(), slug); err == nil && !g.IsZero() {
+		http.Error(w, "subscription has lapsed; the page is in its grace period", http.StatusPaymentRequired)
+		return
+	}
 	err = o.Store.Publish(r.Context(), slug, string(raw), store.Page{
 		DisplayName: name, Blurb: strings.TrimSpace(env.Display.Blurb), TZ: env.Display.TZ,
 	}, time.Now().Add(o.DumpTTL))
@@ -415,6 +457,39 @@ func eventFor(r store.Resolved) mail.Event {
 	}
 }
 
+// check verifies the transaction, records what Apple said, and returns the
+// entitlement hash and tier — or a one-line problem for the 402.
+func (e *Entitler) check(ctx context.Context, st *store.Store, jws string, now time.Time) ([]byte, Tier, string) {
+	tx, err := e.Verify.DecodeTransaction(jws)
+	if err != nil {
+		return nil, Tier{}, "transaction did not verify"
+	}
+	if tx.BundleID != e.BundleID {
+		return nil, Tier{}, "transaction is for another app"
+	}
+	if tx.Environment == "Sandbox" && !e.Sandbox {
+		return nil, Tier{}, "sandbox transactions are not accepted"
+	}
+	if tx.Environment != "Sandbox" && tx.Environment != "Production" {
+		return nil, Tier{}, "transaction did not verify"
+	}
+	tier, ok := TierFor(tx.ProductID)
+	if !ok {
+		return nil, Tier{}, "transaction is not for an AskWhen.me subscription"
+	}
+	if tx.RevocationDate != 0 {
+		return nil, Tier{}, "subscription was refunded or revoked"
+	}
+	if !tx.Expires().After(now) {
+		return nil, Tier{}, "subscription has expired"
+	}
+	ent := store.Entitlement{Hash: tx.Hash(), ProductID: tx.ProductID, Environment: tx.Environment, ExpiresAt: tx.Expires()}
+	if err := st.UpsertEntitlement(ctx, ent); err != nil {
+		return nil, Tier{}, "unavailable"
+	}
+	return ent.Hash, tier, ""
+}
+
 // ------------------------------------------------------------------ helpers
 
 // newSlug is 8 characters of [a-z0-9]: 36^8 ≈ 2.8 trillion, and the schema
@@ -428,6 +503,9 @@ func newSlug() string {
 	}
 	return string(b)
 }
+
+// LapseGrace is decisions.md's "7-day grace, then delete".
+const LapseGrace = 7 * 24 * time.Hour
 
 // Sweeper runs Store.Sweep on an interval until ctx ends.
 func Sweeper(ctx context.Context, st *store.Store, every, confirmedFor time.Duration, notify Notifier, log *slog.Logger) {
@@ -454,6 +532,20 @@ func Sweeper(ctx context.Context, st *store.Store, every, confirmedFor time.Dura
 				if err := notify.NoResponse(ctx, r.Email, eventFor(r)); err != nil {
 					log.Error("sweep: no-response notify failed", "id", r.ID, "err", err)
 				}
+			}
+
+			// Lapse. Subscriptions Apple last said expired more than its own
+			// 16-day billing grace ago start our 7-day grace even if the
+			// EXPIRED notification never arrived; pages whose grace ran out go.
+			if n, err := st.LapseOverdue(ctx, now, 16*24*time.Hour, now.Add(LapseGrace)); err != nil {
+				log.Error("sweep: lapse overdue", "err", err)
+			} else if n > 0 {
+				log.Info("sweep: overdue subscriptions entered grace", "pages", n)
+			}
+			if slugs, err := st.DeleteLapsed(ctx, now); err != nil {
+				log.Error("sweep: delete lapsed", "err", err)
+			} else if len(slugs) > 0 {
+				log.Info("sweep: lapsed pages deleted", "count", len(slugs))
 			}
 		}
 	}

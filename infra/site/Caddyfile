@@ -14,14 +14,19 @@
 	file_server
 
 	header {
-		# The site is hand-written HTML and CSS. The single script is
-		# redirect.js, which forwards the old GitHub Pages address and is a
-		# no-op here — so script-src is 'self' rather than 'none', and there is
-		# no 'unsafe-inline' anywhere.
+		# The site is hand-written HTML and CSS with one script: Plausible,
+		# self-hosted at stats.rehosted.us (our own infrastructure, so still
+		# nothing third-party). It needs script-src to load and connect-src to
+		# POST each pageview to /api/event. There is no inline script and no
+		# 'unsafe-inline' for scripts anywhere.
 		#
 		# This is the header GitHub Pages could not set, and part of why the
 		# site moved off it.
-		Content-Security-Policy "default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src https://stats.rehosted.us; connect-src https://stats.rehosted.us; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		# The GitHub Pages 301 for the old address lands on http:// (see
+		# README); HSTS lets a browser that has been here before skip that
+		# plaintext hop.
+		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "no-referrer"
 		-Server

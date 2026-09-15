@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Bring an App Store Connect version in line with what is in this repo.
 
-Creates the version if it is missing, sets the subtitle, pushes the description,
-keywords, promotional text and release notes, attaches a build, and uploads any
-screenshots that are not already there. Optionally submits for review.
+Creates the version if it is missing, sets the subtitle and privacy policy URL,
+pushes the description, keywords, promotional text, release notes and the
+marketing and support URLs, attaches a build, and uploads any screenshots that
+are not already there. Optionally submits for review.
 
 Everything is idempotent and everything is checked before it is written: a field
 that already matches is skipped and says so, so a second run is quiet and safe.
@@ -116,7 +117,9 @@ def ensure_localization(vid, platform):
     fields = {"description": read(platform, "description"),
               "keywords": read(platform, "keywords"),
               "whatsNew": read(platform, "whats_new"),
-              "promotionalText": read(platform, "promotional_text")}
+              "promotionalText": read(platform, "promotional_text"),
+              "marketingUrl": read(platform, "marketing_url"),
+              "supportUrl": read(platform, "support_url")}
     if loc is None:
         print("    + create en-US localization")
         changes.append("create en-US localization")
@@ -168,8 +171,11 @@ def ensure_build(vid, platform):
 
 # -------------------------------------------------------------------- subtitle
 def ensure_subtitle():
-    """Name and subtitle live on the editable appInfo, not on the version."""
+    """Name, subtitle and the privacy policy URL live on the editable appInfo,
+    not on the version. Apple refuses all three on the live one (409
+    INVALID_STATE), so like the marketing URL they ride the next submission."""
     subtitle, name = read("IOS", "subtitle"), read("IOS", "name")
+    privacy = read("IOS", "privacy_policy_url")
     for info in get(f"/v1/apps/{APP}/appInfos?limit=10").get("data", []):
         state = info["attributes"].get("appStoreState") or info["attributes"].get("state")
         if state in ("READY_FOR_SALE", "REPLACED_WITH_NEW_INFO"):
@@ -179,7 +185,7 @@ def ensure_subtitle():
                 continue
             lid, cur = l["id"], l["attributes"]
             print(f"    editable appInfo [{state}]")
-            for k, v in (("name", name), ("subtitle", subtitle)):
+            for k, v in (("name", name), ("subtitle", subtitle), ("privacyPolicyUrl", privacy)):
                 if not v:
                     continue
                 want(k, cur.get(k), v,

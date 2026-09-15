@@ -170,15 +170,25 @@ One nominated publisher per owner; the others still collect and answer.
 - `RequestChecker`: the re-check at accept. Overlap with the buffered span, or
   an all-day event on the day, is a conflict; the owner's own minimum notice is
   not. Conflicts come with the nearest open alternatives.
-- `AskwhenClient`: the six calls, behind a `Transport` so `cmk-check` exercises
+- `AskwhenClient`: the calls, behind a `Transport` so `cmk-check` exercises
   every status the service returns without a network. 404 is one answer for
-  three causes, on purpose.
+  three causes, on purpose. `createPage` takes the signed StoreKit
+  transaction (`Transaction.jwsRepresentation`); the service verifies Apple's
+  signature and derives the entitlement itself (`design/billing.md`).
 - `RequestPageCoordinator`: create → publish → collect → accept/decline, in the
   architecture's order. Accept re-checks, writes (idempotent on the request
   id, tagged `x-askwhen:` so mirrors copy it like any real event), then
   resolves; a resolve that fails after the write says so and is safe to retry.
 - `MirrorEngine.busyIntervals` is where the privacy boundary is crossed:
   title, location, attendees, calendar and account stop there.
+- `SubscriptionStore` *(15 Sept)*: offers, purchase, current, restore,
+  updates — the whole of StoreKit behind five calls, so the UI never sees a
+  `Product`. `StoreKitSubscriptions` is the real one; `FakeSubscriptions` is
+  what previews and `cmk-check` use. `AskWhenTier` is the tier table, and
+  `cmk-check` asserts it against `AskWhen.storekit` as Xcode synced it from
+  App Store Connect — ids, prices, annual, trial on Page only. Nothing is
+  fetched until `offers()` is called, which the UI does when the owner opens
+  the setup and never at launch.
 
 **Not built, on purpose:** the UI — the two checkboxes, the settings screen,
 the notification and its Accept/Decline, the conflict sheet — and the entitlement

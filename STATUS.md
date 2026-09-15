@@ -1,6 +1,6 @@
 # Where this is, and what is left
 
-**Written 11 September 2026.** Read this first; then [`TASKS.md`](TASKS.md) for
+**Written 11 September 2026; updated 15 September.** Read this first; then [`TASKS.md`](TASKS.md) for
 the live board. `HANDOFF.md` (1 September) is retired — everything in it that
 was still true is here, and everything else has been done.
 
@@ -39,8 +39,9 @@ verified against the live service, not only in tests.
 | Owner queue with weak ETag; accept / decline | ✓ | live |
 | Four emails via Postal's API: confirm, accepted + `.ics`, declined, no-response | ✓ | live, real inbox, `.ics` parsed |
 | Retention: 15m / 24h holds, 14-day answer window, 48h ceiling, **purge on delivery** via Postal webhooks | ✓ | live: purged 25s after delivery |
-| Custom domains and subdomains: claim, verify (live + 5-min checker), serve by `Host`, on-demand TLS gate | ✓ | gate proven from the edge; **flip not done — yours** |
+| Custom domains and subdomains: claim, verify (live + 5-min checker), serve by `Host`, on-demand TLS at the edge | ✓ | live: two fixtures on fresh Let's Encrypt certificates |
 | `/internal/*` perimeter, `askwhen.me/` → `calendarmirror.com` | ✓ | live |
+| Entitlement: create by Apple-signed transaction, tiers, App Store Server Notifications, 7-day grace then delete | ✓ | tests; sandbox proof waits on a purchase from a build |
 
 ### The device client — built, no UI
 
@@ -82,13 +83,13 @@ have; **mine** means it can be built and tested without you.
 | | What | Whose | Size |
 |---|---|---|---|
 | 1 | **The request-page UI in the app.** The two checkboxes in Manage Mirrors (*block for requests* / *use for requests*), a settings sheet (display name, blurb, meeting title, the policy), the per-request notification with Accept/Decline, and the conflict sheet showing `RequestChecker`'s alternatives. The Kit exposes everything it needs (`askwhen/README.md` §4). | **Yours** — look-and-feel | days |
-| 2 | **StoreKit.** The annual subscription with the 90-day trial, the three tiers, and the entitlement hash the device sends to `POST /v1/pages`. | **Yours** — product + App Store Connect | days |
-| 3 | **Entitlement verification on the service.** Today `POST /v1/pages` accepts any 64-hex string. Before a stranger can find the endpoint it must verify a StoreKit signed transaction (JWS, Apple's chain) and derive the hash itself; page count and domain tier come from the same check. | mine, once 2 fixes the transaction format | a day |
-| 4 | **Lapse.** Decided: 7-day grace showing *not currently taking requests*, then delete. Not built. Needs either App Store Server Notifications to the service (a public endpoint, like the Postal hook) or the device to report its own expiry — the first is the honest one. | mine, needs your yes on the mechanism | a day |
-| 5 | **Flip on-demand TLS on `caddy-dc`.** One command in `askwhen/infra/edge.md`; validates before it reloads. Two fixtures are waiting for it. | **Yours** — the proxy fronts your customers | minutes |
+| 2 | **The purchase UI.** Everything under it is done (15 Sept): App Store Connect, the `.storekit` file, and `SubscriptionStore` in the Kit — offers with Apple's prices, purchase, current entitlement, restore, updates — with `FakeSubscriptions` to build against. The UI calls five things and hands `SubscriptionState.active.transaction` to `create`. | **Yours** — look-and-feel | days |
+| 3 | ~~Entitlement verification on the service~~ **done 15 Sept.** `POST /v1/pages` takes Apple's signed transaction, verifies it offline against Apple's pinned root, derives the entitlement, enforces the tier on pages and hostnames. `AW_APPSTORE_SANDBOX=1` until launch, then `0`. | done | — |
+| 4 | ~~Lapse~~ **done 15 Sept.** `/hooks/appstore` and `/hooks/appstore-sandbox` take Server Notifications V2; `EXPIRED` starts the 7-day grace (page serves "not currently taking requests", publish refused), `DID_RENEW` ends it, `REFUND`/`REVOKE` skip it; the sweep deletes pages whose grace ran out, and lapses any subscription 17 days past expiry even if the notification never came. **Proof against the sandbox** waits on a purchase from a build. | done | — |
+| 5 | ~~Flip on-demand TLS~~ **done 15 Sept** — custom domains and subdomains are live. | done | — |
 | 6 | **Privacy policy and site.** `docs/privacy.html` describes an app that touches no server. AskWhen.me has a server that briefly holds a stranger's name, address and note; the policy has to say so, plainly and in the product's own voice. Pricing, tiers and the AskWhen.me story on the site. | mine to draft, **yours** to approve | a day |
 | 7 | **Rotate the five leaked credentials** (`cloudflare_apitoken`, the two R2 keys, the R2 endpoint, `gh_claude`) — printed into a transcript 4 Sept. You said at prod; this is prod. | **Yours** | an hour |
-| 8 | **Back up the pepper.** `/opt/cal-mirror/askwhen/infra/secrets/pepper` exists nowhere else. Lose it, every write token dies silently. | **Yours** | minutes |
+| 8 | ~~Back up the pepper~~ **done** (Infisical). | done | — |
 | 9 | **App Store screenshots and review notes for Calendar Mirror 2.0**, from a synthetic config, never the live one. | mine to produce, **yours** to approve | a day |
 | 10 | **Release Calendar Mirror 2.0 from CI** (`release.yml`). Never from this laptop. 1.4.2 folds in — it is on `main` unreleased. | **Yours** | hours |
 

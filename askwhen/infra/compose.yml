@@ -60,6 +60,13 @@ services:
       AW_EDGE_TARGET: "edge.askwhen.me"
       AW_EDGE_IPS: "64.111.22.170"
 
+      # Apple. Transactions must be for this bundle. AW_APPSTORE_SANDBOX=1
+      # lets Sandbox transactions create pages, which is how the purchase
+      # flow is proven before launch; set it to "0" at launch, or anyone
+      # with a sandbox account for the bundle gets free pages.
+      AW_BUNDLE_ID: "io.github.mattbaylor.cal-mirror"
+      AW_APPSTORE_SANDBOX: "1"
+
       # Retention, from architecture §10. Here rather than compiled in, because
       # these are the numbers a regulator or a customer will ask about and they
       # should be readable without a Go toolchain. The 48h ceiling is *also*
