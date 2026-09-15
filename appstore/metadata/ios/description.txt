@@ -23,7 +23,7 @@ CHOOSE WHICH EVENTS
 Not everything in a calendar is worth copying. A pair can skip:
 
 • Meetings you declined, or have not answered yet
-• Events the organiser cancelled
+• Events the organizer canceled
 • All-day events, and anything marked free
 • Anything shorter or longer than a set number of minutes
 • Titles containing words you choose, such as "Lunch" or "Focus time"
@@ -71,4 +71,4 @@ No account. No server. No analytics, no tracking, no telemetry, no ads. There is
 
 Once a copy lands in an account like iCloud, Google or Exchange, that provider syncs and stores it under their policies, exactly as it would for any event you added yourself. That is the honest boundary.
 
-Open source under the MIT licence. One purchase covers iPhone, iPad and Mac.
+Open source under the MIT license. One purchase covers iPhone, iPad and Mac.

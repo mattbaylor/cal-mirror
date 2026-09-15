@@ -126,7 +126,7 @@ services:
 
 secrets:
   # From Infisical: postal_api_key. A Postal *server* credential of type API,
-  # created in the askwhen.me organisation's `main` server.
+  # created in the askwhen.me organization's `main` server.
   postal_api_key:
     file: ./secrets/postal_api_key
   pepper:

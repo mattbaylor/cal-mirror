@@ -29,7 +29,7 @@ final class Model: ObservableObject {
     @Published var mirrors: [Mirror] = []
     @Published var paused = false
     /// Carried through so saving from this window can't change it. `Config`'s
-    /// initialiser defaults realtime ON (that is what a new install should get),
+    /// initializer defaults realtime ON (that is what a new install should get),
     /// so rebuilding a Config from parts here without this would silently switch
     /// realtime on for anyone who merely edited a mirror. No toggle yet — the
     /// realtime UI is a separate change; this only preserves what's on disk.
@@ -402,7 +402,7 @@ struct ManageView: View {
         let idx = model.mirrors.firstIndex { $0.id == id }
         model.mirrors.removeAll { $0.id == id }
         model.saveConfig()
-        // Select the neighbour that took its place, so the detail pane isn't
+        // Select the neighbor that took its place, so the detail pane isn't
         // left empty after every removal.
         if let idx { selection = model.mirrors.indices.contains(idx) ? model.mirrors[idx].id
                                  : model.mirrors.last?.id }

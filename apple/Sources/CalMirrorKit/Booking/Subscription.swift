@@ -20,7 +20,7 @@ public enum AskWhenTier: String, CaseIterable, Sendable, Codable {
 }
 
 /// One subscription as it can be offered: what the sheet should say, with
-/// Apple's localised price. Never hardcode a price — it comes from Apple,
+/// Apple's localized price. Never hardcode a price — it comes from Apple,
 /// in the customer's storefront and currency.
 public struct SubscriptionOffer: Equatable, Sendable {
     public let tier: AskWhenTier

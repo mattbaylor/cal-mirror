@@ -42,7 +42,7 @@ even if AskWhen.me did not exist.
 **Do not upgrade for the wildcard — drop the wildcard.**
 
 Subdomains can ride the same on-demand path as the $70 custom domains: one
-certificate per subdomain, issued at first handshake, gated by the authorisation
+certificate per subdomain, issued at first handshake, gated by the authorization
 endpoint that is already built and tested. No DNS challenge, therefore **no
 Cloudflare credential on the edge at all**.
 
@@ -111,5 +111,5 @@ carries the mail records.
 The catch-all `https:// { tls { on_demand } }` block for $70 custom domains is
 still unstaged, deliberately. It matches every hostname nothing else claimed,
 which on this proxy means handing issuance to anyone who can point a DNS record
-at `.170`. It goes in after the authorisation gate has been exercised against a
+at `.170`. It goes in after the authorization gate has been exercised against a
 name we chose, with the three conditions in `askwhen/infra/edge.md` met first.

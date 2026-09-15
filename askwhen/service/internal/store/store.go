@@ -23,7 +23,7 @@ type Store struct{ db *sql.DB }
 // the pragma is per *connection*, and database/sql opens connections whenever it
 // likes. Setting it once on a pool means most connections do not have it, which
 // is the kind of bug that only shows up as a cascade that quietly did not
-// happen — and here the cascade is what removes a cancelled customer's domain.
+// happen — and here the cascade is what removes a canceled customer's domain.
 func Open(ctx context.Context, path string) (*Store, error) {
 	db, err := sql.Open("sqlite", path+"?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)")
 	if err != nil {
@@ -308,7 +308,7 @@ func (s *Store) QueueVersion(ctx context.Context, slug string) (int64, error) {
 }
 
 // MarkDomainVerified records that a custom domain's DNS was observed pointing at
-// our edge, which is what lets `tlsauth` authorise a certificate for it.
+// our edge, which is what lets `tlsauth` authorize a certificate for it.
 //
 // Only ever sets the column, never clears it. Un-verifying on a failed check
 // would mean a resolver timeout could revoke every customer at once and then

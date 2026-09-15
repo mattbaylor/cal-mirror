@@ -149,7 +149,7 @@ a stranger your week is empty. Offering four says nothing about the other twelve
 
 ### Timezones
 
-**Everything on the wire is UTC, and the browser localises.** No zone is ever
+**Everything on the wire is UTC, and the browser localizes.** No zone is ever
 negotiated between service and page, and the requester sees their own time
 because their browser knows it. That removes the whole class of bug from the
 service and the web app.
@@ -246,7 +246,7 @@ unconfirmed ──▶ confirmed ──▶ queued ──▶ accepted ──▶ .i
 ```
 
 **Unconfirmed requests never reach the owner** and are swept after an hour. That
-one rule is most of the spam defence.
+one rule is most of the spam defense.
 
 **Expiry needs an answer, not silence.** If the owner is away for a fortnight the
 requester deserves to be told, and the service can say "no response" without ever
@@ -271,7 +271,7 @@ page already implies. Nothing about the calendar.
 
 Red is not a failure state to hide — it is the page being straight, and it makes
 the alternative (silently showing week-old availability) look as bad as it is.
-It also gives lapse behaviour somewhere to live: an expired subscription shows
+It also gives lapse behavior somewhere to live: an expired subscription shows
 *not currently taking requests* in the same slot, in the same voice.
 
 ## 4b. Holds — a slot may only be asked for once
@@ -408,7 +408,7 @@ but note it also *buys* the privacy property, which is worth saying in the copy.
 
 14-day trial, annual only.
 
-**Lapse behaviour needs deciding** (decision 6). My recommendation: 7-day grace
+**Lapse behavior needs deciding** (decision 6). My recommendation: 7-day grace
 during which the page shows "not currently taking requests", then the dump is
 deleted and the slug 404s. Never silently keep serving.
 
@@ -418,7 +418,7 @@ deleted and the slug 404s. Never silently keep serving.
 
 **MVP — three things, all cheap:**
 
-1. **Double opt-in.** The real defence, and free, because the address was needed
+1. **Double opt-in.** The real defense, and free, because the address was needed
    to deliver the `.ics` anyway. Nothing reaches the owner until a human clicks a
    link in a mailbox they control.
 2. **Honeypot field.** Ten lines, catches naive bots, costs a real user nothing.

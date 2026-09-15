@@ -98,7 +98,7 @@ keeps the gallery and a `file://` review working.
 - `loadDump()` in `src/dump.js` becomes a same-origin fetch of `/p/{slug}.json`.
   Nothing above it changes; the components take a parsed dump and have no
   opinion about how it arrived.
-- Held slots are modelled (`availability-week` takes a `held` array and renders
+- Held slots are modeled (`availability-week` takes a `held` array and renders
   those slots struck through and disabled) but nothing populates it, because
   holds live in the service.
 - `request-form` emits `trapped: true` when the honeypot is filled. Step 2

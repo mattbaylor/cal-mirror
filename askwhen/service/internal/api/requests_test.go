@@ -262,7 +262,7 @@ func TestPerIPLimitCountsSubmissionsOnly(t *testing.T) {
 
 func TestForwardedForIsTrustedOnlyFromTheProxy(t *testing.T) {
 	// Every real request arrives from 172.16.1.4. From there, X-Forwarded-For
-	// is the client. From anywhere else it is attacker-chosen: honouring it
+	// is the client. From anywhere else it is attacker-chosen: honoring it
 	// would let a requester pick their own rate-limit bucket.
 	h, _ := setupRequests(t)
 

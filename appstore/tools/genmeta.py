@@ -29,7 +29,7 @@ NAME = "Calendar Mirror"
 # the first chance to change it — that is what this release is for.
 SUBTITLE = "One-way sync with busy blocks"
 
-PROMO = ("Copy one calendar into another, one direction only. Skip declined, cancelled "
+PROMO = ("Copy one calendar into another, one direction only. Skip declined, canceled "
          "and all-day events. No account, no server, nothing leaves your device.")
 
 # Keywords: comma separated, no spaces after commas (spaces cost characters).

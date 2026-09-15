@@ -63,7 +63,7 @@ public enum AskwhenError: Error, Equatable, Sendable {
     /// and should not try. A wrong token and a deleted page look the same.
     case notFound
     /// The service understood and refused: a dump that fails validation, a
-    /// decision it does not recognise. The message is the service's own.
+    /// decision it does not recognize. The message is the service's own.
     case rejected(String)
     /// Try again later. 5xx, or Postal-shaped trouble behind it.
     case unavailable

@@ -66,7 +66,7 @@ public struct RequestPageConfig: Codable, Equatable, Sendable {
 
     /// Whether there is anything to publish or poll for. A page with no slug
     /// has not been created; one with no request calendar has nowhere to put
-    /// an acceptance and must not offer times it cannot honour.
+    /// an acceptance and must not offer times it cannot honor.
     public var isReady: Bool {
         enabled && !slug.isEmpty && requestCalendar != nil && !displayName.isEmpty
     }

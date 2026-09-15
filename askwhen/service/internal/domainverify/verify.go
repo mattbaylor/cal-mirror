@@ -30,7 +30,7 @@ type Resolver interface {
 // Config describes where a customer is supposed to point.
 type Config struct {
 	// Target is the stable CNAME target — `edge.askwhen.me`. Compared with the
-	// trailing dot and case normalised away, because resolvers disagree about
+	// trailing dot and case normalized away, because resolvers disagree about
 	// both and neither carries meaning.
 	Target string
 
