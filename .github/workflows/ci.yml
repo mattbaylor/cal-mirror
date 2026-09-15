@@ -38,7 +38,8 @@ jobs:
         working-directory: apple
         run: |
           python3 tools/gen-request-copy.py
-          git diff --exit-code -- Shared/RequestPage/Copy.swift tools/contact-sheet.html
+          python3 tools/gen-review.py
+          git diff --exit-code -- Shared/RequestPage/Copy.swift tools/contact-sheet.html tools/review.html
 
   build-standalone:
     # The engine and the menu-bar UI: plain swiftc, ad-hoc signed. No project

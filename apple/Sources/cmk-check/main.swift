@@ -1449,6 +1449,21 @@ do {
     else { check(false, "expected conflict, got \(verdict)") }
     check(t.calls.count == before, "and made no call to the service")
 
+    // Accept anyway: the owner has seen the clash on the conflict sheet and
+    // said to write it regardless. The re-check is skipped, the event is
+    // written, and the service is told — the path the sheet's last button
+    // takes, and the only caller allowed to set this.
+    t.answers = [(204, [:], "")]
+    let forced = try! run {
+        try await coord.accept(req, page: &page, overridingConflict: true)
+    }.get()
+    if case .accepted = forced {
+        check(true, "accept overriding a conflict writes and resolves rather than reporting the clash again")
+    } else {
+        check(false, "expected accepted when overriding, got \(forced)")
+    }
+    check(t.calls.last?.path == "/v1/requests/r1/resolve", "and it tells the service, so the .ics is sent")
+
     t.answers = [(204, [:], "")]
     _ = try! run { try await coord.decline(req, page: &page) }.get()
     check(t.calls.last?.path == "/v1/requests/r1/resolve" && page.queueETag == nil,

@@ -48,6 +48,18 @@ struct ContentView: View {
                 // Below the mirrors and above the sync settings: this is a
                 // second thing the app does, not a setting of the first. Off
                 // by default, and drawing it costs no network.
+                // Requests waiting, above the setup row: an unanswered
+                // request is the only thing in this app somebody else is
+                // waiting on, so it outranks everything else on the screen.
+                if !model.pendingRequests.isEmpty {
+                    Section("Waiting for you") {
+                        ForEach(model.pendingRequests) { request in
+                            RequestRow(request: request, zone: model.zone,
+                                       accept: { Task { await model.accept(request) } },
+                                       decline: { Task { await model.decline(request) } })
+                        }
+                    }
+                }
                 Section {
                     NavigationLink {
                         RequestPageSetupView(page: model.config.requestPage)
@@ -81,12 +93,23 @@ struct ContentView: View {
                     Button { model.addMirror() } label: { Image(systemName: "plus") }
                 }
             }
-            .refreshable { await model.syncNow() }
+            .refreshable { await model.syncNow(); await model.collectRequests() }
+        }
+        .sheet(item: $model.conflict) { conflict in
+            RequestConflictSheet(
+                conflict: conflict,
+                onDecline: { Task { await model.decline(conflict.request) } },
+                onAcceptAnyway: { Task { await model.acceptAnyway(conflict.request) } },
+                onLater: { model.conflict = nil })
         }
         .onChange(of: phase) { _, newPhase in
             if newPhase == .background {
                 BackgroundSync.schedule(after: TimeInterval(model.config.intervalSeconds))
             }
+            // On open, alongside the sync — the reliable path on iOS, since
+            // background refresh is opportunistic and promising better would
+            // be promising something the platform will not keep.
+            if newPhase == .active { Task { await model.collectRequests() } }
         }
     }
 

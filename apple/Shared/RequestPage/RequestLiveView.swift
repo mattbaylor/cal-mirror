@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 import CalMirrorKit
 
 /// Screen 9 — the page exists. The URL, and the two facts an owner has to be
@@ -13,6 +14,7 @@ struct RequestLiveView: View {
     let onChange: () -> Void
 
     @State private var copied = false
+    @State private var notifyStatus: UNAuthorizationStatus = .notDetermined
 
     private var url: String { "askwhen.me/\(page.slug)" }
 
@@ -40,6 +42,36 @@ struct RequestLiveView: View {
             Text(RequestCopy.Live.section)
         }
 
+        // Asked here and not at launch, and not at the start of setup:
+        // requests cannot arrive before there is a page, so asking earlier
+        // would be asking permission to do nothing. The consequence is stated
+        // because it is real — a stranger's name and note land on a lock
+        // screen, and the owner should know that before saying yes.
+        Section(RequestCopy.Notification.permissionHeading) {
+            Text(RequestCopy.Notification.permissionBody)
+                .font(.callout).fixedSize(horizontal: false, vertical: true)
+            Text(RequestCopy.Notification.permissionNote)
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            switch notifyStatus {
+            case .notDetermined:
+                Button(RequestCopy.Notification.permissionAsk) {
+                    Task {
+                        _ = await RequestNotifications.requestPermission()
+                        RequestNotifications.registerCategory()
+                        notifyStatus = await RequestNotifications.authorization()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+            case .denied:
+                Label(RequestCopy.Notification.permissionDenied, systemImage: "bell.slash")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            default:
+                Label("On", systemImage: "bell.badge").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+
         Section(RequestCopy.Live.tokenHeading) {
             Text(RequestCopy.Live.tokenBody)
                 .font(.callout).fixedSize(horizontal: false, vertical: true)
@@ -65,6 +97,12 @@ struct RequestLiveView: View {
                 get: { !page.enabled },
                 set: { page.enabled = !$0; onChange() }))
         }
+        .task { await refreshStatus() }
+    }
+
+    private func refreshStatus() async {
+        notifyStatus = await RequestNotifications.authorization()
+        if notifyStatus != .notDetermined { RequestNotifications.registerCategory() }
     }
 
     private func copy(_ s: String) {

@@ -16,6 +16,14 @@ final class Store: ObservableObject {
     @Published var access = false
     @Published var lastRun: Date?
     @Published var syncing = false
+    /// Requests collected and not yet answered. The queue is the service's;
+    /// this is what this device currently knows of it, and it is what the
+    /// notification actions resolve an id against.
+    @Published var pendingRequests: [IncomingRequest] = []
+    /// Set when an accept found the slot taken. Presenting it is the UI's.
+    @Published var conflict: RequestConflict?
+    /// A request the owner tapped through to from a notification.
+    @Published var openedRequestID: String?
     #if os(macOS)
     @Published var launchAtLogin = false
     /// Whether the change observer is actually up, so the UI can tell a working
@@ -182,6 +190,8 @@ final class Store: ObservableObject {
         switch scheduler.decide(now: Date(), intervalSeconds: config.effectiveIntervalSeconds) {
         case .sync:
             await syncNow()
+            // Every few minutes and after each sync, per the settled pace.
+            await collectRequests()
             let done = Date()
             // Order matters: open the self-write window BEFORE clearing the
             // pending burst, so an echo of our own writes landing in between is

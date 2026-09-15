@@ -1,5 +1,6 @@
 import SwiftUI
 import BackgroundTasks
+import UserNotifications
 import CalMirrorKit
 
 /// Background refresh. iOS grants these *opportunistically* — this is a
@@ -26,6 +27,10 @@ enum BackgroundSync {
         TimeInterval(ConfigStore.load(from: Store.configURL).intervalSeconds)
     }
 
+    /// Set by the app so a background refresh can collect requests without
+    /// this enum needing to know what a Store is.
+    @MainActor static var collector: (() -> Void)?
+
     @discardableResult
     static func run() async -> Bool {
         let engine = MirrorEngine()
@@ -34,6 +39,10 @@ enum BackgroundSync {
         guard !cfg.paused else { return true }
         let results = engine.syncAll(cfg)
         UserDefaults.standard.set(Date(), forKey: "lastRun")
+        // Collection rides the same background refresh, because decisions.md
+        // settled that the pace is the sync setting the owner already chose
+        // rather than a second schedule to explain.
+        await MainActor.run { collector?() }
         return results.allSatisfy { $0.ok }
     }
 }
@@ -41,10 +50,22 @@ enum BackgroundSync {
 @main
 struct CalMirrorApp: App {
     @StateObject private var model = Store()
+    @StateObject private var notifications = RequestNotificationDelegate()
 
     var body: some Scene {
         WindowGroup {
-            ContentView().environmentObject(model)
+            ContentView()
+                .environmentObject(model)
+                .environmentObject(notifications)
+                .onAppear {
+                    // Wired here rather than in Store: iOS can deliver a
+                    // notification response before any view exists, and an
+                    // Accept that only worked with a window open would fail
+                    // exactly when it was most useful.
+                    notifications.store = model
+                    UNUserNotificationCenter.current().delegate = notifications
+                    BackgroundSync.collector = { Task { await model.collectRequests() } }
+                }
         }
         // System-driven background refresh; reschedules itself after each run.
         .backgroundTask(.appRefresh(BackgroundSync.refreshID)) {

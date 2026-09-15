@@ -10,6 +10,20 @@ struct MenuContent: View {
 
     var body: some View {
         Text("Calendar Mirror — \(model.headline)")
+        // First in the menu, because somebody is waiting on it.
+        if !model.pendingRequests.isEmpty {
+            Divider()
+            ForEach(model.pendingRequests) { request in
+                Menu("\(request.name) — \(RequestNotifications.when(request.slot, in: model.zone))") {
+                    if let note = request.note, !note.isEmpty { Text(note).font(.caption) }
+                    Text(request.email).font(.caption)
+                    Divider()
+                    Button(RequestCopy.Notification.accept) { Task { await model.accept(request) } }
+                    Button(RequestCopy.Notification.decline) { Task { await model.decline(request) } }
+                }
+            }
+            Divider()
+        }
         if model.config.mirrors.isEmpty { Text("No mirrors yet").font(.caption) }
         ForEach(model.config.mirrors) { m in
             let s = model.statuses[m.id]

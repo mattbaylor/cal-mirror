@@ -91,6 +91,49 @@ enum RequestCopy {
         static let bufferCaption = "Held free around anything real in your calendar, so nothing lands wheel-to-wheel against a meeting the person asking cannot see."
     }
 
+    enum Notification {
+        static let categoryId = "askwhen.request"
+        static let acceptId = "askwhen.accept"
+        static let declineId = "askwhen.decline"
+        static let accept = "Accept"
+        static let decline = "Decline"
+        static let titleFormat = "%@ asked for a time"
+        static let bodyNoNote = "%@"
+        static let bodyWithNote = "%@
+%@"
+        static let acceptedTitle = "Accepted"
+        static let acceptedBody = "%@ is in your calendar. They have been sent the details."
+        static let declinedTitle = "Declined"
+        static let declinedBody = "%@ has been told, and the time is free again."
+        static let conflictTitle = "Could not accept — that time is taken"
+        static let conflictBody = "Something landed on %@ since it was offered. Nothing was written. Open Calendar Mirror to see the alternatives."
+        static let failedTitle = "Accepted, but askwhen.me was not told"
+        static let failedBody = "The event is in your calendar. The person who asked has not been sent it yet — open the app to finish."
+        static let permissionHeading = "Let it tell you"
+        static let permissionBody = "Requests arrive on your device, not in an inbox. A notification is how you find out one is waiting, and it carries Accept and Decline so you can answer without opening anything."
+        static let permissionNote = "Whoever asked gave their name and a note, and both appear in the notification. If you would rather they did not show on a locked screen, iOS controls that under Notifications → Show Previews."
+        static let permissionAsk = "Allow notifications"
+        static let permissionSkip = "Not now"
+        static let permissionDenied = "Notifications are off for Calendar Mirror. Requests still arrive and still wait for you in the app — you just will not be told. Settings → Notifications turns them back on."
+    }
+
+    enum Conflict {
+        static let title = "That time is taken"
+        static let lede = "%@ asked for %@, and something has landed on it since you offered it. Nothing has been written, and nobody has been told anything yet."
+        static let landedHeading = "What is on it now"
+        static let landedFormat = "%@ — %@"
+        static let landedAllDay = "An all-day event on %@"
+        static let landedNote = "Shown as a time only. This is the same busy/free view the page is built from — the app does not read what your events are called."
+        static let alternativesHeading = "Nearest times still open"
+        static let alternativesNote = "Declining tells them the time is gone. There is no way to offer one of these back to them from here — they would have to ask again — so if one of these works, say so when you reply."
+        static let noAlternatives = "Nothing else is open inside your horizon. Declining is the honest answer."
+        static let acceptAnyway = "Accept anyway"
+        static let acceptAnywayNote = "Writes it into your calendar on top of whatever is there. Sometimes that is exactly right — you know what the clash is and this matters more."
+        static let decline = "Decline"
+        static let later = "Leave it for now"
+        static let laterNote = "It stays in your queue. The time is held for whoever asked until the hold runs out, and then the slot goes back on offer."
+    }
+
     enum Live {
         static let section = "Your page"
         static let heading = "Your page is live"
