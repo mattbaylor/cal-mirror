@@ -1454,7 +1454,68 @@ do {
     check(page.slug.isEmpty && (try? tokens.token(for: "x7f2k9")) == nil, "delete forgets slug and token, even on a 404")
 }
 
+
+print("Subscriptions:")
+do {
+    // The tier table, the service's tier.go and App Store Connect must agree.
+    // AskWhen.storekit is what Xcode synced from ASC on 15 Sept, so it is the
+    // one of the three that Apple wrote.
+    let url = URL(fileURLWithPath: "AskWhen.storekit")
+    if let data = try? Data(contentsOf: url),
+       let doc = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+       let groups = doc["subscriptionGroups"] as? [[String: Any]],
+       let subs = groups.first?["subscriptions"] as? [[String: Any]] {
+        let ids = Set(subs.compactMap { $0["productID"] as? String })
+        check(ids == Set(AskWhenTier.allCases.map(\.rawValue)),
+              "AskWhenTier's product ids are exactly the ones App Store Connect has: \(ids.sorted())")
+        check(groups.first?["name"] as? String == "AskWhen.me", "the group is named AskWhen.me")
+        for sub in subs {
+            guard let id = sub["productID"] as? String, let tier = AskWhenTier(rawValue: id) else { continue }
+            let hasIntro = sub["introductoryOffer"] != nil && !(sub["introductoryOffer"] is NSNull)
+            check(hasIntro == tier.hasTrial, "\(id): trial in ASC (\(hasIntro)) matches the Kit (\(tier.hasTrial))")
+            check(sub["recurringSubscriptionPeriod"] as? String == "P1Y", "\(id) is annual")
+        }
+        let prices = Dictionary(uniqueKeysWithValues: subs.compactMap { s -> (String, String)? in
+            guard let id = s["productID"] as? String, let p = s["displayPrice"] as? String else { return nil }
+            return (id, p)
+        })
+        check(prices[AskWhenTier.page.rawValue] == "19.99" && prices[AskWhenTier.subdomain.rawValue] == "34.99"
+              && prices[AskWhenTier.domain.rawValue] == "69.99", "prices are the decided $20 / $35 / $70: \(prices)")
+    } else {
+        check(false, "AskWhen.storekit is present beside Package.swift and parses (run cmk-check from apple/)")
+    }
+
+    // What each tier buys, as tier.go has it.
+    check(AskWhenTier.page.pages == 1 && AskWhenTier.subdomain.pages == 5 && AskWhenTier.domain.pages == 5, "pages per tier: 1 / 5 / 5")
+    check(!AskWhenTier.page.includesSubdomain && AskWhenTier.subdomain.includesSubdomain && AskWhenTier.domain.includesSubdomain, "subdomains from $35")
+    check(!AskWhenTier.subdomain.includesCustomDomain && AskWhenTier.domain.includesCustomDomain, "custom domains at $70 only")
+    check(AskWhenTier.page.rank < AskWhenTier.subdomain.rank && AskWhenTier.subdomain.rank < AskWhenTier.domain.rank, "ranked Page < Subdomain < Domain")
+
+    // The fake, which is what the UI is built against.
+    let fake = FakeSubscriptions()
+    check(fake.offersFetched == 0, "nothing is fetched until asked — opt-in")
+    let offers = try! run { try await fake.offers() }.get()
+    check(offers.map(\.tier) == [.page, .subdomain, .domain] && offers[0].trial == "3 months free" && offers[1].trial == nil,
+          "offers carry Apple's price and the trial only on Page")
+    check((run { await fake.current() }.value) == SubscriptionState.none, "nothing owned to start")
+    let bought = try! run { try await fake.purchase(.page) }.get()
+    if case .purchased(let st) = bought, case .active(let tier, _, let jws) = st {
+        check(tier == .page && jws.hasPrefix("fake.jws."), "purchase → active with a transaction to hand to create")
+    } else { check(false, "purchase did not yield an active state: \(bought)") }
+    check((run { await fake.current() }.value)?.isActive == true, "current reflects the purchase")
+
+    // Apple later says it expired; whoever is listening hears it.
+    let stream = fake.updates()
+    fake.set(.expired(tier: .page, at: Date()))
+    let heard = run { await stream.first(where: { _ in true }) }.value
+    if case .expired(let tier, _)? = heard { check(tier == .page, "updates stream delivers Apple's later word") }
+    else { check(false, "updates stream heard \(String(describing: heard))") }
+    check((run { await fake.current() }.value)?.isActive == false, "and current agrees")
+    check(SubscriptionState.revoked(tier: .domain).tier == .domain && !SubscriptionState.revoked(tier: .domain).isActive, "revoked is not active")
+}
+
 extension Result { var failure: Failure? { if case .failure(let e) = self { return e }; return nil } }
+extension Result { var value: Success? { if case .success(let v) = self { return v }; return nil } }
 
 print(failures == 0 ? "\nALL CHECKS PASSED" : "\n\(failures) CHECK(S) FAILED")
 exit(failures == 0 ? 0 : 1)
