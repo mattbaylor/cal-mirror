@@ -4,7 +4,7 @@
 # into a false claim without anyone touching the file. This notices.
 #
 # Deliberately does not edit anything: a price change often wants new wording,
-# not just a new number, and that is a judgement rather than a substitution.
+# not just a new number, and that is a judgment rather than a substitution.
 name: Competitor price drift
 
 on:

@@ -199,7 +199,7 @@ func (d *Domains) List(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{"domains": views, "point": d.Verify.Target})
 }
 
-// classify normalises a host and decides which tier it is, or says why not.
+// classify normalizes a host and decides which tier it is, or says why not.
 func (d *Domains) classify(raw string) (host, kind, why string) {
 	host, err := tlsauth.Normalize(raw)
 	if err != nil {

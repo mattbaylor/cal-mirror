@@ -23,7 +23,7 @@ PILL = re.compile(r'<h2>([0-9][0-9.]*)</h2>\s*<span class="tag">In review</span>
 # it can be removed without hand-editing prose on the day review clears.
 #
 # Tag the version it belongs to — <!--UNRELEASED:1.4.1-->. Untagged blocks are
-# still honoured, but only cleared once nothing at all is pending: with two
+# still honored, but only cleared once nothing at all is pending: with two
 # versions in review, a global marker means the first one to ship leaves its own
 # "waiting on review" note standing, which is how 1.4.0 briefly told people its
 # features were source-only after it had shipped.

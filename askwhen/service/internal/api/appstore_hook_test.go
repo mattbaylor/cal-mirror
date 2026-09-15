@@ -110,7 +110,7 @@ func TestGraceRunsOutAndTheSweepDeletesThePage(t *testing.T) {
 		t.Fatalf("not deleted after grace: %v", slugs)
 	}
 	if ok, _ := o.Store.AuthorizedDomain(ctx, "matt.askwhen.me"); ok {
-		t.Fatal("a deleted page's subdomain is still authorised for a certificate")
+		t.Fatal("a deleted page's subdomain is still authorized for a certificate")
 	}
 }
 

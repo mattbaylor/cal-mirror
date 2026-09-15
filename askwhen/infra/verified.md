@@ -116,7 +116,7 @@ the budget. Either way the result is **`permerror`, not `pass`** — for
 
 `rehosted.us` publishes `_dmarc` at **`p=quarantine`** with `aspf=r`. So mail
 from that domain currently passes DMARC on **DKIM alignment alone**, with SPF
-contributing nothing and some receivers penalising the permerror directly.
+contributing nothing and some receivers penalizing the permerror directly.
 
 ### The blast radius is four domains, not one
 
@@ -154,7 +154,7 @@ which is the point of the macro. `dlvr`'s own record becomes valid too:
 `a` → `.174`, `mx` → `mx.dlvr.rehosted.us`, `include` → the new TXT.
 
 **Verify with a real SPF validator, not `dig`.** This is read off DNS and the
-conclusion depends on RFC 7208's loop and lookup-limit behaviour rather than on
+conclusion depends on RFC 7208's loop and lookup-limit behavior rather than on
 something a resolver reports directly.
 
 ### One more, while looking
@@ -177,7 +177,7 @@ worth ten seconds while the zone is open.
 The obvious move — point askwhen.me at the platform's own macro,
 `v=spf1 include:spf.dlvr.rehosted.us -all` — **would import the loop** and give
 askwhen.me a `permerror` on day one, on a `-all` record, for the confirmation
-mail that is the entire spam defence.
+mail that is the entire spam defense.
 
 So **keep `mail.md`'s record exactly as written**:
 
@@ -225,7 +225,7 @@ What that pulls in, and none of it is optional:
   disposes of correction 1 as a side effect — askwhen never touches the address
   serving the company website — and the spare IPs stay spare.
 - **On-demand TLS moves into `caddy-dc`.** That proxy is already load-bearing for
-  customer sites, so the `ask_domain` authorisation endpoint has to be right
+  customer sites, so the `ask_domain` authorization endpoint has to be right
   before it is enabled, or a misconfiguration issues certificates on a proxy
   that matters. This is the single riskiest line in the whole branch now.
 - **The per-IP rate limit has to read a forwarded header**, since every request

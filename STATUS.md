@@ -75,7 +75,7 @@ keep it real.
 
 ## What is left to ship Calendar Mirror 2.0 and launch AskWhen.me
 
-In the order it blocks a release. **Yours** means judgement or access only you
+In the order it blocks a release. **Yours** means judgment or access only you
 have; **mine** means it can be built and tested without you.
 
 ### Must — neither ships without these
@@ -120,7 +120,7 @@ have; **mine** means it can be built and tested without you.
 ### Loose ends
 
 - `feat/synced-events-view` — one WIP commit, no PR. Finish or delete.
-- Tag `v1.4.1` on the standalone track (needs a notarised build).
+- Tag `v1.4.1` on the standalone track (needs a notarized build).
 - The `-target` fix in `build.sh` / `build-ui.sh` is still uncommitted in your tree.
 - Two step-6 fixtures exist: `ask-test.calendarmirror.com` (CNAME in your zone) and `matt-test.askwhen.me`, on a page named in `TASKS.md`. Delete after the flip, or keep as the first real customer domains.
 

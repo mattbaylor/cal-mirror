@@ -1,7 +1,7 @@
 // Everything the page knows about time, in one pure module.
 //
 // The wire is UTC and only UTC — architecture §3 "Timezones". The browser is
-// what localises, and it is the only thing that knows where the requester is.
+// what localizes, and it is the only thing that knows where the requester is.
 // That confines the whole timezone problem to this file, where it can be tested
 // against real DST boundaries instead of reasoned about.
 //
@@ -11,7 +11,7 @@
 
 import type { PolicyDump, Slot } from './generated/policy-dump.ts';
 
-/** One slot, localised for the requester: what the picker renders. */
+/** One slot, localized for the requester: what the picker renders. */
 export interface Entry {
   slot: Slot;
   start: Date;
@@ -148,7 +148,7 @@ export function weekDayKeys(startKey: string, zone: string): string[] {
 }
 
 /**
- * Group slots into local days, labelled and disambiguated.
+ * Group slots into local days, labeled and disambiguated.
  *
  * The disambiguation is the reason this is not a one-line reduce. On the day a
  * clock falls back, two distinct slots an hour apart render to the identical

@@ -6,7 +6,7 @@
 // would have produced an empty box.
 //
 // What it serves today is what has been built and tested: the policy dump with a
-// conditional GET, and the on-demand TLS authorisation gate. The request
+// conditional GET, and the on-demand TLS authorization gate. The request
 // lifecycle is step 3 and is deliberately absent — `GET /c/{confirm_token}` in
 // particular must not be written until the mutating-GET question is answered,
 // because a link already sitting in an inbox cannot be changed.
@@ -145,7 +145,7 @@ func run(log *slog.Logger) error {
 		return err
 	}
 	if cfg.tlsSecret == "" {
-		log.Warn("no TLS authorisation secret configured; custom-domain certificates will all be refused")
+		log.Warn("no TLS authorization secret configured; custom-domain certificates will all be refused")
 	}
 	if len(cfg.pepper) == 0 {
 		log.Warn("no pepper configured; every write path will refuse")
@@ -331,7 +331,7 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 
 	// The gate is reachable from the edge and nothing else (edge.md, "three
 	// things that are not optional", 1). The secret in the query string is
-	// defence in depth; this is the perimeter.
+	// defense in depth; this is the perimeter.
 	mux.Handle("GET /internal/tls-authorize", internalOnly(cfg.trustedProxy, tlsauth.New(st, tlsauth.Config{
 		Zone:   cfg.zone,
 		Secret: cfg.tlsSecret,

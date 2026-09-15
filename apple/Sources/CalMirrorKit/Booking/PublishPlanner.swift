@@ -52,7 +52,7 @@ public enum PublishPlanner {
 
     /// Republish this long after the last upload even when nothing changed.
     /// Half the service's 24-hour dump TTL: one missed cycle does not take the
-    /// page down, two do — which is the correct behaviour for a device that has
+    /// page down, two do — which is the correct behavior for a device that has
     /// actually gone quiet.
     public static let refreshAfter: TimeInterval = 12 * 3600
 

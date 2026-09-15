@@ -66,7 +66,7 @@ public struct SyncScheduler: Equatable, Sendable {
     public var tuning: Tuning
 
     /// When the last cycle *finished*. Measuring from completion rather than
-    /// start is what stops a slow cycle from immediately queueing the next.
+    /// start is what stops a slow cycle from immediately queuing the next.
     public private(set) var lastSyncAt: Date?
     public private(set) var lastWriteAt: Date?
     public private(set) var changeFirstSeenAt: Date?

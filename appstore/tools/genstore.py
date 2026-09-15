@@ -168,7 +168,7 @@ FRAMES = [
     # 5
     dict(kind="shot", grad=G_TEAL,
          head="Copy the meetings. Skip the noise.",
-         sub="Skip declined, cancelled, all-day and free events — no tagging needed.",
+         sub="Skip declined, canceled, all-day and free events — no tagging needed.",
          shot=dict(iphone="ios-detail-light.png", ipad="ipad-detail.png", mac="mac-selection-light.png"),
          crop=dict(iphone=(0, 1395, 1206, 1905), ipad=(0, 560, 2064, 1235)),
          mac_crop=(0, 0, 940, 880)),
@@ -176,7 +176,7 @@ FRAMES = [
     dict(kind="list", grad=G_BLUE,
          head="Filter on what the events already say.",
          sub="Works on calendars you don't control — a subscribed work feed, a team calendar.",
-         items=["Declined, unanswered or cancelled",
+         items=["Declined, unanswered or canceled",
                 "All-day events, and anything marked free",
                 "Shorter than 15 minutes, or longer than 8 hours",
                 "Titles containing “Lunch” or “Focus time”",

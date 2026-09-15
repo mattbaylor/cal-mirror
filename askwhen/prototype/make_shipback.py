@@ -41,7 +41,7 @@ def ics(owner, requester, req_email, start, end, summary, uid, stamp):
         f"SUMMARY:{esc(summary)}",
         "SEQUENCE:0",
         "STATUS:CONFIRMED",
-        # The OWNER organises. The device is sending from the owner's identity,
+        # The OWNER organizes. The device is sending from the owner's identity,
         # so the requester receives an invitation *from* them and can accept it.
         f"ORGANIZER;CN={esc(owner['name'])}:mailto:{owner['email']}",
         f"ATTENDEE;CN={esc(owner['name'])};ROLE=CHAIR;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:{owner['email']}",
@@ -84,7 +84,7 @@ def eml(owner, requester, req_email, start, end, summary, body_text, cal):
     msg = "\r\n".join(hdrs + [""] + parts)
     # MIME is CRLF throughout. Any bare LF that slipped in from prose (the
     # human-readable part is written with \n) is a defect a strict parser is
-    # entitled to choke on, so normalise the whole message rather than trusting
+    # entitled to choke on, so normalize the whole message rather than trusting
     # every caller to remember.
     return msg.replace("\r\n", "\n").replace("\n", "\r\n")
 
