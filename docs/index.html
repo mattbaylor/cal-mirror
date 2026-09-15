@@ -31,12 +31,13 @@
       var(--bg);-webkit-font-smoothing:antialiased}
   a{color:inherit}
   .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;margin-bottom:0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px;text-decoration:none;color:var(--tx)}
+  .brand img{width:30px;height:30px;border-radius:8px;display:block}
+  .nav-links{display:flex;gap:18px;align-items:center;font-size:14px;color:var(--mut);flex-wrap:wrap}
+  .nav-links a{text-decoration:none;color:var(--mut)}.nav-links a:hover{color:var(--tx)}
+  .nav-links a[aria-current]{color:var(--tx);font-weight:600}
 
-  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;flex-wrap:wrap;gap:12px}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
-  .brand .logo{width:30px;height:30px;border-radius:8px;display:block}
-  .nav-links{display:flex;gap:22px;align-items:center;font-size:14px;color:var(--mut);flex-wrap:wrap}
-  .nav-links a{text-decoration:none}.nav-links a:hover{color:var(--tx)}
 
   header.hero{text-align:center;padding:64px 0 26px}
   .pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
@@ -129,7 +130,7 @@
 <div class="wrap">
 
   <nav>
-    <div class="brand"><img class="logo" src="icon.png" alt="Calendar Mirror icon"> Calendar Mirror</div>
+    <a class="brand" href="./"><img src="icon.png" alt="Calendar Mirror icon"> Calendar Mirror</a>
     <div class="nav-links">
       <a href="#what">What it does</a>
       <a href="#filters">Which events</a>
@@ -137,7 +138,7 @@
       <a href="vs/">Compare</a>
       <a href="changelog.html">Release notes</a>
       <a href="coming.html">What’s coming</a>
-      <a href="https://github.com/mattbaylor/cal-mirror">GitHub ↗</a>
+      <a href="privacy.html">Privacy</a>
     </div>
   </nav>
 
