@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Bring an App Store Connect version in line with what is in this repo.
 
-Creates the version if it is missing, sets the subtitle, pushes the description,
-keywords, promotional text and release notes, attaches a build, and uploads any
-screenshots that are not already there. Optionally submits for review.
+Creates the version if it is missing, sets the subtitle and privacy policy URL,
+pushes the description, keywords, promotional text, release notes and the
+marketing and support URLs, attaches a build, and uploads any screenshots that
+are not already there. Optionally submits for review.
 
 Everything is idempotent and everything is checked before it is written: a field
 that already matches is skipped and says so, so a second run is quiet and safe.
@@ -116,7 +117,9 @@ def ensure_localization(vid, platform):
     fields = {"description": read(platform, "description"),
               "keywords": read(platform, "keywords"),
               "whatsNew": read(platform, "whats_new"),
-              "promotionalText": read(platform, "promotional_text")}
+              "promotionalText": read(platform, "promotional_text"),
+              "marketingUrl": read(platform, "marketing_url"),
+              "supportUrl": read(platform, "support_url")}
     if loc is None:
         print("    + create en-US localization")
         changes.append("create en-US localization")
@@ -189,6 +192,25 @@ def ensure_subtitle():
             return
     print("    ! no editable appInfo found")
     problems.append("no editable appInfo")
+
+
+def ensure_privacy_url():
+    """The privacy policy URL is app-level, and unlike name and subtitle Apple
+    lets it change on the live listing — so try every appInfo, not just the
+    editable one, and let the API say no if it minds."""
+    url = read("IOS", "privacy_policy_url")
+    if not url:
+        return
+    for info in get(f"/v1/apps/{APP}/appInfos?limit=10").get("data", []):
+        state = info["attributes"].get("appStoreState") or info["attributes"].get("state")
+        for l in get(f"/v1/appInfos/{info['id']}/appInfoLocalizations?limit=20").get("data", []):
+            if l["attributes"].get("locale") != "en-US":
+                continue
+            lid = l["id"]
+            want(f"privacyPolicyUrl [{state}]", l["attributes"].get("privacyPolicyUrl"), url,
+                 lambda lid=lid: call("PATCH", f"/v1/appInfoLocalizations/{lid}",
+                                      {"data": {"type": "appInfoLocalizations", "id": lid,
+                                                "attributes": {"privacyPolicyUrl": url}}}))
 
 
 # ----------------------------------------------------------------- screenshots
@@ -286,6 +308,8 @@ def main():
 
     print("Subtitle / name")
     ensure_subtitle()
+    print("Privacy policy URL")
+    ensure_privacy_url()
 
     for platform, cfg in PLATFORMS.items():
         print(f"\n{platform}")

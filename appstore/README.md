@@ -13,6 +13,8 @@ metadata/{ios,mac}/promotional_text.txt      ≤ 170
 metadata/{ios,mac}/description.txt           ≤ 4000
 metadata/{ios,mac}/whats_new.txt             ≤ 4000
 metadata/{ios,mac}/keywords.txt              ≤ 100
+metadata/{ios,mac}/marketing_url.txt         the website
+metadata/{ios,mac}/privacy_policy_url.txt    the privacy page on it
 ```
 
 Upload order matters — the files are numbered in the order they should appear.
