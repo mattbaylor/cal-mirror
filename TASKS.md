@@ -4,7 +4,7 @@ The living board. [`STATUS.md`](STATUS.md) is the narrative — where things
 stand and what is left to ship Calendar Mirror 2.0 and launch AskWhen.me — and is the place to start; this is the
 granular list underneath it.
 
-Last accurate: **15 September 2026, morning.** Anything here that the repo or the
+Last accurate: **15 September 2026, midday.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -19,15 +19,15 @@ The order that unblocks the most. Each line names whose it is.
 
 | # | What | Whose | Unblocks |
 |---|---|---|---|
-| 1 | App Store Connect, `design/billing.md` Part 1 steps 1–6: agreement check, subscription group, three products, 3-month free offer, Server Notifications URLs, a sandbox tester | Matt, ~1h | everything StoreKit-shaped |
+| 1 | ~~App Store Connect~~ **done 15 Sept** — agreement active, group 22387296, three products, trial on Page only, notifications URLs set, sandbox tester exists | Matt | — |
 | 2 | The `.storekit` file, synced from ASC, checked in under `apple/` | Matt, 10 min | the purchase UI, testable offline |
 | 3 | Review draft [#84](https://github.com/mattbaylor/cal-mirror/pull/84) (privacy, billing); answer the one TODO in it — `caddy-dc` access-log retention | Matt | the privacy page ships |
-| 4 | Back up the pepper | Matt, 5 min | — |
+| 4 | ~~Back up the pepper~~ **done** (Infisical) | Matt | — |
 | 5 | Entitlement verification on the service: Apple JWS verifier, `POST /v1/pages` by signed transaction, tier enforcement on pages and domains | me, today | closes the free-pages hole |
 | 6 | `POST /hooks/appstore`: Server Notifications V2, the 7-day grace, the delete | me, today; sandbox proof needs #1 | lapse |
 | 7 | `CalMirrorKit` StoreKit wrapper: products, purchase, current entitlement, the JWS to send | me, today; testable against #2 | the purchase UI |
-| 8 | Commit the `-target` fix | Matt, 2 min | — |
-| 9 | Flip on-demand TLS (`edge.md`) — whenever you have five quiet minutes | Matt | custom domains live |
+| 8 | ~~Commit the `-target` fix~~ **done** [#87](https://github.com/mattbaylor/cal-mirror/pull/87) | | — |
+| 9 | ~~Flip on-demand TLS~~ **done 15 Sept** — two fixtures answer 200 on fresh Let's Encrypt certificates; an unclaimed name is refused at the handshake | Matt | — |
 
 Then the design loop for the app UI, in its own session.
 
@@ -44,9 +44,9 @@ Judgement, not access. Roughly in the order it starts costing.
 
 | | What | The call |
 |---|---|---|
+| ⚪ | **Apple agreements renew 14 Dec 2026** — both Paid Apps and Free Apps. Until you accept the renewed version, new products and price changes are refused; existing sales continue. Calendar a reminder for early December. | |
+| 🔴 | **The `.storekit` file** — Xcode: File → New → File → StoreKit Configuration File, tick *Sync this file with an app in App Store Connect*, save as `apple/AskWhen.storekit`, commit. Ten minutes; unblocks the purchase UI offline. | |
 | 🔴 | **Rotate five credentials before prod** | `cloudflare_apitoken`, `cloudflare_accesskey`, `cloudflare_secretaccesskey`, the R2 endpoint (carries the account hash) and `gh_claude` were printed into a session transcript on 4 Sept. You said rotate at prod rather than now; this is the reminder so it does not get lost. `~/.claude/settings.json` now denies `infisical secrets` outright. |
-| 🔴 | **Flip on-demand TLS on `caddy-dc`** | Step 6 is built, deployed and proven up to this line: the gate answers 200/200/404 for a claimed custom domain, a claimed subdomain and an unclaimed name when asked from the proxy itself. What remains is writing the global `on_demand_tls` options and the catch-all `https://` block into `/opt/caddy/Caddyfile` and reloading — on the proxy that fronts your customers' sites, which is why it stops here. `askwhen/infra/edge.md`, "The flip, as one command": one line, validates before it reloads, backup beside the file. Two fixtures are waiting for it: `ask-test.calendarmirror.com` (CNAME, in your zone) and `matt-test.askwhen.me`. Delete both, and the fixture page `qjvg8iar`, when done — or leave them as the first real customer domains. |
-| 🔴 | **Back up the pepper** | `/opt/cal-mirror/askwhen/infra/secrets/pepper` on CT 112, generated 10 Sept. It hashes every write token; lose it and every owner silently stops being able to publish. Somewhere you would keep a private key — not Infisical's `prod` env alongside things that rotate. |
 | 🔴 | **Commit the `-target` fix** | Still uncommitted in your tree (`build.sh`, `build-ui.sh`). Say the word and I will commit it; I did not want to commit your working tree unasked. |
 | 🟡 | **Edge Caddy: 2.6.2 → 2.11.4, and drop the wildcard** | Plan and argument in `askwhen/infra/edge/upgrade-plan.md`. Only apex + `www` are staged today because 2.6.2 has no DNS modules. Recommendation: upgrade for the security fixes, and do **not** add the wildcard — every `*.askwhen.me` name we would ever serve is a custom-domain CNAME, which on-demand TLS already covers. |
 | 🟡 | **Disable Universal SSL on `askwhen.me`** | Cloudflare keeps injecting CAA records for its own CAs into the zone. Harmless while the records also permit Let's Encrypt, but it is a foreign hand in a zone we otherwise control. Cloudflare → SSL/TLS → Edge Certificates → Disable Universal SSL. |
