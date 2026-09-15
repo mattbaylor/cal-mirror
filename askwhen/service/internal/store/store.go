@@ -694,6 +694,180 @@ func (s *Store) Resolve(ctx context.Context, slug, id, decision string, purgeAft
 	return &out, nil
 }
 
+// ------------------------------------------------------------- entitlements
+
+// Entitlement is what Apple has told us about one subscription, keyed by the
+// hash of its originalTransactionId.
+type Entitlement struct {
+	Hash        []byte
+	ProductID   string
+	Environment string
+	ExpiresAt   time.Time
+	RevokedAt   time.Time // zero unless refunded or revoked
+	UpdatedAt   time.Time
+}
+
+// Live is whether the subscription is in a paid or trial period right now.
+func (e Entitlement) Live(now time.Time) bool {
+	return e.RevokedAt.IsZero() && e.ExpiresAt.After(now)
+}
+
+// UpsertEntitlement records Apple's latest word on a subscription. Called
+// from a verified transaction at create and from every notification, so
+// expires_at only ever reflects the most recent signed transaction. A
+// revocation is recorded; a fresh subscription clears it.
+func (s *Store) UpsertEntitlement(ctx context.Context, e Entitlement) error {
+	var revoked any
+	if !e.RevokedAt.IsZero() {
+		revoked = e.RevokedAt.UTC().Format(time.RFC3339)
+	}
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO entitlement (hash, product_id, environment, expires_at, revoked_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT (hash) DO UPDATE SET
+		  product_id = excluded.product_id,
+		  environment = excluded.environment,
+		  expires_at = excluded.expires_at,
+		  revoked_at = excluded.revoked_at,
+		  updated_at = excluded.updated_at`,
+		e.Hash, e.ProductID, e.Environment, e.ExpiresAt.UTC().Format(time.RFC3339), revoked, nowRFC3339())
+	if err != nil {
+		return fmt.Errorf("upsert entitlement: %w", err)
+	}
+	return nil
+}
+
+// Entitlement reads one by hash; nil if Apple has never told us about it.
+func (s *Store) Entitlement(ctx context.Context, hash []byte) (*Entitlement, error) {
+	var e Entitlement
+	var expires, updated string
+	var revoked sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		SELECT hash, product_id, environment, expires_at, revoked_at, updated_at
+		FROM entitlement WHERE hash = ?`, hash).Scan(
+		&e.Hash, &e.ProductID, &e.Environment, &expires, &revoked, &updated)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("entitlement: %w", err)
+	}
+	e.ExpiresAt, _ = time.Parse(time.RFC3339, expires)
+	e.UpdatedAt, _ = time.Parse(time.RFC3339, updated)
+	if revoked.Valid {
+		e.RevokedAt, _ = time.Parse(time.RFC3339, revoked.String)
+	}
+	return &e, nil
+}
+
+// EntitlementForPage is the subscription behind a page, for tier checks on
+// domain claims. nil if the page has no recorded entitlement — a page from
+// before verification existed.
+func (s *Store) EntitlementForPage(ctx context.Context, slug string) (*Entitlement, error) {
+	var hash []byte
+	err := s.db.QueryRowContext(ctx, `SELECT entitlement_hash FROM page WHERE slug = ?`, slug).Scan(&hash)
+	if err == sql.ErrNoRows {
+		return nil, ErrNoPage
+	}
+	if err != nil {
+		return nil, fmt.Errorf("entitlement for page: %w", err)
+	}
+	return s.Entitlement(ctx, hash)
+}
+
+// PagesFor counts the pages a subscription holds, for the per-tier limit.
+func (s *Store) PagesFor(ctx context.Context, hash []byte) (int, error) {
+	var n int
+	if err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM page WHERE entitlement_hash = ?`, hash).Scan(&n); err != nil {
+		return 0, fmt.Errorf("pages for: %w", err)
+	}
+	return n, nil
+}
+
+// Lapse starts the grace period on every page of a subscription (decisions.md:
+// 7 days of "not currently taking requests", then delete). Only sets a
+// grace that is not already running, so a repeated notification does not
+// keep pushing the deadline out. Returns how many pages entered grace.
+func (s *Store) Lapse(ctx context.Context, hash []byte, graceUntil time.Time) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE page SET grace_until = ?
+		WHERE entitlement_hash = ? AND grace_until IS NULL`,
+		graceUntil.UTC().Format(time.RFC3339), hash)
+	if err != nil {
+		return 0, fmt.Errorf("lapse: %w", err)
+	}
+	return res.RowsAffected()
+}
+
+// Reinstate ends a grace period: the subscription renewed after all.
+func (s *Store) Reinstate(ctx context.Context, hash []byte) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE page SET grace_until = NULL
+		WHERE entitlement_hash = ? AND grace_until IS NOT NULL`, hash)
+	if err != nil {
+		return 0, fmt.Errorf("reinstate: %w", err)
+	}
+	return res.RowsAffected()
+}
+
+// GraceUntil is when a page's grace ends; zero while its subscription is live.
+func (s *Store) GraceUntil(ctx context.Context, slug string) (time.Time, error) {
+	var g sql.NullString
+	err := s.db.QueryRowContext(ctx, `SELECT grace_until FROM page WHERE slug = ?`, slug).Scan(&g)
+	if err == sql.ErrNoRows {
+		return time.Time{}, ErrNoPage
+	}
+	if err != nil {
+		return time.Time{}, fmt.Errorf("grace: %w", err)
+	}
+	if !g.Valid {
+		return time.Time{}, nil
+	}
+	t, _ := time.Parse(time.RFC3339, g.String)
+	return t, nil
+}
+
+// LapseOverdue is the belt to the notifications' braces: any subscription
+// Apple last said expired more than `slack` ago, with no grace running on its
+// pages, starts one now. Apple's own billing grace period is at most 16
+// days, so a subscription 17 days past its expiry with no renewal in hand
+// has lapsed whether or not the EXPIRED notification arrived.
+func (s *Store) LapseOverdue(ctx context.Context, now time.Time, slack time.Duration, graceUntil time.Time) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE page SET grace_until = ?
+		WHERE grace_until IS NULL AND entitlement_hash IN (
+		  SELECT hash FROM entitlement
+		  WHERE revoked_at IS NOT NULL OR expires_at < ?)`,
+		graceUntil.UTC().Format(time.RFC3339),
+		now.Add(-slack).UTC().Format(time.RFC3339))
+	if err != nil {
+		return 0, fmt.Errorf("lapse overdue: %w", err)
+	}
+	return res.RowsAffected()
+}
+
+// DeleteLapsed removes every page whose grace has run out. Requests, domains
+// and deliveries cascade; the token dies with the page. Returns the slugs,
+// for the log.
+func (s *Store) DeleteLapsed(ctx context.Context, now time.Time) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		DELETE FROM page WHERE grace_until IS NOT NULL AND grace_until < ?
+		RETURNING slug`, now.UTC().Format(time.RFC3339))
+	if err != nil {
+		return nil, fmt.Errorf("delete lapsed: %w", err)
+	}
+	defer rows.Close()
+	var slugs []string
+	for rows.Next() {
+		var slug string
+		if err := rows.Scan(&slug); err != nil {
+			return slugs, err
+		}
+		slugs = append(slugs, slug)
+	}
+	return slugs, rows.Err()
+}
+
 // --------------------------------------------------------------- deliveries
 
 // RecordDelivery ties a Postal message id to the accepted request whose .ics

@@ -84,6 +84,23 @@ func (d *Domains) Claim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The tier is the subscription's word, not the page's. A page from
+	// before verification existed has no entitlement on record and gets
+	// nothing above the base tier.
+	ent, err := d.Owner.Store.EntitlementForPage(r.Context(), slug)
+	if err != nil && !errors.Is(err, store.ErrNoPage) {
+		d.fail(w, "entitlement", err)
+		return
+	}
+	tier := Tier{Pages: 1}
+	if ent != nil {
+		tier, _ = TierFor(ent.ProductID)
+	}
+	if (kind == "subdomain" && !tier.Subdomain) || (kind == "custom" && !tier.Custom) {
+		http.Error(w, "this subscription does not include that kind of hostname", http.StatusPaymentRequired)
+		return
+	}
+
 	existing, err := d.Owner.Store.Domains(r.Context(), slug)
 	if err != nil {
 		d.fail(w, "domains", err)

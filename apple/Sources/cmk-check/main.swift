@@ -1307,12 +1307,13 @@ do {
     let c = AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t)
 
     t.answers = [(201, [:], #"{"slug":"x7f2k9","write_token":"tok_123"}"#)]
-    let created = try! run { try await c.createPage(entitlementHash: String(repeating: "ab", count: 32),
+    let created = try! run { try await c.createPage(transaction: "eyJ.signed.byApple",
                                                     display: .init(name: "Matt", tz: "America/Denver")) }.get()
     check(created.slug == "x7f2k9" && created.writeToken == "tok_123", "create parses slug and token")
     check(t.calls[0].method == "POST" && t.calls[0].path == "/v1/pages" && t.calls[0].headers["Authorization"] == nil,
           "create is POST /v1/pages with no bearer")
-    check(String(decoding: t.calls[0].body!, as: UTF8.self).contains(#""entitlement_hash":"abab"#), "and carries the entitlement hash")
+    check(String(decoding: t.calls[0].body!, as: UTF8.self).contains(#""transaction":"eyJ.signed.byApple"#),
+          "and carries Apple's signed transaction, not a hash")
 
     t.answers = [(204, ["ETag": "\"deadbeef\""], "")]
     let etag = try! run { try await c.publish(Data("{\"v\":1}".utf8), slug: "x7f2k9", token: "tok_123") }.get()
@@ -1349,6 +1350,9 @@ do {
     _ = try! run { try await c.releaseDomain("matt.askwhen.me", slug: "x7f2k9", token: "tok_123") }.get()
     check(t.calls.last?.method == "DELETE" && t.calls.last?.path == "/v1/pages/x7f2k9/domains/matt.askwhen.me", "releaseDomain is DELETE")
 
+    t.answers = [(402, [:], #"{"error":"subscription has expired"}"#)]
+    check((run { try await c.createPage(transaction: "eyJ.old", display: .init(name: "M", tz: "UTC")) }.failure as? AskwhenError)
+          == .rejected(#"{"error":"subscription has expired"}"#), "402 → rejected, with the service's reason")
     t.answers = [(404, [:], "404 page not found")]
     check((run { try await c.resolve(requestID: "r1", slug: "x7f2k9", decision: .accept, token: "bad") }.failure as? AskwhenError) == .notFound,
           "404 → notFound, whichever of token/page/request it was")
@@ -1394,7 +1398,7 @@ do {
     try! tokens.remove(for: "x7f2k9")
 
     t.answers = [(201, [:], #"{"slug":"x7f2k9","write_token":"tok_123"}"#)]
-    _ = try! run { try await coord.create(page: &page, entitlementHash: String(repeating: "ab", count: 32)) }.get()
+    _ = try! run { try await coord.create(page: &page, transaction: "eyJ.signed.byApple") }.get()
     check(page.slug == "x7f2k9" && (try? tokens.token(for: "x7f2k9")) == "tok_123", "create sets the slug and stores the token")
 
     t.answers = [(204, ["ETag": "\"a\""], "")]

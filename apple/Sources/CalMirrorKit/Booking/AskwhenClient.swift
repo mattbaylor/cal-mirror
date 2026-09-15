@@ -114,12 +114,16 @@ public struct AskwhenClient: Sendable {
         public let writeToken: String
     }
 
-    /// `entitlementHash` is SHA-256 hex of the StoreKit originalTransactionId,
-    /// computed on the device; the service never sees the id itself.
-    public func createPage(entitlementHash: String, display: PolicyDump.Display) async throws -> Created {
+    /// `transaction` is the signed transaction StoreKit hands the device
+    /// (`Transaction.jwsRepresentation`). The service verifies Apple's
+    /// signature itself and derives the entitlement from it; the device sends
+    /// no hash and no receipt. A 402 means the subscription does not buy this
+    /// — expired, refunded, for another product, or already holding as many
+    /// pages as its tier allows — and `AskwhenError.rejected` carries which.
+    public func createPage(transaction: String, display: PolicyDump.Display) async throws -> Created {
         var req = request("POST", "/v1/pages", token: nil)
-        struct Body: Encodable { let entitlement_hash: String; let display: PolicyDump.Display }
-        req.httpBody = try JSONEncoder().encode(Body(entitlement_hash: entitlementHash, display: display))
+        struct Body: Encodable { let transaction: String; let display: PolicyDump.Display }
+        req.httpBody = try JSONEncoder().encode(Body(transaction: transaction, display: display))
         let (data, resp) = try await exchange(req)
         guard resp.statusCode == 201 else { throw failure(resp, data) }
         struct Reply: Decodable { let slug: String; let write_token: String }

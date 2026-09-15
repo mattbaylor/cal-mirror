@@ -403,3 +403,47 @@ func TestACustomerHostServesItsPageAtTheRoot(t *testing.T) {
 		t.Fatalf("/p/host.json on our own name: %d", w.Code)
 	}
 }
+
+func TestALapsedPageServesNotTakingRequestsThenNothing(t *testing.T) {
+	h, st := testRoutesAndStore(t)
+	ctx := context.Background()
+
+	before := do(h, http.MethodGet, "/p/x7f2k9.json", nil)
+	if before.Code != http.StatusOK {
+		t.Fatalf("precondition: %d", before.Code)
+	}
+	liveETag := before.Header().Get("ETag")
+
+	// The subscription lapsed; the grace week starts.
+	if _, err := st.DB().Exec(`UPDATE page SET grace_until = ? WHERE slug = 'x7f2k9'`,
+		time.Now().Add(7*24*time.Hour).UTC().Format(time.RFC3339)); err != nil {
+		t.Fatal(err)
+	}
+	w := do(h, http.MethodGet, "/p/x7f2k9.json", map[string]string{"If-None-Match": liveETag})
+	if w.Code != http.StatusOK {
+		t.Fatalf("a cached live dump was not revalidated into the lapsed one: %d", w.Code)
+	}
+	var got struct {
+		Slug    string   `json:"slug"`
+		Expires string   `json:"expires"`
+		Slots   []any    `json:"slots"`
+		Held    []string `json:"held"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &got)
+	exp, _ := time.Parse(time.RFC3339, got.Expires)
+	if got.Slug != "x7f2k9" || len(got.Slots) != 0 || !exp.Before(time.Now()) || len(got.Held) != 0 {
+		t.Fatalf("lapsed dump = %s", w.Body.String())
+	}
+	// And it revalidates as itself.
+	if w2 := do(h, http.MethodGet, "/p/x7f2k9.json", map[string]string{"If-None-Match": w.Header().Get("ETag")}); w2.Code != http.StatusNotModified {
+		t.Fatalf("lapsed representation did not revalidate: %d", w2.Code)
+	}
+
+	// Grace runs out: the sweep deletes the page and the slug is nobody's.
+	if slugs, err := st.DeleteLapsed(ctx, time.Now().Add(8*24*time.Hour)); err != nil || len(slugs) != 1 {
+		t.Fatalf("delete lapsed: %v %v", slugs, err)
+	}
+	if w := do(h, http.MethodGet, "/p/x7f2k9.json", nil); w.Code != http.StatusNotFound {
+		t.Fatalf("after grace: %d, want 404 — indistinguishable from never-existed", w.Code)
+	}
+}

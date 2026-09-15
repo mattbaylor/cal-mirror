@@ -61,6 +61,32 @@ PRAGMA foreign_keys = ON;       -- ON DELETE CASCADE below is load-bearing for
                                 -- "owner deletes the page" (§9).
 PRAGMA busy_timeout = 5000;
 
+-- -------------------------------------------------------------- entitlements
+--
+-- One row per subscription Apple has told us about, keyed by the hash of its
+-- originalTransactionId — never the id, and never anything Apple attaches a
+-- person to. What the service needs to answer is "is this subscription live,
+-- and which tier" — and it needs to answer that on every page create and
+-- every domain claim without asking Apple.
+--
+-- Written from two directions: the signed transaction a device presents at
+-- create (appstore.Verifier), and App Store Server Notifications as the
+-- subscription renews, changes tier, lapses or is refunded. Both are Apple's
+-- signature, verified offline against Apple's pinned root.
+
+CREATE TABLE IF NOT EXISTS entitlement (
+  hash         BLOB PRIMARY KEY,
+  -- me.askwhen.page.annual | me.askwhen.subdomain.annual | me.askwhen.domain.annual
+  product_id   TEXT NOT NULL,
+  environment  TEXT NOT NULL CHECK (environment IN ('Production', 'Sandbox')),
+  -- When Apple says the current period ends. Renewals move it forward;
+  -- nothing here moves it back except a revocation.
+  expires_at   TEXT NOT NULL,
+  -- Set on REFUND / REVOKE. A revoked subscription is lapsed at once, no grace.
+  revoked_at   TEXT,
+  updated_at   TEXT NOT NULL
+);
+
 -- --------------------------------------------------------------------- pages
 
 CREATE TABLE IF NOT EXISTS page (

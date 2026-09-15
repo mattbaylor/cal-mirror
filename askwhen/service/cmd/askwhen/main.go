@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/api"
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/appstore"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/domainverify"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/httpcache"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/mail"
@@ -77,6 +78,10 @@ type config struct {
 	// edge's public address for an apex that cannot carry a CNAME.
 	edgeTarget string
 	edgeIPs    []string
+	// Apple. The bundle a transaction must be for, and whether Sandbox
+	// transactions may create pages — on until launch, off after.
+	bundleID        string
+	appstoreSandbox bool
 }
 
 func loadConfig() (config, error) {
@@ -93,6 +98,10 @@ func loadConfig() (config, error) {
 		webDir:       envOr("AW_WEB", "/web"),
 		edgeTarget:   envOr("AW_EDGE_TARGET", "edge.askwhen.me"),
 		edgeIPs:      strings.Fields(strings.ReplaceAll(envOr("AW_EDGE_IPS", "64.111.22.170"), ",", " ")),
+		bundleID:     envOr("AW_BUNDLE_ID", "io.github.mattbaylor.cal-mirror"),
+		// Default on: the sandbox is how the flow is proven before launch.
+		// compose.yml flips it to "0" at launch (TASKS.md).
+		appstoreSandbox: envOr("AW_APPSTORE_SANDBOX", "1") == "1",
 	}
 
 	// Read from a file rather than an environment variable so the value does not
@@ -382,13 +391,23 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 
 	// The owner's side. Every route here needs the page's write token — the one
 	// credential the service ever issues, and the one it stores only as a hash.
+	apple := appstore.New()
 	owner := &api.Owner{
 		Store:       st,
 		Pepper:      cfg.pepper,
 		DumpTTL:     24 * time.Hour,
 		TTLResolved: ttlResolved,
 		Notify:      notifier(post, log),
+		Entitle:     &api.Entitler{Verify: apple, BundleID: cfg.bundleID, Sandbox: cfg.appstoreSandbox},
 		Logger:      log,
+	}
+
+	// Apple's word on subscriptions, one door per environment. Public;
+	// Apple's signature is the authentication.
+	for path, env := range map[string]string{"/hooks/appstore": "Production", "/hooks/appstore-sandbox": "Sandbox"} {
+		mux.Handle("POST "+path, &api.AppStoreHook{
+			Store: st, Verify: apple, Environment: env, Grace: api.LapseGrace, Logger: log,
+		})
 	}
 	mux.HandleFunc("POST /v1/pages", owner.Create)
 	mux.HandleFunc("PUT /v1/pages/{slug}", owner.Publish)
@@ -443,7 +462,18 @@ func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slo
 		return
 	}
 
-	if httpcache.Serve(w, r, servedETag(dumpETag, held)) {
+	grace, err := st.GraceUntil(r.Context(), slug)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	// The validator's view of the holds. A lapsed page has no slots to hold,
+	// so its validator is one fixed word whatever the hold table says.
+	validator := held
+	if !grace.IsZero() {
+		validator = []string{"lapsed"}
+	}
+	if httpcache.Serve(w, r, servedETag(dumpETag, validator)) {
 		return
 	}
 
@@ -457,6 +487,20 @@ func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slo
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
 	}
+	// Lapse (decisions.md): during the grace week the page says "not
+	// currently taking requests" in the freshness stoplight's own voice. The
+	// web app renders exactly that for a dump whose expiry has passed and
+	// whose slots are empty, so that is what a lapsed page becomes on the way
+	// out — the stored document is untouched, and comes back if they renew.
+	if !grace.IsZero() {
+		dump, err = lapsed(dump)
+		if err != nil {
+			log.Error("dump lapse", "slug", slug, "err", err)
+			http.Error(w, "unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		held = nil
+	}
 	body, err := withHeld(dump, held)
 	if err != nil {
 		log.Error("dump merge", "slug", slug, "err", err)
@@ -466,7 +510,7 @@ func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slo
 	// A publish can land between the two reads. Serving the new bytes under the
 	// old validator would leave every cache holding a document it thinks is
 	// current and is not.
-	w.Header().Set("ETag", servedETag(dumpETag2, held))
+	w.Header().Set("ETag", servedETag(dumpETag2, validator))
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	// §8: noindex by default. The page opts in per slug; the dump never does.
 	w.Header().Set("X-Robots-Tag", "noindex")
@@ -513,6 +557,20 @@ func hostOf(r *http.Request) string {
 // whenever either half is.
 func servedETag(dumpETag string, held []string) string {
 	return httpcache.StrongETag([]byte(dumpETag + "\n" + strings.Join(held, "\n")))
+}
+
+// lapsed is the stored dump with its offers withdrawn: no slots, and an
+// expiry already past, which is the page's "not currently taking requests".
+func lapsed(dump string) (string, error) {
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(dump), &doc); err != nil {
+		return "", err
+	}
+	doc["slots"] = json.RawMessage("[]")
+	exp, _ := json.Marshal(time.Now().Add(-time.Second).UTC().Format(time.RFC3339))
+	doc["expires"] = exp
+	out, err := json.Marshal(doc)
+	return string(out), err
 }
 
 // withHeld adds the `held` list to the stored document. Every other value is
