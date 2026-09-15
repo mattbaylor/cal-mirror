@@ -51,6 +51,19 @@ already handles this better than it looks — the slug 404s *into the invitation
 page*, so a dead link still explains itself to whoever clicks it. Worth
 re-checking if the trial ever gets longer.
 
+**askwhen is opt-in, and not opting in changes nothing.** *(15 Sept 2026,
+Matt, restating the packaging decision as the promise it actually is.)* An
+owner who never turns the request page on has exactly the privacy position
+1.x had: no account, no server, no network request of any kind — not a
+version check, not a product fetch, nothing. The request page is a thing you
+choose, and everything the privacy policy says about a server applies only
+after you choose it. Structurally: `RequestPageConfig.enabled` defaults to
+false on every path (fresh, decoded without the key, malformed), the
+coordinator refuses to publish or poll a page that is not on, and `cmk-check`
+asserts both. StoreKit's product fetch — itself a network request to Apple —
+belongs behind the same choice: the app loads products when the owner opens
+the request-page setup, never at launch.
+
 **Packaging — one app, opt-in, off by default.** Shipping in Calendar Mirror *and*
 as a second app would not preserve the clean privacy policy — that only survives
 if Calendar Mirror lacks the feature — so "both" buys the complicated policy
