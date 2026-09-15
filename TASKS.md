@@ -4,7 +4,7 @@ The living board. [`STATUS.md`](STATUS.md) is the narrative — where things
 stand and what is left to ship Calendar Mirror 2.0 and launch AskWhen.me — and is the place to start; this is the
 granular list underneath it.
 
-Last accurate: **15 September 2026, midday.** Anything here that the repo or the
+Last accurate: **15 September 2026, evening.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -20,16 +20,31 @@ The order that unblocks the most. Each line names whose it is.
 | # | What | Whose | Unblocks |
 |---|---|---|---|
 | 1 | ~~App Store Connect~~ **done 15 Sept** — agreement active, group 22387296, three products, trial on Page only, notifications URLs set, sandbox tester exists | Matt | — |
-| 2 | The `.storekit` file, synced from ASC, checked in under `apple/` | Matt, 10 min | the purchase UI, testable offline |
+| 2 | ~~The `.storekit` file~~ **done 15 Sept** [#90](https://github.com/mattbaylor/cal-mirror/pull/90) — group 22387296, three annual products, trial on Page only, attached to both run schemes | Matt | — |
 | 3 | Review draft [#84](https://github.com/mattbaylor/cal-mirror/pull/84) (privacy, billing); answer the one TODO in it — `caddy-dc` access-log retention | Matt | the privacy page ships |
 | 4 | ~~Back up the pepper~~ **done** (Infisical) | Matt | — |
-| 5 | Entitlement verification on the service: Apple JWS verifier, `POST /v1/pages` by signed transaction, tier enforcement on pages and domains | me, today | closes the free-pages hole |
-| 6 | `POST /hooks/appstore`: Server Notifications V2, the 7-day grace, the delete | me, today; sandbox proof needs #1 | lapse |
-| 7 | `CalMirrorKit` StoreKit wrapper: products, purchase, current entitlement, the JWS to send | me, today; testable against #2 | the purchase UI |
+| 5 | ~~Entitlement verification on the service~~ **done 15 Sept** [#91](https://github.com/mattbaylor/cal-mirror/pull/91) | | — |
+| 6 | ~~`POST /hooks/appstore`~~ **done 15 Sept** — sandbox proof still waits on a purchase from a real build | | — |
+| 7 | ~~`CalMirrorKit` StoreKit wrapper~~ **done 15 Sept** [#93](https://github.com/mattbaylor/cal-mirror/pull/93) — `SubscriptionStore` behind five calls, with `FakeSubscriptions` for previews and `cmk-check` | | — |
 | 8 | ~~Commit the `-target` fix~~ **done** [#87](https://github.com/mattbaylor/cal-mirror/pull/87) | | — |
 | 9 | ~~Flip on-demand TLS~~ **done 15 Sept** — two fixtures answer 200 on fresh Let's Encrypt certificates; an unclaimed name is refused at the handshake | Matt | — |
 
-Then the design loop for the app UI, in its own session.
+**The punch list is clear.** The design loop for the app UI ran on 15 September
+and landed as [#99](https://github.com/mattbaylor/cal-mirror/pull/99); what it
+left behind is below, under *Next*.
+
+---
+
+## Next — the shortest path to a submission
+
+| # | What | Whose |
+|---|---|---|
+| 1 | **Run the request-page UI in a simulator.** Nothing in `apple/Shared/RequestPage/` has been seen moving: it compiles, and `cmk-check` covers what is pure, but the notification actions and the StoreKit sheet are exercised by no test. The `.storekit` file is on both run schemes, so a debug build buys the trial with no network and no sandbox account. | **Matt** to run, me to fix what it finds |
+| 2 | **Screenshots and review notes for 2.0**, from the same pass — `apple/tools/review-fixture.json` holds a synthetic owner to drive it, and the live config is never used for this. | mine to produce, **Matt** to approve |
+| 3 | **Sandbox proof of the lapse path** — a real purchase from a build, then `EXPIRED` → grace → delete against `/hooks/appstore-sandbox`. Waits on 1. | mine, once 1 happens |
+| 4 | **Privacy policy and site** — [#84](https://github.com/mattbaylor/cal-mirror/pull/84) is drafted and waiting on Matt's read plus the one TODO in it. | **Matt** to review |
+| 5 | **Rotate the five leaked credentials.** Said at prod; this is prod. | **Matt** |
+| 6 | **Release 2.0 from CI** (`release.yml`), never from the laptop. 1.4.2 folds in. | **Matt** |
 
 ## Asks — none open
 
@@ -45,14 +60,13 @@ Judgment, not access. Roughly in the order it starts costing.
 | | What | The call |
 |---|---|---|
 | ⚪ | **Apple agreements renew 14 Dec 2026** — both Paid Apps and Free Apps. Until you accept the renewed version, new products and price changes are refused; existing sales continue. Calendar a reminder for early December. | |
-| 🔴 | **The `.storekit` file** — Xcode: File → New → File → StoreKit Configuration File, tick *Sync this file with an app in App Store Connect*, save as `apple/AskWhen.storekit`, commit. Ten minutes; unblocks the purchase UI offline. | |
 | 🔴 | **Rotate five credentials before prod** | `cloudflare_apitoken`, `cloudflare_accesskey`, `cloudflare_secretaccesskey`, the R2 endpoint (carries the account hash) and `gh_claude` were printed into a session transcript on 4 Sept. You said rotate at prod rather than now; this is the reminder so it does not get lost. `~/.claude/settings.json` now denies `infisical secrets` outright. |
 | 🔴 | **Commit the `-target` fix** | Still uncommitted in your tree (`build.sh`, `build-ui.sh`). Say the word and I will commit it; I did not want to commit your working tree unasked. |
 | 🟡 | **Edge Caddy: 2.6.2 → 2.11.4, and drop the wildcard** | Plan and argument in `askwhen/infra/edge/upgrade-plan.md`. Only apex + `www` are staged today because 2.6.2 has no DNS modules. Recommendation: upgrade for the security fixes, and do **not** add the wildcard — every `*.askwhen.me` name we would ever serve is a custom-domain CNAME, which on-demand TLS already covers. |
 | 🟡 | **Disable Universal SSL on `askwhen.me`** | Cloudflare keeps injecting CAA records for its own CAs into the zone. Harmless while the records also permit Let's Encrypt, but it is a foreign hand in a zone we otherwise control. Cloudflare → SSL/TLS → Edge Certificates → Disable Universal SSL. |
 | 🟡 | **Reserve `172.16.1.41` in pfSense** and **add CT 112 to PBS** | The guest has a static address nothing else knows about, and no backup. Both are yours because both are DC-wide config. |
 | 🟡 | **An Infisical machine identity** | User sessions expire in 20–60 minutes and each expiry cost a round trip today. A Universal Auth identity scoped to `calendarmirror-com-v2-yo/prod`, read-only, would let `infisical run` work unattended. |
-| 🟡 | **The request-page UI** | Step 4 built everything under it and nothing of it. Needed, in the order a new owner meets them: the two checkboxes in Manage Mirrors (`RequestPageConfig.blocking` / `.requestCalendar`); a settings sheet for display name, blurb, meeting title and the policy; the StoreKit entitlement → `create`; a notification per collected request with Accept / Decline; and the conflict sheet that shows `RequestChecker`'s alternatives. Yours because it is look-and-feel; the Kit's surface is in `askwhen/README.md` §4. |
+| 🟡 | **Run the request-page UI once** | The UI itself is built and merged ([#99](https://github.com/mattbaylor/cal-mirror/pull/99)), approved against `apple/tools/review.html`. It has never been run. Yours because it needs Xcode and a device, and because the four things the review left open — the policy screen's length, the conflict sheet showing a time rather than a title, the full IANA zone picker, publisher nomination folded into the live page — are all easier to judge moving than still. `decisions.md`, *The request-page UI is approved as built*, says what would make each worth reopening. |
 | 🟡 | **1.4.2 folds into Calendar Mirror 2.0** | Decided 15 Sept. On main, unreleased; ships with 2.0. |
 | 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. Needs a signed, notarized build, so it is a release rather than a tag. |
 | ⚪ | **Design the emails** *(Matt, 10 Sept)* | All four — confirm, accepted, declined, no-response — are deliberately plain today: one `<p>` after another, no image, no styled button, nothing fetched. The plainness is partly a security stance (a scanner rendering the confirm mail finds nothing to click but a URL whose GET does nothing) and partly that nobody has designed them yet. Whatever they become should keep both properties; the templates are in `askwhen/service/internal/mail/postal.go`, and the same look should probably reach the request page's own states. |
