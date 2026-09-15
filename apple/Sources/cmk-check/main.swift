@@ -1475,6 +1475,18 @@ do {
     check((run { try await coord.collect(page: &page) }.failure as? RequestPageError) == .noToken,
           "a page whose token is gone says so rather than 404-looping")
 
+    // A hostname as typed is not a hostname as DNS holds it. Each of these
+    // would otherwise claim a name that can never verify, and the owner would
+    // be left staring at a CNAME they had set correctly.
+    check(RequestPageCoordinator.normalize("  Ask.Example.COM ") == "ask.example.com",
+          "a hostname is trimmed and case-folded")
+    check(RequestPageCoordinator.normalize("https://ask.example.com/") == "ask.example.com",
+          "a pasted URL is reduced to its host")
+    check(RequestPageCoordinator.normalize("ask.example.com.") == "ask.example.com",
+          "a fully-qualified trailing dot is dropped")
+    check(RequestPageCoordinator.normalize("ask.example.com") == "ask.example.com",
+          "and an already-clean hostname is left alone")
+
     try! tokens.store("tok_123", for: "x7f2k9")
     t.answers = [(404, [:], "")]
     _ = try! run { try await coord.delete(page: &page) }.get()

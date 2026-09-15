@@ -91,9 +91,38 @@ struct RequestPageSetupView: View {
             .formStyle(.grouped)
         case .live:
             Form {
-                RequestLiveView(page: model.requestPageBinding, onChange: { model.save() })
+                // Above everything, when it applies. An owner whose page has
+                // stopped taking requests is not reading this screen to copy
+                // their link — they are reading it to find out what happened.
+                if let lapse = model.lapse {
+                    RequestLapseView(state: lapse) { step = .offer }
+                }
+                if lapseIsTerminal {
+                    // Nothing below applies to a page that no longer exists,
+                    // and a copy button for a dead link is a trap.
+                    EmptyView()
+                } else {
+                    RequestLiveView(page: model.requestPageBinding, onChange: { model.save() })
+                    RequestDomainsView(
+                        page: model.requestPage,
+                        tier: model.subscriptionState.tier,
+                        domains: model.claimedDomains,
+                        busy: model.domainsBusy,
+                        error: model.domainError,
+                        onClaim: { host in Task { await model.claimDomain(host) } },
+                        onRelease: { host in Task { await model.releaseDomain(host) } },
+                        onCheck: { Task { await model.refreshDomains() } },
+                        onUpgrade: { tier in Task { await model.upgrade(to: tier) } })
+                }
             }
             .formStyle(.grouped)
+            .task {
+                await model.refreshSubscription()
+                // Only once there is a live page: a lapsed or deleted one has
+                // no addresses to list, and asking would be a network request
+                // on behalf of something that no longer exists.
+                if model.lapse == nil { await model.refreshDomains() }
+            }
         }
     }
 
@@ -101,6 +130,11 @@ struct RequestPageSetupView: View {
     /// where the gap is, and `isReady` refuses to publish without it — a dead
     /// button with no explanation attached is the worse of the two, and every
     /// step stays reachable from the row afterwards.
+    /// Revoked or deleted: there is no page left to manage, only to explain.
+    private var lapseIsTerminal: Bool {
+        model.lapse == .gone || model.lapse == .revoked
+    }
+
     private func next(_ to: Step) -> some View {
         Section {
             Button(to == .offer ? "See what it costs" : "Continue") { step = to }

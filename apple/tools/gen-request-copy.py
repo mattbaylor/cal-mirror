@@ -14,7 +14,7 @@ generated type, so the two cannot separate silently.
 What the sheet is NOT: a screenshot. It cannot be, because this repository's
 UI is SwiftUI and the sheet is HTML. It shows the words, the order, the
 control types and the true width. Pixel truth comes from the simulator on a
-Mac, and nothing here should be trusted about spacing, type or colour.
+Mac, and nothing here should be trusted about spacing, type or color.
 """
 import json
 import pathlib
@@ -79,7 +79,8 @@ def gen_swift(c: dict) -> str:
         out.append(f"        static let {k} = {swift_string(v)}\n")
     out.append("    }\n")
 
-    for name, key in (("Notification", "notification"), ("Conflict", "conflict")):
+    for name, key in (("Notification", "notification"), ("Conflict", "conflict"),
+                      ("Lapse", "lapse"), ("Domains", "domains")):
         out.append(f"\n    enum {name} {{\n")
         for k, v in c[key].items():
             out.append(f"        static let {k} = {swift_string(v)}\n")
@@ -383,7 +384,7 @@ def gen_sheet(c: dict) -> str:
       your system setting — switch it to see both.</p>
     <p class="warn">This is not a screenshot and cannot be: the app is SwiftUI and this is HTML.
       It is here to review <strong>the words, the order, and the control types</strong> at true
-      width. Do not trust it about spacing, type or colour — that comes from the simulator.
+      width. Do not trust it about spacing, type or color — that comes from the simulator.
       Both this file and the app's strings are generated from
       <code>Shared/RequestPage/Copy.json</code>, so what you mark up is what ships.</p>
     <div id="sheet">{body}</div>

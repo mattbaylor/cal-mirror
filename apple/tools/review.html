@@ -90,6 +90,9 @@ h4 { font-size:18px; margin:0 0 6px; }
 .slot { font-size:12px; padding:3px 9px; border-radius:6px; border:1px solid var(--tint); color:var(--tint); }
 .empty { font-size:12px; color:var(--note); font-style:italic; }
 .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:17px; margin:14px 0 0; word-break:break-all; }
+.mono.sm { font-size:12.5px; margin:4px 0 10px; }
+.ok { color:var(--local); font-size:12.5px; }
+.pend { color:var(--service); font-size:12.5px; }
 .notif { background:var(--card); border:1px solid var(--edge); border-radius:14px; padding:13px 15px; margin:12px; }
 .napp { font-size:10.5px; letter-spacing:.7px; color:var(--note); margin-bottom:5px; }
 .ntitle { font-weight:600; font-size:15px; }
@@ -108,8 +111,8 @@ h4 { font-size:18px; margin:0 0 6px; }
   <body>
     <div class="wrap">
       <h1>The request page, end to end</h1>
-      <p class="lede">Eleven steps from an owner who has never heard of this to a stranger
-        asking for a time and being answered. Every screen carries what it does, why it is
+      <p class="lede">Fourteen steps from an owner who has never heard of this to a stranger
+        asking for a time and being answered — and on to a nicer address, and to what happens when the subscription stops. Every screen carries what it does, why it is
         that way, and anything still open on it.</p>
       <div class="meta">
         <span class="chip">Calendar Mirror 2.0</span>
@@ -120,7 +123,7 @@ h4 { font-size:18px; margin:0 0 6px; }
       <div class="warnbox">
         <b>What this is and is not.</b> The words, the order and the reasoning are real — the
         copy is generated from the same file the app's strings are, so it cannot drift.
-        The rendering is not: this is HTML and the app is SwiftUI, so spacing, type and colour
+        The rendering is not: this is HTML and the app is SwiftUI, so spacing, type and color
         come from the simulator, not from here. Nothing in it has been compiled — there is no
         Swift toolchain in the session that wrote it, and CI is the first real build.
         Every name, calendar and time below is invented; the live config is never used for this.
@@ -280,6 +283,48 @@ h4 { font-size:18px; margin:0 0 6px; }
         <div class="open"><b>Open</b> — "What landed" is a time, never a title — BusyInterval carries no title by design. Whether the owner should see their own event's name here is your call, and it means a new path through the privacy boundary.</div>
       </div>
       <div class="right"><div class="scr"><div class="nav">Request conflict</div><div class="grp"><div class="pad"><h4>That time is taken</h4><p class="body sm">Priya Raman asked for Thursday 24 September, 1:30 PM, and something has landed on it since you offered it. Nothing has been written, and nobody has been told anything yet.</p></div></div><div class="grp"><div class="hdr">What is on it now</div><div class="row"><div class="rowmain"><span class="t">Thursday 24 September — 1:00–2:00 PM</span></div></div><p class="cap pad8">Shown as a time only. This is the same busy/free view the page is built from — the app does not read what your events are called.</p></div><div class="grp"><div class="hdr">Nearest times still open</div><div class="row"><div class="rowmain"><span class="t">Thursday 24 September, 3:00 PM</span></div></div><div class="row"><div class="rowmain"><span class="t">Friday 25 September, 10:00 AM</span></div></div><div class="row"><div class="rowmain"><span class="t">Friday 25 September, 2:30 PM</span></div></div><p class="cap pad8">Declining tells them the time is gone. There is no way to offer one of these back to them from here — they would have to ask again — so if one of these works, say so when you reply.</p></div><div class="grp"><div class="row"><div class="rowmain"><span class="t danger">Decline</span></div></div><div class="row"><div class="rowmain"><span class="t">Leave it for now</span></div></div></div><div class="grp"><div class="row"><div class="rowmain"><span class="t">Accept anyway</span></div></div><p class="cap pad8">Writes it into your calendar on top of whatever is there. Sometimes that is exactly right — you know what the clash is and this matters more.</p></div></div></div>
+    </section>
+    <section class="step">
+      <div class="left">
+        <div class="num">12</div>
+        <div class="rail stage-service"></div>
+      </div>
+      <div class="mid">
+        <h3>A nicer address</h3>
+        <span class="tag tag-service">askwhen.me</span>
+        <p class="what">The slug always works. On top of it, a subdomain of askwhen.me that verifies instantly, or a domain the owner already controls that needs one CNAME.</p>
+        <p class="why"><b>Why</b> — Checking is not a refresh button — GET /domains makes the service re-read DNS and issue the certificate the moment the record is right, so asking is what makes it start working.</p>
+        <div class="open"><b>Open</b> — The upgrade is offered here rather than on the offer screen — where the want appears. Apple prorates, and the note says so, because otherwise it reads as paying twice for the same year.</div>
+      </div>
+      <div class="right"><div class="scr"><div class="nav">Address</div><div class="grp"><div class="pad"><p class="cap">Your page is at</p><p class="mono">askwhen.me/k4m2p9</p><p class="cap">This address always works and is never taken away, whatever else you add.</p></div></div><div class="grp"><div class="pad"><p class="body"><span class="mono sm">dana.askwhen.me</span> <span class="ok">✓ Working</span></p></div></div><div class="grp"><div class="pad"><p class="body"><span class="mono sm">ask.okonkwo-referees.com</span> <span class="pend">◷ Waiting for DNS</span></p><p class="cap">Add this record</p><p class="mono sm">CNAME   ask.okonkwo-referees.com   →   edge.askwhen.me</p><p class="cap">What DNS says right now</p><p class="mono sm">ask.okonkwo-referees.com. 300 IN A 203.0.113.9</p><p class="body sm">That is an A record pointing somewhere else. Replace it with the CNAME above.</p><div class="btn">Check now</div><p class="foot">Checking is what makes it start working — the service re-reads DNS every time you ask, and issues the certificate the moment the record is right.</p></div></div></div></div>
+    </section>
+    <section class="step">
+      <div class="left">
+        <div class="num">13</div>
+        <div class="rail stage-service"></div>
+      </div>
+      <div class="mid">
+        <h3>The subscription ends</h3>
+        <span class="tag tag-service">askwhen.me</span>
+        <p class="what">Seven days of grace. The page stays up saying “not currently taking requests”, then askwhen.me deletes it and the link 404s.</p>
+        <p class="why"><b>Why</b> — That line is the same one a page shows when the publisher has been offline a while, so a visitor learns nothing about the owner’s billing. Renewing inside the grace brings the same page back at the same address, which is the fact that decides whether someone renews.</p>
+        <div class="open"><b>Open</b> — The device counts the grace down, but the service is the authority — it deletes from Apple’s server notifications and this device may have slept through it. Finding the slug gone is what settles it.</div>
+      </div>
+      <div class="right"><div class="scr"><div class="nav">Your page</div><div class="grp"><div class="pad"><p class="body"><b>⚠ Your subscription has ended</b></p><p class="body sm">Your page is still there, but it is not taking requests. Anyone who opens it sees “not currently taking requests” — the same line it shows when your device has been offline for a while, so it does not announce anything about you.</p><p class="body"><b>It is deleted in 4 days.</b></p><p class="cap">When that happens the page, its address and anything still in its queue are removed, and the link 404s. Your calendar is untouched — every request you already accepted is an ordinary event and stays exactly where it is.</p><p class="body sm">Renewing inside the grace brings the same page back at the same address, so the links you have sent out keep working.</p><div class="btn">Renew</div></div></div></div></div>
+    </section>
+    <section class="step">
+      <div class="left">
+        <div class="num">14</div>
+        <div class="rail stage-service"></div>
+      </div>
+      <div class="mid">
+        <h3>It is gone</h3>
+        <span class="tag tag-service">askwhen.me</span>
+        <p class="what">The grace ran out. The page, its address and its queue are removed; a new subscription starts a new page at a new address.</p>
+        <p class="why"><b>Why</b> — The sentence that matters is that the calendar is untouched — every request already accepted is an ordinary event that never depended on the page staying up.</p>
+        
+      </div>
+      <div class="right"><div class="scr"><div class="nav">Your page</div><div class="grp"><div class="pad"><p class="body"><b>Your page has been deleted</b></p><p class="body sm">The grace period ended and askwhen.me removed the page. Links to the old address no longer work, and there is nothing left to restore — a new subscription starts a new page with a new address.</p><p class="cap">Everything you accepted is still in your calendar. Nothing that was already agreed depended on the page staying up.</p><div class="btn">Start a new page</div></div></div></div></div>
     </section>
     </div>
   </body>

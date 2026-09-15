@@ -8,7 +8,7 @@ import CalMirrorKit
 ///
 /// **Use for requests is exactly one calendar**, so it behaves as a radio rather
 /// than a checkbox even though it is drawn as one: turning it on somewhere else
-/// turns it off here. A multi-select would be a config the Kit cannot honour —
+/// turns it off here. A multi-select would be a config the Kit cannot honor —
 /// `accept` writes into a single `CalRef` — and the place to make that
 /// impossible is the control, not a validation message afterwards.
 ///

@@ -24,6 +24,13 @@ final class Store: ObservableObject {
     @Published var conflict: RequestConflict?
     /// A request the owner tapped through to from a notification.
     @Published var openedRequestID: String?
+    /// The hostnames this page answers on, as the service last reported them.
+    @Published var claimedDomains: [AskwhenClient.ClaimedDomain] = []
+    @Published var domainsBusy = false
+    @Published var domainError: String?
+    /// What StoreKit says is owned. Read from the device's own cache, so
+    /// holding it costs no network; `.none` until the setup is opened.
+    @Published var subscriptionState: SubscriptionState = .none
     #if os(macOS)
     @Published var launchAtLogin = false
     /// Whether the change observer is actually up, so the UI can tell a working

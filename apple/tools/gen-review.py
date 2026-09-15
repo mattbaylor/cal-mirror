@@ -241,6 +241,49 @@ def build(c, fx):
                   f'<p class="cap pad8">{esc(cs["acceptAnywayNote"])}</p>')),
         open_q="\"What landed\" is a time, never a title — BusyInterval carries no title by design. Whether the owner should see their own event's name here is your call, and it means a new path through the privacy boundary."))
 
+    lp, dm = c["lapse"], c["domains"]
+    fd, fl = fx["domains"], fx["lapse"]
+
+    steps.append(step(12, "A nicer address", "service",
+        "The slug always works. On top of it, a subdomain of askwhen.me that verifies instantly, or a domain the owner already controls that needs one CNAME.",
+        "Checking is not a refresh button — GET /domains makes the service re-read DNS and issue the certificate the moment the record is right, so asking is what makes it start working.",
+        phone(nav(esc(dm["section"])) + grp(pad(
+            f'<p class="cap">{esc(dm["current"])}</p><p class="mono">askwhen.me/{esc(o["slug"])}</p>'
+            f'<p class="cap">{esc(dm["slugNote"])}</p>'))
+            + grp(pad(f'<p class="body"><span class="mono sm">{esc(fd["subdomain"])}</span> '
+                      f'<span class="ok">✓ {esc(dm["verified"])}</span></p>'))
+            + grp(pad(f'<p class="body"><span class="mono sm">{esc(fd["custom"])}</span> '
+                      f'<span class="pend">◷ {esc(dm["pending"])}</span></p>'
+                      f'<p class="cap">{esc(dm["cnameHeading"])}</p>'
+                      f'<p class="mono sm">{esc(fmt(dm["cnameFormat"], fd["custom"], fd["point"]))}</p>'
+                      f'<p class="cap">{esc(dm["sawHeading"])}</p>'
+                      f'<p class="mono sm">{esc(fd["check"])}</p>'
+                      f'<p class="body sm">{esc(fd["advice"])}</p>'
+                      f'<div class="btn">{esc(dm["check"])}</div>'
+                      f'<p class="foot">{esc(dm["checkNote"])}</p>'))),
+        open_q="The upgrade is offered here rather than on the offer screen — where the want appears. Apple prorates, and the note says so, because otherwise it reads as paying twice for the same year."))
+
+    steps.append(step(13, "The subscription ends", "service",
+        "Seven days of grace. The page stays up saying \u201cnot currently taking requests\u201d, then askwhen.me deletes it and the link 404s.",
+        "That line is the same one a page shows when the publisher has been offline a while, so a visitor learns nothing about the owner\u2019s billing. Renewing inside the grace brings the same page back at the same address, which is the fact that decides whether someone renews.",
+        phone(nav(esc(lv["section"])) + grp(pad(
+            f'<p class="body"><b>⚠ {esc(lp["graceHeading"])}</b></p>'
+            f'<p class="body sm">{esc(lp["graceBody"])}</p>'
+            f'<p class="body"><b>{esc(fmt(lp["graceCountMany"], fl["daysLeft"]))}</b></p>'
+            f'<p class="cap">{esc(lp["graceWhatGoes"])}</p>'
+            f'<p class="body sm">{esc(lp["graceFix"])}</p>'
+            f'<div class="btn">{esc(lp["renew"])}</div>'))),
+        open_q="The device counts the grace down, but the service is the authority — it deletes from Apple\u2019s server notifications and this device may have slept through it. Finding the slug gone is what settles it."))
+
+    steps.append(step(14, "It is gone", "service",
+        "The grace ran out. The page, its address and its queue are removed; a new subscription starts a new page at a new address.",
+        "The sentence that matters is that the calendar is untouched \u2014 every request already accepted is an ordinary event that never depended on the page staying up.",
+        phone(nav(esc(lv["section"])) + grp(pad(
+            f'<p class="body"><b>{esc(lp["goneHeading"])}</b></p>'
+            f'<p class="body sm">{esc(lp["goneBody"])}</p>'
+            f'<p class="cap">{esc(lp["goneCalendar"])}</p>'
+            f'<div class="btn">{esc(lp["startAgain"])}</div>')))))
+
     return "".join(steps)
 
 
@@ -327,6 +370,9 @@ h4 { font-size:18px; margin:0 0 6px; }
 .slot { font-size:12px; padding:3px 9px; border-radius:6px; border:1px solid var(--tint); color:var(--tint); }
 .empty { font-size:12px; color:var(--note); font-style:italic; }
 .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:17px; margin:14px 0 0; word-break:break-all; }
+.mono.sm { font-size:12.5px; margin:4px 0 10px; }
+.ok { color:var(--local); font-size:12.5px; }
+.pend { color:var(--service); font-size:12.5px; }
 .notif { background:var(--card); border:1px solid var(--edge); border-radius:14px; padding:13px 15px; margin:12px; }
 .napp { font-size:10.5px; letter-spacing:.7px; color:var(--note); margin-bottom:5px; }
 .ntitle { font-weight:600; font-size:15px; }
@@ -363,8 +409,8 @@ def main():
   <body>
     <div class="wrap">
       <h1>The request page, end to end</h1>
-      <p class="lede">Eleven steps from an owner who has never heard of this to a stranger
-        asking for a time and being answered. Every screen carries what it does, why it is
+      <p class="lede">Fourteen steps from an owner who has never heard of this to a stranger
+        asking for a time and being answered — and on to a nicer address, and to what happens when the subscription stops. Every screen carries what it does, why it is
         that way, and anything still open on it.</p>
       <div class="meta">
         <span class="chip">Calendar Mirror 2.0</span>
@@ -375,7 +421,7 @@ def main():
       <div class="warnbox">
         <b>What this is and is not.</b> The words, the order and the reasoning are real — the
         copy is generated from the same file the app's strings are, so it cannot drift.
-        The rendering is not: this is HTML and the app is SwiftUI, so spacing, type and colour
+        The rendering is not: this is HTML and the app is SwiftUI, so spacing, type and color
         come from the simulator, not from here. Nothing in it has been compiled — there is no
         Swift toolchain in the session that wrote it, and CI is the first real build.
         Every name, calendar and time below is invented; the live config is never used for this.
