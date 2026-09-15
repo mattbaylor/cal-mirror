@@ -4,7 +4,7 @@ The living board. [`STATUS.md`](STATUS.md) is the narrative — where things
 stand and what is left to ship 2.0 — and is the place to start; this is the
 granular list underneath it.
 
-Last accurate: **11 September 2026, midday.** Anything here that the repo or the
+Last accurate: **15 September 2026, morning.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -12,6 +12,24 @@ being worked, or there is a **named ask** with what it unblocks — and an ask i
 thing to chase, not a place to stop.
 
 ---
+
+## Punch list — 15 September
+
+The order that unblocks the most. Each line names whose it is.
+
+| # | What | Whose | Unblocks |
+|---|---|---|---|
+| 1 | App Store Connect, `design/billing.md` Part 1 steps 1–6: agreement check, subscription group, three products, 3-month free offer, Server Notifications URLs, a sandbox tester | Matt, ~1h | everything StoreKit-shaped |
+| 2 | The `.storekit` file, synced from ASC, checked in under `apple/` | Matt, 10 min | the purchase UI, testable offline |
+| 3 | Review draft [#84](https://github.com/mattbaylor/cal-mirror/pull/84) (privacy, billing); answer the one TODO in it — `caddy-dc` access-log retention | Matt | the privacy page ships |
+| 4 | Back up the pepper | Matt, 5 min | — |
+| 5 | Entitlement verification on the service: Apple JWS verifier, `POST /v1/pages` by signed transaction, tier enforcement on pages and domains | me, today | closes the free-pages hole |
+| 6 | `POST /hooks/appstore`: Server Notifications V2, the 7-day grace, the delete | me, today; sandbox proof needs #1 | lapse |
+| 7 | `CalMirrorKit` StoreKit wrapper: products, purchase, current entitlement, the JWS to send | me, today; testable against #2 | the purchase UI |
+| 8 | Commit the `-target` fix | Matt, 2 min | — |
+| 9 | Flip on-demand TLS (`edge.md`) — whenever you have five quiet minutes | Matt | custom domains live |
+
+Then the design loop for the app UI, in its own session.
 
 ## Asks — none open
 
@@ -40,6 +58,19 @@ Judgement, not access. Roughly in the order it starts costing.
 | ⚪ | **Design the emails** *(Matt, 10 Sept)* | All four — confirm, accepted, declined, no-response — are deliberately plain today: one `<p>` after another, no image, no styled button, nothing fetched. The plainness is partly a security stance (a scanner rendering the confirm mail finds nothing to click but a URL whose GET does nothing) and partly that nobody has designed them yet. Whatever they become should keep both properties; the templates are in `askwhen/service/internal/mail/postal.go`, and the same look should probably reach the request page's own states. |
 | ⚪ | **Sit with the request page** | You said you were not sold. `askwhen/web/dist/gallery.html` is every state at true size and opens straight from the filesystem. |
 | ⚪ | **`feat/synced-events-view`** | One WIP commit, no PR, abandoned mid-thought. Finish or delete. |
+
+## Things nobody had listed yet (15 Sept)
+
+| What | Why it matters |
+|---|---|
+| **iPhone-only owners will watch their page go dark.** The dump expires 24h after the last publish, and iOS runs the app when it feels like it. A Mac that is usually on is fine; a phone-only owner who does not open the app for a day serves "not taking requests". Options: a longer TTL for iOS publishers (say 7 days), or a push-triggered refresh. | Product decision, yours. Not a bug — a consequence of §6 that the copy should be honest about either way. |
+| **App Privacy labels in App Store Connect** currently say *Data Not Collected*. 2.0 sends a display name and an anonymous subscription id from the owner's device; Apple will ask. | Review blocker if wrong. |
+| **Terms for the request page** — refunds are Apple's, but a $70 custom-domain customer has no terms to read, and nothing says what happens to their domain when they lapse (answer: the grace week, then released). | Needed before the domain tier is sold. |
+| **Database backup.** PBS will snapshot CT 112 (when added), but a WAL-mode SQLite file inside a running container is not guaranteed consistent in a filesystem snapshot. A nightly `VACUUM INTO` to a file PBS then takes is the honest version. | Losing the DB loses every page and token. |
+| **DMARC to `quarantine`** on the schedule `mail.md` describes, once a few weeks of `p=none` reports look clean. | Deliverability. |
+| **A support address requesters can reach.** Mail comes from `no-reply@`; the page footer says `askwhen.me` and nothing else. Someone who gets a wrong `.ics` has nowhere to write. | Support, and Apple asks for one. |
+| **Small Business Program** enrolment, if not already — 15% instead of 30%. | Money. |
+| **`askwhen.me` registration renewal** date — put it somewhere a reminder fires. | The whole product is one lapsed domain from gone. |
 
 ## Also yours, but lower stakes
 
