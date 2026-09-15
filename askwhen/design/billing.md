@@ -44,7 +44,7 @@ it does yearly and silently.
 *Apps* → Calendar Mirror → *Subscriptions* (left column, under *Monetization*
 or *Features* depending on the year) → *Create Subscription Group*.
 
-- Name: `askwhen` (internal; users see the localised display name).
+- Name: `AskWhen.me` (internal; users see the localised display name).
 - One group, because the three tiers are **levels of one service**, and a
   group is what lets a user move between them with proration instead of
   holding two.
@@ -56,9 +56,13 @@ yours forever, so pick them once:
 
 | Reference name | Product ID | Duration | Price (USD) |
 |---|---|---|---|
-| Request page | `me.askwhen.page.annual` | 1 year | $19.99 |
-| Custom subdomain | `me.askwhen.subdomain.annual` | 1 year | $34.99 |
-| Custom domain | `me.askwhen.domain.annual` | 1 year | $69.99 |
+| AskWhen.me — Request page | `me.askwhen.page.annual` | 1 year | $19.99 |
+| AskWhen.me — Custom subdomain | `me.askwhen.subdomain.annual` | 1 year | $34.99 |
+| AskWhen.me — Custom domain | `me.askwhen.domain.annual` | 1 year | $69.99 |
+
+The display name a customer sees on the purchase sheet is set per
+localisation and should lead with **AskWhen.me** too, so the receipt Apple
+emails them names the product, not the app it was bought inside.
 
 For each: *Subscription Prices* → set the USD price and let Apple generate
 the other territories (you can edit any). *Localization* → display name and
