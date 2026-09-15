@@ -303,7 +303,7 @@ subscription lapsed, owner deleted it, or the dump expired because the publisher
 went quiet.
 
 Rather than a dead end, it is the only page a stranger will ever see cold — so
-it should explain what askwhen is, in a sentence, and offer the app. It is the
+it should explain what AskWhen.me is, in a sentence, and offer the app. It is the
 one piece of organic distribution the product gets, and a default 404 wastes it.
 
 Never distinguish the reasons. "Lapsed subscription" tells a stranger something

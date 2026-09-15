@@ -1,6 +1,9 @@
-# askwhen.me
+# AskWhen.me
 
-A request page whose server never learns who you are.
+A separate product from Calendar Mirror: a subscription, with its own server,
+that you turn on from inside the app. What it serves is a request page whose
+server never learns who you are. (Vocabulary: `design/glossary.md`, "The two
+products".)
 
 Availability is derived on your device, published as a list of offerable slots —
 never your calendar, never your busy times, never a credential. Someone picks a

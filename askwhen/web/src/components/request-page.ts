@@ -303,7 +303,7 @@ export class RequestPage extends LitElement {
             account, and no third-party script — no fonts, no analytics, nothing that phones
             anywhere.
           </p>
-          <p>askwhen.me</p>
+          <p>AskWhen.me</p>
         </footer>
       </div>
     `;
@@ -400,7 +400,7 @@ export class RequestPage extends LitElement {
         </p>
         <footer style="margin-top:34px">
           <p>
-            askwhen.me is a request page whose server never learns whose calendar it is. Availability
+            AskWhen.me is a request page whose server never learns whose calendar it is. Availability
             is worked out on the owner's own device; nothing else ever leaves it.
           </p>
         </footer>

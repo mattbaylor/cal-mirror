@@ -116,7 +116,7 @@ func loadConfig() (config, error) {
 	// Postal, by API rather than SMTP. The key is a server credential held in
 	// Infisical as postal_api_key and mounted as a file, like the others.
 	c.postalURL = envOr("AW_POSTAL_URL", "https://dlvr.rehosted.us")
-	c.mailFrom = envOr("AW_MAIL_FROM", "askwhen.me <no-reply@askwhen.me>")
+	c.mailFrom = envOr("AW_MAIL_FROM", "AskWhen.me <no-reply@askwhen.me>")
 	key, err := readSecret("AW_POSTAL_API_KEY_FILE", "AW_POSTAL_API_KEY")
 	if err != nil {
 		return c, err

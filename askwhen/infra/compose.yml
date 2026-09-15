@@ -41,7 +41,7 @@ services:
       # bounce itself, so there is no envelope sender to configure here.
       AW_POSTAL_URL: "https://dlvr.rehosted.us"
       AW_POSTAL_API_KEY_FILE: "/run/secrets/postal_api_key"
-      AW_MAIL_FROM: "askwhen.me <no-reply@askwhen.me>"
+      AW_MAIL_FROM: "AskWhen.me <no-reply@askwhen.me>"
 
       # Pepper for the write-token, confirm-token and rate-limit-key hashes
       # (schema.sql). Rotating it invalidates every write token in existence,

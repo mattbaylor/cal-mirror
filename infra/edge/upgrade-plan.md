@@ -35,7 +35,7 @@ staged.
 **2. Three years of an unpatched TLS terminator.** 2.6.2 → 2.11.4 is a long way,
 and this one is on the public internet holding certificates for other people's
 domains. That argument stands entirely on its own, and would be worth acting on
-even if askwhen did not exist.
+even if AskWhen.me did not exist.
 
 ## The alternative worth weighing first
 
