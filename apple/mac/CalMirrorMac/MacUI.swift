@@ -10,6 +10,20 @@ struct MenuContent: View {
 
     var body: some View {
         Text("Calendar Mirror — \(model.headline)")
+        // First in the menu, because somebody is waiting on it.
+        if !model.pendingRequests.isEmpty {
+            Divider()
+            ForEach(model.pendingRequests) { request in
+                Menu("\(request.name) — \(RequestNotifications.when(request.slot, in: model.zone))") {
+                    if let note = request.note, !note.isEmpty { Text(note).font(.caption) }
+                    Text(request.email).font(.caption)
+                    Divider()
+                    Button(RequestCopy.Notification.accept) { Task { await model.accept(request) } }
+                    Button(RequestCopy.Notification.decline) { Task { await model.decline(request) } }
+                }
+            }
+            Divider()
+        }
         if model.config.mirrors.isEmpty { Text("No mirrors yet").font(.caption) }
         ForEach(model.config.mirrors) { m in
             let s = model.statuses[m.id]
@@ -73,6 +87,7 @@ struct MenuContent: View {
 
 struct ManageView: View {
     @ObservedObject var model: Store
+    @State private var showingSetup = false
 
     var body: some View {
         Form {
@@ -95,9 +110,26 @@ struct ManageView: View {
                     MacMirrorRow(model: model, m: $m)
                 }
             }
+            // The request page sits at the bottom of the window the two
+            // checkboxes live in, so "which of these calendars count" is asked
+            // where the owner is already looking at their calendars.
+            Section {
+                Button { showingSetup = true } label: {
+                    RequestPageRow(page: model.config.requestPage)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .formStyle(.grouped)
         .frame(minWidth: 640, minHeight: 480)
+        .sheet(isPresented: $showingSetup) {
+            NavigationStack { RequestPageSetupView(page: model.config.requestPage) }
+                .environmentObject(model)
+                .frame(minWidth: 560, minHeight: 520)
+                .toolbar { ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { showingSetup = false }
+                } }
+        }
         .onDisappear { NSApp.setActivationPolicy(.accessory) }
     }
 }

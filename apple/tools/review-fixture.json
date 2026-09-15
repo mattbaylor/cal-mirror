@@ -1,0 +1,126 @@
+{
+  "_comment": [
+    "The synthetic config every review artifact is drawn from. Never the live",
+    "one, which holds a work email, an employer, a spouse's calendar and",
+    "children's names (STATUS.md, 'Facts that are expensive to rediscover').",
+    "",
+    "Making this a file rather than a habit is the point: the rule is now",
+    "satisfied by where the data comes from, not by whoever is generating the",
+    "sheet remembering to be careful."
+  ],
+  "owner": {
+    "displayName": "Dana Okonkwo",
+    "blurb": "30 minutes, usually about league scheduling.",
+    "meetingTitle": "Intro call",
+    "meetingLocation": "Video link in the invite",
+    "slug": "k4m2p9",
+    "timeZone": "America/Denver"
+  },
+  "calendars": [
+    {
+      "name": "Personal",
+      "blocking": true,
+      "request": false,
+      "writable": true
+    },
+    {
+      "name": "League ops",
+      "blocking": true,
+      "request": true,
+      "writable": true
+    },
+    {
+      "name": "Match assignments",
+      "blocking": true,
+      "request": false,
+      "writable": true
+    },
+    {
+      "name": "US Holidays",
+      "blocking": false,
+      "request": false,
+      "writable": false
+    }
+  ],
+  "policy": {
+    "dayStarts": "9:00 AM",
+    "dayEnds": "5:00 PM",
+    "lunch": "12:00 – 1:30 PM",
+    "weekdays": "MTWTF",
+    "horizon": "14 days",
+    "notice": "12 hours",
+    "maxPerDay": "4",
+    "slot": "30 min",
+    "align": ":00 and :30",
+    "buffer": "15 min"
+  },
+  "preview": {
+    "offered": 11,
+    "days": 14,
+    "grid": [
+      [
+        "Mon 21",
+        [
+          "9:00",
+          "10:30",
+          "2:00"
+        ]
+      ],
+      [
+        "Tue 22",
+        [
+          "9:30",
+          "11:00"
+        ]
+      ],
+      [
+        "Wed 23",
+        []
+      ],
+      [
+        "Thu 24",
+        [
+          "9:00",
+          "1:30",
+          "3:00"
+        ]
+      ],
+      [
+        "Fri 25",
+        [
+          "10:00",
+          "2:30",
+          "4:00"
+        ]
+      ]
+    ],
+    "emptyDay": {
+      "label": "Wed 23",
+      "reasons": "6 busy, 2 over your daily cap, 1 your lunch gap"
+    }
+  },
+  "request": {
+    "name": "Priya Raman",
+    "email": "priya@example.org",
+    "note": "Wanted to ask about the referee assignment tool before the season starts.",
+    "slot": "Thursday 24 September, 1:30 PM"
+  },
+  "conflict": {
+    "landed": "Thursday 24 September — 1:00–2:00 PM",
+    "alternatives": [
+      "Thursday 24 September, 3:00 PM",
+      "Friday 25 September, 10:00 AM",
+      "Friday 25 September, 2:30 PM"
+    ]
+  },
+  "domains": {
+    "subdomain": "dana.askwhen.me",
+    "custom": "ask.okonkwo-referees.com",
+    "point": "edge.askwhen.me",
+    "check": "ask.okonkwo-referees.com. 300 IN A 203.0.113.9",
+    "advice": "That is an A record pointing somewhere else. Replace it with the CNAME above."
+  },
+  "lapse": {
+    "daysLeft": 4
+  }
+}

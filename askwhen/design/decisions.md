@@ -51,6 +51,33 @@ already handles this better than it looks — the slug 404s *into the invitation
 page*, so a dead link still explains itself to whoever clicks it. Worth
 re-checking if the trial ever gets longer.
 
+**The trial opt-in comes after the preview.** *(15 September 2026)* Matt. The
+request-page setup stays local until the owner has seen their own page: blocking
+calendars, display name, meeting shape, the policy and the derived preview all
+happen with no network and nothing agreed to, and Apple's sheet is the step
+after. His reason was the short one — *"it's a free trial regardless"* — which
+disposes of the objection that a tier screen at the end of a setup flow reads as
+bait. Nothing is being charged, so there is no paywall to arrive at.
+
+The agent's argument for the same ordering, which he did not need and which is
+recorded because it is the one that will come back: the preview is the only
+honest demonstration this product can give — *eleven times across fourteen days,
+and Thursday is empty because you were busy* — and it costs nothing to show, so
+asking for a payment method first means asking someone to commit before seeing
+whether their own calendar produces a page worth having. There is also a
+commercial argument for the late placement (a configured page converts better
+than an unconfigured one) which is a sunk-cost effect, and is named here so it
+cannot hide inside the privacy argument later.
+
+**Consequence, and it is structural:** `create` needs the entitlement hash, so
+the slug does not exist until the trial is opted into. Everything before that
+writes only to the local `RequestPageConfig`, and an owner who configures a page
+and never opts in ends with a complete local policy and no slug.
+
+They also end with **no network request ever made** — settled below, *"The
+product load happens on the offer screen"*, which resolves the one question
+this ordering opened.
+
 **The trial is on the Request Page tier only.** *(15 Sept 2026, Matt, while
 creating the products.)* `me.askwhen.page.annual` carries the 3-month free
 introductory offer; `me.askwhen.subdomain.annual` ($34.99) and
@@ -62,6 +89,35 @@ Upfront"; the monthly-with-commitment shape Apple now offers is not enabled.
 Family Sharing off. Subscription group `AskWhen.me`, id 22387296, ranked
 Domain > Subdomain > Page. Server Notifications V2 point at
 `https://askwhen.me/hooks/appstore` and `…/hooks/appstore-sandbox`.
+
+**The offer screen sells the Request Page trial, not a choice of three.**
+*(15 September 2026)* Matt. Screen 7 of the setup flow offers
+`me.askwhen.page.annual` — 90 days free, then its price — as the single live
+action. Subdomain and domain are shown so the ladder is discoverable, but as
+*available now, or upgrade any time*, not as a third of a decision.
+
+It follows from the entry above rather than adding to it. The trial exists on
+the page tier only, and Apple grants one introductory offer per customer per
+group ever, so a three-way picker where one option is free and two are not is
+not a real choice — it is a free option with two decoys beside it, and every
+rational owner takes the free one. Worse, the two paid tiers are the two a new
+owner cannot yet evaluate: a custom subdomain is worth nothing before there is
+a page to put on it, and *several pages* answers a problem nobody has on their
+first day. They are upgrades, and they belong where the owner meets the want.
+
+**The product load happens on the offer screen.** *(15 September 2026)* Matt.
+StoreKit's `Product.products(for:)` — the app's first network request of any
+kind — runs when screen 7 is shown, not when the owner opens the setup.
+
+This sharpens the opt-in entry below, which says "the app loads products when
+the owner opens the request-page setup"; that ruled out a fetch at launch,
+and this rules out a fetch the owner never asked to pay for. Everything from
+the explainer through the preview is local, so an owner can open the setup,
+pick calendars, write a policy, look at the slots their own calendar would
+offer, decide against the whole thing and close it — having made no network
+request at all. The promise now holds through setup rather than only up to it,
+and it is testable: the offer screen is the only place in the flow that may
+touch the network before a page exists.
 
 **AskWhen.me is opt-in, and not opting in changes nothing.** *(15 Sept 2026,
 Matt, restating the packaging decision as the promise it actually is.)* An
@@ -346,6 +402,34 @@ yet. Full attribution — recording that owner B came from owner A's page — is
 one reading of *"convert the requestor into a user"* the architecture forbids: it
 creates a relationship between two people who never agreed to be associated, and
 it ends the partitioning property for the same reason group scheduling does.
+
+**The request-page UI is approved as built.** *(15 September 2026)* Matt,
+having walked the fifteen-step flow in `apple/tools/review.html`: *"it all
+looks good to me, proceed."*
+
+Recorded as one entry rather than four, because that is what it was. Four
+questions were put to him with the flow and are closed by this approval, but
+none was individually argued — so the honest record is that he reviewed the
+whole thing and accepted it, not that he ruled on each of these in turn. Any
+of them is worth reopening on its own merits if it starts to bite:
+
+- **The policy screen carries a sentence plus six numbered settings.** In some
+  tension with *Configuration stays opinionated* below; buffer, align and slot
+  length are the candidates to fold behind a disclosure if it reads as long in
+  the simulator.
+- **The conflict sheet shows what landed as a time, never a title.**
+  `BusyInterval` carries `start`, `end` and `isAllDay` and nothing else, so
+  the app genuinely cannot name the clashing event. Showing the owner their
+  own event's title would mean a second path out of `MirrorEngine` carrying
+  more than busy-or-free, which is the boundary the whole privacy claim rests
+  on — so it stays a time until there is a reason worth that.
+- **The timezone picker is the full IANA list**, device zone pinned first.
+  This is the owner-side counterpart of the requester-side picker still open
+  under *Still open* below.
+- **Publisher nomination is folded into the live page** rather than given a
+  screen. A nomination screen with one candidate asks a question that has no
+  second answer; it becomes a real choice when a second device appears, and
+  that is when it should first be offered.
 
 ## Proposed — an agent's reasoning, not a decision
 

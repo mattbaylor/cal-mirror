@@ -780,6 +780,18 @@ do {
     check(try JSONDecoder().decode(RequestPolicy.self, from: data) == p, "a policy round-trips through encode/decode")
     check(String(data: data, encoding: .utf8)!.contains("\"mon\""), "weekdays are written as names, not Calendar numbers")
     check(RequestPolicy.Weekday.mon.calendarWeekday == 2, "mon is Calendar's 2 (Sunday is 1)")
+
+    // The settings UI binds a time picker to these strings, so this parse is
+    // now a shared contract rather than a private helper. Both sides have to
+    // agree about the edges or the UI accepts what the deriver then refuses.
+    check(RequestPolicy.minutesPastMidnight("09:30") == 570, "09:30 is 570 minutes past midnight")
+    check(RequestPolicy.minutesPastMidnight("00:00") == 0, "midnight is zero, not nil")
+    check(RequestPolicy.minutesPastMidnight("24:00") == 1440, "24:00 is a usable end — 'my day ends at midnight'")
+    check(RequestPolicy.minutesPastMidnight("24:01") == nil, "but nothing past it is")
+    check(RequestPolicy.minutesPastMidnight("07:60") == nil, "a 60th minute is refused, not carried into the next hour")
+    check(RequestPolicy.minutesPastMidnight("9:30") == 570, "a single-digit hour parses")
+    check(RequestPolicy.minutesPastMidnight("0930") == nil, "a missing separator is refused rather than guessed at")
+    check(RequestPolicy.minutesPastMidnight("") == nil, "and so is an empty string")
     check(RequestPolicy(timeZone: "Mars/Olympus").resolvedTimeZone == nil, "an unknown zone resolves to nil, not to the device's own")
 }
 
@@ -1372,14 +1384,22 @@ do {
     let t = FakeTransport()
     let tokens = InMemoryTokenStore()
     nonisolated(unsafe) var busy: [BusyInterval] = []
-    // Never reached: every path exercised here stops before a calendar write,
-    // and busy intervals come from the closure. A stub keeps EventKit out.
-    final class NoCalendar: CalendarAccess {
+    // Busy intervals come from the closure; this stands in for the calendar.
+    // It used to trap on write, on the grounds that every path here stopped
+    // before one — which stopped being true when accept gained
+    // `overridingConflict`, the one path that writes without re-checking. It
+    // records instead, so the write can be asserted rather than assumed.
+    final class RecordingCalendar: CalendarAccess {
+        var written: [(id: String, title: String)] = []
         func busyIntervals(in: [CalRef], from: Date, to: Date) -> [BusyInterval] { [] }
         func writeAcceptedEvent(requestID: String, title: String, location: String?, notes: String?,
-                                start: Date, end: Date, into ref: CalRef) throws -> String { fatalError("not in cmk-check") }
+                                start: Date, end: Date, into ref: CalRef) throws -> String {
+            written.append((requestID, title))
+            return "event-\(requestID)"
+        }
     }
-    let coord = RequestPageCoordinator(engine: NoCalendar(),
+    let calendar = RecordingCalendar()
+    let coord = RequestPageCoordinator(engine: calendar,
                                        client: AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t),
                                        tokens: tokens, busySource: { _, _, _ in busy })
     var page = RequestPageConfig(enabled: true, policy: reqPolicy(weekdays: [.wed]), displayName: "Matt Baylor",
@@ -1437,6 +1457,23 @@ do {
     else { check(false, "expected conflict, got \(verdict)") }
     check(t.calls.count == before, "and made no call to the service")
 
+    // Accept anyway: the owner has seen the clash on the conflict sheet and
+    // said to write it regardless. The re-check is skipped, the event is
+    // written, and the service is told — the path the sheet's last button
+    // takes, and the only caller allowed to set this.
+    t.answers = [(204, [:], "")]
+    let forced = try! run {
+        try await coord.accept(req, page: &page, overridingConflict: true)
+    }.get()
+    if case .accepted = forced {
+        check(true, "accept overriding a conflict writes and resolves rather than reporting the clash again")
+    } else {
+        check(false, "expected accepted when overriding, got \(forced)")
+    }
+    check(t.calls.last?.path == "/v1/requests/r1/resolve", "and it tells the service, so the .ics is sent")
+    check(calendar.written.count == 1 && calendar.written.first?.title == "Chat",
+          "the event written carries the owner's title, never the requester's words")
+
     t.answers = [(204, [:], "")]
     _ = try! run { try await coord.decline(req, page: &page) }.get()
     check(t.calls.last?.path == "/v1/requests/r1/resolve" && page.queueETag == nil,
@@ -1447,6 +1484,18 @@ do {
     try! tokens.remove(for: "x7f2k9")
     check((run { try await coord.collect(page: &page) }.failure as? RequestPageError) == .noToken,
           "a page whose token is gone says so rather than 404-looping")
+
+    // A hostname as typed is not a hostname as DNS holds it. Each of these
+    // would otherwise claim a name that can never verify, and the owner would
+    // be left staring at a CNAME they had set correctly.
+    check(RequestPageCoordinator.normalize("  Ask.Example.COM ") == "ask.example.com",
+          "a hostname is trimmed and case-folded")
+    check(RequestPageCoordinator.normalize("https://ask.example.com/") == "ask.example.com",
+          "a pasted URL is reduced to its host")
+    check(RequestPageCoordinator.normalize("ask.example.com.") == "ask.example.com",
+          "a fully-qualified trailing dot is dropped")
+    check(RequestPageCoordinator.normalize("ask.example.com") == "ask.example.com",
+          "and an already-clean hostname is left alone")
 
     try! tokens.store("tok_123", for: "x7f2k9")
     t.answers = [(404, [:], "")]

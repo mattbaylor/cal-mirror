@@ -16,6 +16,21 @@ final class Store: ObservableObject {
     @Published var access = false
     @Published var lastRun: Date?
     @Published var syncing = false
+    /// Requests collected and not yet answered. The queue is the service's;
+    /// this is what this device currently knows of it, and it is what the
+    /// notification actions resolve an id against.
+    @Published var pendingRequests: [IncomingRequest] = []
+    /// Set when an accept found the slot taken. Presenting it is the UI's.
+    @Published var conflict: RequestConflict?
+    /// A request the owner tapped through to from a notification.
+    @Published var openedRequestID: String?
+    /// The hostnames this page answers on, as the service last reported them.
+    @Published var claimedDomains: [AskwhenClient.ClaimedDomain] = []
+    @Published var domainsBusy = false
+    @Published var domainError: String?
+    /// What StoreKit says is owned. Read from the device's own cache, so
+    /// holding it costs no network; `.none` until the setup is opened.
+    @Published var subscriptionState: SubscriptionState = .none
     #if os(macOS)
     @Published var launchAtLogin = false
     /// Whether the change observer is actually up, so the UI can tell a working
@@ -27,7 +42,11 @@ final class Store: ObservableObject {
     private var observerToken: NSObjectProtocol?
     #endif
 
-    private let engine = MirrorEngine()
+    // Not private: the request page's preview derives slots against these same
+    // calendars, and it must ask the one engine rather than stand up a second
+    // EventKit store. `busyIntervals` is the only thing it uses, and that is
+    // where title, location, attendees and account already stop.
+    let engine = MirrorEngine()
 
     /// Config lives in the app container's Application Support (sandbox-safe).
     /// `nonisolated` so background code (iOS `BackgroundSync`) can read it too.
@@ -50,6 +69,14 @@ final class Store: ObservableObject {
     func bootstrap() async {
         access = await engine.requestAccess()
         if access { calendars = engine.calendars(); await syncNow() }
+        // Only once a page exists. StoreKit's update stream is local, but
+        // starting it for an owner who never opted in would still be this app
+        // reaching for something it has no business touching — and the slug is
+        // the honest test of whether they opted in.
+        if config.requestPage?.slug.isEmpty == false {
+            Task { await watchSubscription() }
+            await refreshSubscription()
+        }
     }
 
     func save() {
@@ -178,6 +205,8 @@ final class Store: ObservableObject {
         switch scheduler.decide(now: Date(), intervalSeconds: config.effectiveIntervalSeconds) {
         case .sync:
             await syncNow()
+            // Every few minutes and after each sync, per the settled pace.
+            await collectRequests()
             let done = Date()
             // Order matters: open the self-write window BEFORE clearing the
             // pending burst, so an echo of our own writes landing in between is

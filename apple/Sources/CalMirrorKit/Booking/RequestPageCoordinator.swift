@@ -102,6 +102,52 @@ public final class RequestPageCoordinator: @unchecked Sendable {
         page.queueETag = nil
     }
 
+    // MARK: Domains
+
+    /// The page's hostnames. Asking is what re-checks DNS on the service, so
+    /// "is it working yet?" is the thing that makes it start working — which
+    /// is why the UI's refresh button is not merely a refresh button.
+    public func domains(page: RequestPageConfig) async throws -> [AskwhenClient.ClaimedDomain] {
+        guard !page.slug.isEmpty else { throw RequestPageError.notCreated }
+        guard let token = try tokens.token(for: page.slug) else { throw RequestPageError.noToken }
+        return try await client.domains(slug: page.slug, token: token)
+    }
+
+    /// Claims a hostname. A subdomain of askwhen.me comes back verified with
+    /// nothing to do; a custom domain comes back unverified, carrying the
+    /// CNAME the owner has to set and what DNS currently answers instead.
+    ///
+    /// Tier is the service's to enforce, not this method's — it holds the
+    /// verified entitlement and this device only holds an opinion about it.
+    /// A refusal arrives as `AskwhenError.rejected` with the service's own
+    /// words, which the UI shows rather than paraphrases.
+    public func claimDomain(_ host: String, page: RequestPageConfig) async throws -> AskwhenClient.ClaimedDomain {
+        guard !page.slug.isEmpty else { throw RequestPageError.notCreated }
+        guard let token = try tokens.token(for: page.slug) else { throw RequestPageError.noToken }
+        return try await client.claimDomain(Self.normalize(host), slug: page.slug, token: token)
+    }
+
+    /// Releases it. Anyone holding a link to that hostname loses it, which is
+    /// why the UI confirms first — the slug keeps working either way.
+    public func releaseDomain(_ host: String, page: RequestPageConfig) async throws {
+        guard !page.slug.isEmpty else { throw RequestPageError.notCreated }
+        guard let token = try tokens.token(for: page.slug) else { throw RequestPageError.noToken }
+        do { try await client.releaseDomain(Self.normalize(host), slug: page.slug, token: token) }
+        catch AskwhenError.notFound {}   // already gone is success
+    }
+
+    /// What a person types is not what DNS holds. Case is folded, surrounding
+    /// space dropped, a pasted URL reduced to its host, and one trailing dot
+    /// removed — the four ways a correct answer arrives looking wrong, each of
+    /// which would otherwise claim a hostname that can never verify.
+    public static func normalize(_ host: String) -> String {
+        var h = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if let range = h.range(of: "://") { h = String(h[range.upperBound...]) }
+        if let slash = h.firstIndex(of: "/") { h = String(h[..<slash]) }
+        if h.hasSuffix(".") { h.removeLast() }
+        return h
+    }
+
     // MARK: Publish
 
     /// Derive, compare, and PUT only if the offers changed or the last upload
@@ -151,17 +197,26 @@ public final class RequestPageCoordinator: @unchecked Sendable {
     /// event, tell the service. Each step only happens if the one before it
     /// did, and the write is idempotent on the request id, so calling this
     /// again after a failure is safe.
+    ///
+    /// `overridingConflict` skips step 1. It exists for the one case the
+    /// re-check cannot judge: the owner has been shown the clash on the
+    /// conflict sheet and said to write it anyway, because they know what the
+    /// clash is and this matters more. Asking the same question twice is not a
+    /// safeguard. It is never the default and nothing sets it but that sheet.
     public func accept(_ request: IncomingRequest, page: inout RequestPageConfig,
-                       now: Date = Date()) async throws -> AcceptOutcome {
+                       now: Date = Date(),
+                       overridingConflict: Bool = false) async throws -> AcceptOutcome {
         guard let token = try tokens.token(for: page.slug) else { throw RequestPageError.noToken }
         guard let calendar = page.requestCalendar else { throw RequestPageError.noRequestCalendar }
 
         // 1. The dump was a snapshot. The calendar is the truth.
-        let horizon = now.addingTimeInterval(TimeInterval(page.policy.horizonDays + 1) * 86400)
-        let busy = busySource(page.blocking, min(now, request.slot.start).addingTimeInterval(-86400), horizon)
-        if case .conflict(let alternatives) = RequestChecker.check(slot: request.slot, policy: page.policy,
-                                                                   busy: busy, now: now) {
-            return .conflict(alternatives: alternatives)
+        if !overridingConflict {
+            let horizon = now.addingTimeInterval(TimeInterval(page.policy.horizonDays + 1) * 86400)
+            let busy = busySource(page.blocking, min(now, request.slot.start).addingTimeInterval(-86400), horizon)
+            if case .conflict(let alternatives) = RequestChecker.check(slot: request.slot, policy: page.policy,
+                                                                       busy: busy, now: now) {
+                return .conflict(alternatives: alternatives)
+            }
         }
 
         // 2. Write it. Title is the owner's; the requester's words go in the
