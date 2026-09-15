@@ -46,7 +46,7 @@ as *the visible cost of the server knowing nothing*, it is coherent — and it
 should appear next to the reason, every time, or it reads as a missing feature.
 
 **Consequence for the build:** steal the conditional shape anyway. Not for
-auto-confirming — we cannot — but for **auto-declining and prioritising**. "Free
+auto-confirming — we cannot — but for **auto-declining and prioritizing**. "Free
 email provider, no note, asking for tomorrow" is a different queue item from
 "company domain, wrote three sentences, asking for a fortnight out", and the
 device already has everything needed to say so. See *Worth stealing* below.
@@ -64,7 +64,7 @@ commercial features stripped out
 The stated reason is that AI makes published code easier to attack: *"in the age
 of AI-driven security threats, protecting customer data has to come first."*
 
-Removed from the open fork: organisations and teams, routing forms, workflow
+Removed from the open fork: organizations and teams, routing forms, workflow
 automation, instant booking, Cal.ai, SAML/SSO, analytics, API v1, audit logging.
 
 The [`cal.diy` README](https://github.com/calcom/cal.diy) is blunter than the
@@ -83,7 +83,7 @@ open source" is repeating something that stopped being true five months ago.
 
 **Why this matters to us.** We are not open source and this does not make us so.
 But the *reason* people wanted an auditable scheduler was never the source
-licence — it was not wanting a third party holding standing read access to their
+license — it was not wanting a third party holding standing read access to their
 calendar. That want is now unserved by the tool that used to serve it. Our answer
 is different and, for this specific worry, stronger: there is nothing to audit
 because there is nothing there. The server cannot leak a calendar it was never
@@ -220,7 +220,7 @@ their own telling.
 
 **Note the shape of that complaint.** It is not "booking pages are impersonal".
 It is "*you* made *me* do the work." Which is a statement about who is asking
-whom for a favour.
+whom for a favor.
 
 We are the only product in this list whose name and whole vocabulary already
 answer it. `askwhen.me/x7f2k9` says *ask* before anyone clicks. The page says the

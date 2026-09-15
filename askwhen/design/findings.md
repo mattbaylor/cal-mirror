@@ -116,7 +116,7 @@ SUMMARY / DESCRIPTION
 ```
 
 The requester opens it. Their calendar client creates the event and, seeing an
-attendee on an event they organise, sends the iTIP invitation itself. The owner
+attendee on an event they organize, sends the iTIP invitation itself. The owner
 receives a genuine calendar invitation in Mail and accepts it, which is what puts
 it in their calendar.
 
@@ -173,7 +173,7 @@ is on-device, rather than harder.
    `ORGANIZER` and the owner as a `NEEDS-ACTION` attendee. Verified against the
    prototype; `../prototype/test-invite.ics` is a ready-made one.
 1. **Does the requester's client actually send the invitation?** Apple Calendar
-   and Outlook send iTIP when you add an attendee to an event you organise. What
+   and Outlook send iTIP when you add an attendee to an event you organize. What
    they do with a *downloaded* `METHOD:REQUEST` file is more variable — some
    create it silently and send nothing. **This is the one assumption that decides
    whether the design is elegant or merely adequate**, and it is a 20-minute test

@@ -10,7 +10,7 @@ depend on.** Read that sentence again before pasting anything.
 
 ---
 
-## Why the authorisation endpoint is the risky part
+## Why the authorization endpoint is the risky part
 
 On-demand TLS means: an unknown name arrives in a TLS handshake and the proxy
 asks a certificate authority for a certificate. Ungated, that is a public
@@ -41,10 +41,10 @@ The properties that matter, each with a test behind it:
 |---|---|
 | Fails **closed** on a database error | A gate that opens when it breaks is not a gate. Returns 503; never 2xx. |
 | An error is **not** cached | A brief outage must not become a refusal that outlives it. |
-| Refusals **are** cached, approvals are not | A flood of random names is one lookup each otherwise. Caching an *allow* would keep serving a cancelled customer; caching a *deny* only makes a new one wait. |
+| Refusals **are** cached, approvals are not | A flood of random names is one lookup each otherwise. Caching an *allow* would keep serving a canceled customer; caching a *deny* only makes a new one wait. |
 | Refuses `askwhen.me` and `*.askwhen.me` | Those have their own certificates. On-demand minting them starts a competing order for a name that already has one. |
 | Refuses wildcards, IP literals, single labels, and anything outside `[a-z0-9.-]` | No CA issues for these. Asking anyway spends an order. |
-| Normalises case and trailing dot before the lookup | The database stores one spelling and the query is exact. |
+| Normalizes case and trailing dot before the lookup | The database stores one spelling and the query is exact. |
 | An unset secret refuses **everything** | A deployment that forgot to configure it is closed, not open. |
 
 ## What changed on 10 September 2026
@@ -151,7 +151,7 @@ openssl rand -hex 32 > infra/secrets/tls_auth_secret
 
 ## Three things that are not optional
 
-**1. Reach the endpoint from the proxy and nothing else.** The secret is defence
+**1. Reach the endpoint from the proxy and nothing else.** The secret is defense
 in depth, not the perimeter. The app listens on `:8080` on the internal network;
 it should accept `/internal/*` only from `172.16.1.4`. A secret in a URL can
 reach a debug log, which is precisely why it is not the only control.

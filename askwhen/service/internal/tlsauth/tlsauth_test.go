@@ -126,7 +126,7 @@ func TestDenialsAreCachedAndApprovalsAreNot(t *testing.T) {
 
 	t.Run("an approval is not remembered", func(t *testing.T) {
 		// Caching an allow would keep serving a domain after its owner
-		// cancelled. Caching a deny can only make a new customer wait.
+		// canceled. Caching a deny can only make a new customer wait.
 		f := &fakeLookup{ok: true}
 		a := newAuth(f, nil)
 		for i := 0; i < 5; i++ {

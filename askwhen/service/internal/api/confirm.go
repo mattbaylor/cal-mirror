@@ -19,12 +19,12 @@ import (
 // The obvious design puts the confirmation on `GET /c/{token}`, and it is
 // wrong twice over.
 //
-// It breaks the spam defence. Mail scanners fetch every URL in incoming mail —
+// It breaks the spam defense. Mail scanners fetch every URL in incoming mail —
 // Microsoft detonates them in a sandbox at delivery, Gmail ships equivalent
 // click-time protection — so the robot clicks the link before the human does.
 // Double opt-in is the whole of this product's anti-spam story (§8), and a
 // confirmation a scanner can perform is not a confirmation. Marketing platforms
-// live with this because their stake is a mailing list; ours is the defence
+// live with this because their stake is a mailing list; ours is the defense
 // itself.
 //
 // And it breaks HTTP. RFC 9110 requires GET to be safe: a GET must not be

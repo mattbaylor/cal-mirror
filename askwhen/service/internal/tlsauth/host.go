@@ -43,7 +43,7 @@ const maxHostLen = 253
 //
 // It is deliberately strict. Caddy hands us the SNI more or less as it arrived,
 // and every permissive reading of a hostname here is a way to smuggle one name
-// past the lookup and get a certificate for another. Internationalised names
+// past the lookup and get a certificate for another. Internationalized names
 // must arrive already punycoded — `xn--` labels satisfy the charset rule on
 // their own, and doing the IDNA conversion here would mean two different
 // spellings of one name, which is exactly the ambiguity to avoid.

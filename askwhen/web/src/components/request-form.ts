@@ -26,7 +26,7 @@ type Errors = { name?: string; email?: string };
  * the event body; the owner titles the event, so nothing typed here can name
  * anything in their calendar.
  *
- * The honeypot is the whole bot defence at this stage. Proof of work is named
+ * The honeypot is the whole bot defense at this stage. Proof of work is named
  * in the architecture but deferred by `design/decisions.md` — MVP is double
  * opt-in, honeypot and a per-IP limit — so there is no widget here and no
  * third-party script to load one.
