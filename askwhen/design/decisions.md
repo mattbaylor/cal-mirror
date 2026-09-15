@@ -403,6 +403,34 @@ one reading of *"convert the requestor into a user"* the architecture forbids: i
 creates a relationship between two people who never agreed to be associated, and
 it ends the partitioning property for the same reason group scheduling does.
 
+**The request-page UI is approved as built.** *(15 September 2026)* Matt,
+having walked the fifteen-step flow in `apple/tools/review.html`: *"it all
+looks good to me, proceed."*
+
+Recorded as one entry rather than four, because that is what it was. Four
+questions were put to him with the flow and are closed by this approval, but
+none was individually argued — so the honest record is that he reviewed the
+whole thing and accepted it, not that he ruled on each of these in turn. Any
+of them is worth reopening on its own merits if it starts to bite:
+
+- **The policy screen carries a sentence plus six numbered settings.** In some
+  tension with *Configuration stays opinionated* below; buffer, align and slot
+  length are the candidates to fold behind a disclosure if it reads as long in
+  the simulator.
+- **The conflict sheet shows what landed as a time, never a title.**
+  `BusyInterval` carries `start`, `end` and `isAllDay` and nothing else, so
+  the app genuinely cannot name the clashing event. Showing the owner their
+  own event's title would mean a second path out of `MirrorEngine` carrying
+  more than busy-or-free, which is the boundary the whole privacy claim rests
+  on — so it stays a time until there is a reason worth that.
+- **The timezone picker is the full IANA list**, device zone pinned first.
+  This is the owner-side counterpart of the requester-side picker still open
+  under *Still open* below.
+- **Publisher nomination is folded into the live page** rather than given a
+  screen. A nomination screen with one candidate asks a question that has no
+  second answer; it becomes a real choice when a second device appears, and
+  that is when it should first be offered.
+
 ## Proposed — an agent's reasoning, not a decision
 
 Everything here was arrived at by Claude and reads as settled in the docs it came
