@@ -1,6 +1,6 @@
 # The edge — what goes on `caddy-dc`
 
-Decided 2 September 2026: askwhen sits behind the Caddy that already exists at
+Decided 2 September 2026: AskWhen.me sits behind the Caddy that already exists at
 `172.16.1.4`, public via `fw.rehosted.us` (`64.111.22.170`). We grow a second
 edge only if we need one.
 
@@ -20,7 +20,7 @@ Ungated **on `caddy-dc`**, it is a public certificate-minting service running on
 the budget that also renews the customer sites. Failed orders count. An attacker
 with a wordlist and a DNS zone can exhaust the failure budget in minutes, and the
 symptom is that unrelated sites stop renewing — which will not look like an
-askwhen problem to whoever is paged.
+AskWhen.me problem to whoever is paged.
 
 So the gate is not a nicety. It is the thing standing between a new tier and an
 outage on the business.
@@ -130,7 +130,7 @@ credentials, and the same people can read it either way.
 and the site block, last so it matches only what nothing else claimed:
 
 ```caddyfile
-# askwhen.me custom domains ($70). Customers CNAME at edge.askwhen.me.
+# AskWhen.me custom domains ($70). Customers CNAME at edge.askwhen.me.
 https:// {
 	tls {
 		on_demand

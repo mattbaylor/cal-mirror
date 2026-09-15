@@ -6,13 +6,18 @@ was still true is here, and everything else has been done.
 
 Two products in one repository:
 
-- **Calendar Mirror** — the shipping app. **1.4.1 is live** on both App Stores
-  (cleared review 1 September). Nothing about it is in flight.
-- **askwhen.me** — the request page, shipping as **Calendar Mirror 2.0**. A
-  dead drop: the server holds slots in and requests out, and never the owner's
-  calendar, address or credential. **All six build steps are built and running
-  in production.** What separates that from a release is listed below, and most
-  of it is yours.
+- **Calendar Mirror** — the app. $2.99, no server, ever. **1.4.1 is live** on
+  both App Stores (cleared review 1 September). **2.0** is the release that adds
+  the ability to turn on AskWhen.me; 1.4.2 folds into it.
+- **AskWhen.me** — a separate product: a subscription with its own server, the
+  dead drop, which holds slots in and requests out and never the owner's
+  calendar, address or credential. Enabled from inside Calendar Mirror, off by
+  default. **All six build steps are built and running in production.** What
+  separates that from a launch is listed below, and most of it is yours.
+
+The vocabulary is in `askwhen/design/glossary.md`, "The two products". In short:
+Calendar Mirror is the app; AskWhen.me is the product you turn on from it; the
+request page is what AskWhen.me serves.
 
 ---
 
@@ -67,12 +72,12 @@ keep it real.
 
 ---
 
-## What is left to ship 2.0
+## What is left to ship Calendar Mirror 2.0 and launch AskWhen.me
 
 In the order it blocks a release. **Yours** means judgement or access only you
 have; **mine** means it can be built and tested without you.
 
-### Must — 2.0 cannot ship without these
+### Must — neither ships without these
 
 | | What | Whose | Size |
 |---|---|---|---|
@@ -81,11 +86,11 @@ have; **mine** means it can be built and tested without you.
 | 3 | **Entitlement verification on the service.** Today `POST /v1/pages` accepts any 64-hex string. Before a stranger can find the endpoint it must verify a StoreKit signed transaction (JWS, Apple's chain) and derive the hash itself; page count and domain tier come from the same check. | mine, once 2 fixes the transaction format | a day |
 | 4 | **Lapse.** Decided: 7-day grace showing *not currently taking requests*, then delete. Not built. Needs either App Store Server Notifications to the service (a public endpoint, like the Postal hook) or the device to report its own expiry — the first is the honest one. | mine, needs your yes on the mechanism | a day |
 | 5 | **Flip on-demand TLS on `caddy-dc`.** One command in `askwhen/infra/edge.md`; validates before it reloads. Two fixtures are waiting for it. | **Yours** — the proxy fronts your customers | minutes |
-| 6 | **Privacy policy and site.** `docs/privacy.html` describes an app that touches no server. 2.0 has a server that briefly holds a stranger's name, address and note; the policy has to say so, plainly and in the product's own voice. Pricing, tiers and the askwhen story on the site. | mine to draft, **yours** to approve | a day |
+| 6 | **Privacy policy and site.** `docs/privacy.html` describes an app that touches no server. AskWhen.me has a server that briefly holds a stranger's name, address and note; the policy has to say so, plainly and in the product's own voice. Pricing, tiers and the AskWhen.me story on the site. | mine to draft, **yours** to approve | a day |
 | 7 | **Rotate the five leaked credentials** (`cloudflare_apitoken`, the two R2 keys, the R2 endpoint, `gh_claude`) — printed into a transcript 4 Sept. You said at prod; this is prod. | **Yours** | an hour |
 | 8 | **Back up the pepper.** `/opt/cal-mirror/askwhen/infra/secrets/pepper` exists nowhere else. Lose it, every write token dies silently. | **Yours** | minutes |
-| 9 | **App Store screenshots and review notes for 2.0**, from a synthetic config, never the live one. | mine to produce, **yours** to approve | a day |
-| 10 | **Release 2.0 from CI** (`release.yml`). Never from this laptop. Fold 1.4.2 in — it is on `main` unreleased. | **Yours** | hours |
+| 9 | **App Store screenshots and review notes for Calendar Mirror 2.0**, from a synthetic config, never the live one. | mine to produce, **yours** to approve | a day |
+| 10 | **Release Calendar Mirror 2.0 from CI** (`release.yml`). Never from this laptop. 1.4.2 folds in — it is on `main` unreleased. | **Yours** | hours |
 
 ### Should — ship-worthy without them, worse for it
 
@@ -100,7 +105,7 @@ have; **mine** means it can be built and tested without you.
 | 17 | **Edge Caddy 2.6.2 → 2.11.4** — plan in `infra/edge/upgrade-plan.md`; three years of TLS fixes. | **Yours** |
 | 18 | **CT 112 in PBS; `.41` reserved in pfSense; Universal SSL off for `askwhen.me`; an Infisical machine identity.** | **Yours** — DC-wide config |
 
-### Later — designed, not for 2.0 unless you say so
+### Later — designed, not for launch unless you say so
 
 | | What |
 |---|---|
@@ -128,7 +133,7 @@ have; **mine** means it can be built and tested without you.
 - **App Store builds come from CI**, never this laptop (`ITMS-90301` on beta macOS). `release.yml`; nine signing secrets plus `CM_RELEASE_TOKEN` are in the repo.
 - **`CM_RELEASE_TOKEN`** lets `watch-review.yml` stamp the site on `main` when a version clears review. Fine-grained PAT, admin on `mattbaylor`, expires **1 September 2027**. Its fallback (open a PR) is refused by a repo setting, so renew it or turn *Allow GitHub Actions to create PRs* on before then. The push path has still never been exercised by a real release.
 - **Screenshots come from a synthetic config**, never the live one — it holds a work email, an employer, a spouse's calendar and children's names.
-- **askwhen is opt-in, and not opting in changes nothing.** Until an owner turns the request page on, the app makes no network request of any kind — not a version check, not a product fetch. `RequestPageConfig.enabled` defaults to false on every path and `cmk-check` asserts it. Anything that would make the app talk to a server before that choice is wrong.
+- **AskWhen.me is opt-in, and not opting in changes nothing.** Until an owner turns the request page on, the app makes no network request of any kind — not a version check, not a product fetch. `RequestPageConfig.enabled` defaults to false on every path and `cmk-check` asserts it. Anything that would make the app talk to a server before that choice is wrong.
 - **It is a request page, never a booking page.** `askwhen/design/glossary.md` before any copy.
 - **Every competitor claim** must be verifiable from that competitor's own site, linked and dated. It has been wrong three times.
 - **Never add group scheduling.** The warning is at the top of `askwhen/infra/schema.sql`; the reasoning in `design/scale.md`.

@@ -51,7 +51,7 @@ already handles this better than it looks — the slug 404s *into the invitation
 page*, so a dead link still explains itself to whoever clicks it. Worth
 re-checking if the trial ever gets longer.
 
-**askwhen is opt-in, and not opting in changes nothing.** *(15 Sept 2026,
+**AskWhen.me is opt-in, and not opting in changes nothing.** *(15 Sept 2026,
 Matt, restating the packaging decision as the promise it actually is.)* An
 owner who never turns the request page on has exactly the privacy position
 1.x had: no account, no server, no network request of any kind — not a
@@ -208,13 +208,17 @@ and a customer asks. Reasoning in `scale.md`; the same warning sits at the top o
 `../infra/schema.sql`, beside the tables it would break, because that is where
 somebody building it would be looking.
 
-**askwhen ships as Calendar Mirror 2.0.** *(2 Sept 2026)* Not a separate app and
-not a point release — the major version is the announcement. Follows from the
-packaging decision above: one app, opt-in, off by default. Consequences worth
-tracking: `MARKETING_VERSION` and both plists jump from the 1.4.x line, 1.4.2 is
-either shipped first or folded in, and 2.0 is the moment the site gets rewritten
-around two products rather than one — a $2.99 app with a $20/year subscription
-inside it.
+**AskWhen.me is a separate product; Calendar Mirror 2.0 is the release that
+lets you turn it on.** *(15 Sept 2026, Matt — replacing "askwhen ships as
+Calendar Mirror 2.0" from 2 Sept.)* Not a feature of the app and not described
+as one. Calendar Mirror stays what it is: a $2.99 app with no server, ever.
+AskWhen.me is a subscription with its own server, enabled from inside Calendar
+Mirror, which is where it is configured and where requests are answered. The
+vocabulary and styling are in `glossary.md`, "The two products" — always
+**AskWhen.me** with the `.me`, because the `.me` is what says it is web-based
+where Calendar Mirror is not. What survives from the 2 Sept decision: one app,
+opt-in, off by default; the major version is the announcement; 1.4.2 folds in;
+the site is rewritten around two products.
 
 **The request page pushes Apple visitors to the app.** *(2 Sept 2026)* Matt's.
 If a requester opens the page on a Mac, iPhone or iPad, offer them Calendar
@@ -320,7 +324,7 @@ costs no database write at all. `GET /c/{confirm_token}` is left out on purpose:
 the token is 256 bits, so brute force is not the attack to worry about.
 
 **Conversion is counted, never attributed.** *(2 Sept 2026)* Matt. An install
-carries *"came from an askwhen page"* and nothing more. That gives aggregate
+carries *"came from an AskWhen.me page"* and nothing more. That gives aggregate
 funnel numbers with no cross-owner link, no new storage, and nothing to reverse
 later — and it is the honest v1 besides, because Apple offers no reliable install
 attribution without deferred deep links or pasteboard tricks.
