@@ -70,9 +70,21 @@ extension Store {
         }
     }
 
+    /// A decline the service did not take is not a decline: the requester
+    /// hears nothing, the hold stands, and the next poll brings the request
+    /// straight back. So it stays in the queue, still waiting, rather than
+    /// being reported as answered — the same shape as `writtenButNotResolved`
+    /// on the accept side.
     func decline(_ request: IncomingRequest) async {
         var page = requestPage
-        try? await requestCoordinator().decline(request, page: &page)
+        do {
+            try await requestCoordinator().decline(request, page: &page)
+        } catch {
+            requestPage = page
+            save()
+            if conflict?.id == request.id { conflict = nil }
+            return
+        }
         requestPage = page
         save()
         finish(request)
@@ -94,16 +106,26 @@ extension Store {
 
     /// The request may be gone — answered on another device, or expired — in
     /// which case there is nothing to do and saying so would be noise.
+    ///
+    /// The queue is not persisted, so after a launch from the notification
+    /// itself it is empty; the request is looked up again before giving up,
+    /// the way `openRequest` does. Without that, Accept on a lock screen
+    /// worked only while the app happened to be alive.
     func acceptFromNotification(_ id: String) async {
-        guard let request = pendingRequests.first(where: { $0.id == id }) else { return }
+        guard let request = await pending(id) else { return }
         if let outcome = await accept(request) {
             RequestNotifications.postOutcome(outcome, for: request, zone: zone)
         }
     }
 
     func declineFromNotification(_ id: String) async {
-        guard let request = pendingRequests.first(where: { $0.id == id }) else { return }
+        guard let request = await pending(id) else { return }
         await decline(request)
+    }
+
+    private func pending(_ id: String) async -> IncomingRequest? {
+        if pendingRequests.isEmpty { await collectRequests() }
+        return pendingRequests.first(where: { $0.id == id })
     }
 
     /// A plain tap, or the conflict notification. Surfaces the request without

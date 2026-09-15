@@ -105,7 +105,10 @@ struct CalendarRequestRow: View {
             #if os(macOS)
             HStack(spacing: 18) { checkboxes }
             #else
-            VStack(alignment: .leading, spacing: 2) { checkboxes }
+            // A switch is 31pt tall but a Toggle inside a row reports its
+            // label's height, so two of them at spacing 2 draw on top of each
+            // other. The minimum height makes each row as tall as its control.
+            VStack(alignment: .leading, spacing: 4) { checkboxes }
             #endif
             // Only said on the calendars where it changes the answer, so it
             // reads as a reason this one is different rather than as noise.
@@ -117,12 +120,20 @@ struct CalendarRequestRow: View {
         .padding(.vertical, 2)
     }
 
+    #if os(macOS)
+    private let controlHeight: CGFloat? = nil
+    #else
+    private let controlHeight: CGFloat? = 31
+    #endif
+
     @ViewBuilder private var checkboxes: some View {
         Toggle(RequestCopy.Calendars.blockTitle, isOn: $blocking)
+            .frame(minHeight: controlHeight)
         Toggle(RequestCopy.Calendars.useTitle, isOn: $isRequestCalendar)
             // A calendar the app cannot write to cannot hold an accepted
             // request, so the choice is refused at the control rather than
             // failing later with `calendarReadOnly` when somebody says yes.
             .disabled(!calendar.writable)
+            .frame(minHeight: controlHeight)
     }
 }

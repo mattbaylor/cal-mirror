@@ -141,10 +141,13 @@ final class RequestNotificationDelegate: NSObject, ObservableObject, UNUserNotif
     /// Shown even while the app is in front. A request that arrived during a
     /// sync the owner was watching is still news, and suppressing it would
     /// make the notification unreliable in exactly the way that teaches people
-    /// to stop trusting it.
+    /// to stop trusting it. `.list` keeps it in Notification Center once the
+    /// banner has gone — without it a request that arrived while the app was
+    /// open vanished after four seconds, and the live screen promises the
+    /// notification is how the owner finds out.
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             willPresent notification: UNNotification) async
-        -> UNNotificationPresentationOptions { [.banner, .sound] }
+        -> UNNotificationPresentationOptions { [.banner, .list, .sound] }
 
     private func handle(action: String, requestID: String) async {
         guard let store else { return }

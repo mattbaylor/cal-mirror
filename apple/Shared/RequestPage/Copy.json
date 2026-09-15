@@ -113,6 +113,7 @@
     "lede": "Everything so far has stayed on this device. Publishing puts the times you just previewed on askwhen.me, where the people you send the link to can ask for one.",
     "network": "Loading the price is the first time this app has contacted anyone. It asks Apple what a subscription costs in your currency — nothing about you, your calendar or your page is sent, and askwhen.me is still not involved.",
     "loading": "Asking Apple for the price…",
+    "purchasing": "Waiting for Apple…",
     "failedTitle": "Could not reach the App Store",
     "failedBody": "Apple did not answer, so there is no price to show. Nothing is wrong with your page — it is still here, still on this device. Try again when you have a connection.",
     "retry": "Try again",

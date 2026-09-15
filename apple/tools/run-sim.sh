@@ -10,11 +10,16 @@
 #   ./apple/tools/run-sim.sh --clean      # wipe the app's container first
 #   SCREEN=preview ./apple/tools/run-sim.sh   # open at one screen, with a
 #                                             # seeded calendar behind it
-#   DEVICE='iPhone 16 Pro' ./apple/tools/run-sim.sh
+#   REQUEST=1 ./apple/tools/run-sim.sh    # seeded, plus one request waiting
+#                                         # in the queue and its notification
+#   XCODE=1 ./apple/tools/run-sim.sh      # launch through Xcode instead, so
+#                                         # the .storekit file is attached
+#   DEVICE='iPhone 17 Pro' ./apple/tools/run-sim.sh
 #
-# What it does NOT do: seed calendar events. EventKit in a fresh simulator is
-# empty, so the preview screen will honestly show nothing offered. Seeding
-# needs a debug-gated path inside the app — see the note at the bottom.
+# The build is ad-hoc signed, not unsigned. An unsigned simulator build has no
+# application-identifier, and the keychain refuses it (-34018) — silently, so
+# the write token never stores and accept, decline, collect and the domains
+# all fail without a word. Found the hard way on 15 September.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -33,12 +38,16 @@ echo "==> Booting $DEVICE"
 UDID=$(python3 "$DIR/apple/tools/pick-sim.py" "$DEVICE" || true)
 [ -n "$UDID" ] || { echo "no simulator named '$DEVICE'. xcrun simctl list devices available"; exit 1; }
 xcrun simctl bootstatus "$UDID" -b >/dev/null 2>&1 || xcrun simctl boot "$UDID" || true
-open -a Simulator --args -CurrentDeviceUDID "$UDID" || true
+# Xcode 27 folded Simulator.app into Device Hub; older Xcodes still ship
+# Simulator.app. Neither is needed for the build or the launch — the device
+# runs headless — so a missing window is not an error.
+open -a Simulator --args -CurrentDeviceUDID "$UDID" 2>/dev/null \
+  || open -a "Device Hub" 2>/dev/null || true
 
 echo "==> Building for the simulator"
 (cd "$DIR/apple/ios" && xcodebuild -project CalMirror.xcodeproj -scheme CalMirror \
   -configuration Debug -destination "id=$UDID" \
-  -derivedDataPath "$DIR/.build-sim" CODE_SIGNING_ALLOWED=NO -quiet build)
+  -derivedDataPath "$DIR/.build-sim" CODE_SIGN_IDENTITY=- -quiet build)
 
 APP="$DIR/.build-sim/Build/Products/Debug-iphonesimulator/CalMirror.app"
 [ -d "$APP" ] || { echo "no app at $APP"; exit 1; }
@@ -75,11 +84,31 @@ fi
 echo "==> Launching"
 # SCREEN=preview ./run-sim.sh opens straight at one screen and seeds a
 # calendar, the same way the screenshots workflow drives it — so what you see
-# locally and what CI photographs are the same thing.
-if [ -n "${SCREEN:-}" ]; then
-  xcrun simctl launch "$UDID" "$BUNDLE_ID" -AskWhenSeed -AskWhenScreen "$SCREEN" >/dev/null
+# locally and what CI photographs are the same thing. REQUEST=1 adds one
+# request to the queue, on top of a seeded event, so Accept can be walked
+# through to the conflict sheet.
+ARGS=()
+[ -n "${SCREEN:-}" ] && ARGS+=(-AskWhenSeed -AskWhenScreen "$SCREEN")
+[ -n "${REQUEST:-}" ] && ARGS+=(-AskWhenSeed -AskWhenRequest)
+if [ -n "${XCODE:-}" ]; then
+  # simctl cannot attach a StoreKit configuration; only a run from Xcode
+  # does. Xcode is scriptable enough to do that from here: open the project,
+  # pick the scheme and the booted device, press Run. The launch arguments
+  # come from the scheme in that case, not from ARGS.
+  open -a Xcode "$DIR/apple/ios/CalMirror.xcodeproj"
+  sleep 5
+  osascript <<EOS
+tell application "Xcode"
+  set ws to first workspace document whose name contains "CalMirror"
+  set active scheme of ws to (first scheme of ws whose name is "CalMirror")
+  set active run destination of ws to (first run destination of ws whose name starts with "$DEVICE")
+  run ws
+end tell
+EOS
 else
-  xcrun simctl launch "$UDID" "$BUNDLE_ID" >/dev/null
+  # The ${ARGS[@]+...} form: macOS ships bash 3.2, where an empty array
+  # under `set -u` is an unbound variable.
+  xcrun simctl launch "$UDID" "$BUNDLE_ID" ${ARGS[@]+"${ARGS[@]}"} >/dev/null
 fi
 
 cat <<'NOTE'
@@ -94,9 +123,11 @@ Two things this cannot give you, and both are honest gaps rather than bugs:
     few events in the simulator's own Calendar app and it fills in.
 
   * The offer screen (7) needs StoreKit. `simctl launch` does not use the run
-    scheme, so the .storekit file is not attached. Launch from Xcode instead
-    (the scheme has it) and the trial purchase works with no network and no
-    sandbox account.
+    scheme, so the .storekit file is not attached. XCODE=1 launches through
+    Xcode instead (the scheme has it) and the trial purchase works with no
+    network and no sandbox account. The create that follows is refused by the
+    live service — an Xcode-environment transaction does not verify — which
+    is the create-failed screen, and correct.
 
 Screenshot whatever you want with:
   xcrun simctl io booted screenshot ~/Desktop/shot.png

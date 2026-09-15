@@ -70,7 +70,7 @@ jobs:
         run: |
           xcodebuild -project CalMirror.xcodeproj -scheme CalMirror \
             -configuration Debug -destination "id=${{ steps.sim.outputs.udid }}" \
-            -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO -quiet build
+            -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGN_IDENTITY=- -quiet build
 
       - name: Install and grant access
         run: |

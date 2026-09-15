@@ -49,3 +49,4 @@ node_modules/
 
 # Python bytecode from the repo scripts
 __pycache__/
+.build-sim/

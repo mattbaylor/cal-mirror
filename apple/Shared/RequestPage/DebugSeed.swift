@@ -64,12 +64,71 @@ enum DebugSeed {
         isSimulator && ProcessInfo.processInfo.arguments.contains("-AskWhenConflict")
     }
 
+    /// `-AskWhenRequest` — one request in the queue and its notification on
+    /// screen, so Accept and Decline can be exercised by hand. No test does,
+    /// and nothing short of a live page otherwise can. The request lands on
+    /// top of a seeded event on purpose: the interesting path is the one where
+    /// Accept re-checks the calendar and finds the time taken.
+    static var wantsRequest: Bool {
+        isSimulator && ProcessInfo.processInfo.arguments.contains("-AskWhenRequest")
+    }
+
+    /// A request for the seeded "League ops sync" hour. A slot inside it is a
+    /// conflict for the checker; the request is the same synthetic one the
+    /// conflict sheet uses so the two frames agree.
+    static func sampleRequest(_ zone: TimeZone) -> IncomingRequest {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = zone
+        let tomorrow = cal.startOfDay(for: Date()).addingTimeInterval(86400)
+        let slot = Slot(start: tomorrow.addingTimeInterval(10 * 3600),
+                        end: tomorrow.addingTimeInterval(10.5 * 3600))
+        return IncomingRequest(id: "seed-request-1", slot: slot,
+                               name: "Priya Raman", email: "priya@example.org",
+                               note: "Wanted to ask about the referee assignment tool before the season starts.",
+                               holdUntil: Date().addingTimeInterval(86400))
+    }
+
+    /// Puts the request where a poll would have put it and posts what a poll
+    /// would have posted. The token is invented too — `accept` refuses to run
+    /// without one, and the re-check is local; only the resolve afterwards
+    /// reaches the service, which will refuse the token, and that refusal is
+    /// itself a state worth seeing.
+    ///
+    /// This is the one seed that turns the page on. A request cannot exist
+    /// without a page, and the argument is an explicit ask for one — the rule
+    /// that seeding never skips the opt-in is about the setup flow, which this
+    /// is not photographing. The slug is the glossary's example and answers
+    /// 404 on the service, which the coordinator reads as "already resolved".
+    @MainActor
+    static func seedRequest(into store: Store) {
+        guard wantsRequest else { return }
+        if store.requestPage.slug.isEmpty {
+            store.requestPage.slug = "x7f2k9"
+            store.requestPage.enabled = true
+            store.save()
+        }
+        try? KeychainTokenStore().store("seed-token", for: store.requestPage.slug)
+        let request = sampleRequest(store.zone)
+        if !store.pendingRequests.contains(where: { $0.id == request.id }) {
+            store.pendingRequests.append(request)
+        }
+        RequestNotifications.registerCategory()
+        RequestNotifications.post(request, zone: store.zone)
+    }
+
     /// A conflict to photograph. Built rather than provoked: making a real one
     /// needs a request in the queue and an event landing on it, which is a lot
     /// of live state to arrange for a picture of a sheet.
     static func sampleConflict(_ zone: TimeZone) -> RequestConflict {
-        let slot = Slot(start: Date().addingTimeInterval(3 * 86400 + 13.5 * 3600),
-                        end: Date().addingTimeInterval(3 * 86400 + 14 * 3600))
+        // Anchored on the start of the day, not on now: "three days from now
+        // plus 13.5 hours" is 1:30 PM only when run at midnight, and a review
+        // frame that says a stranger asked for 3:55 AM reads as a bug in the
+        // sheet rather than in the seed.
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = zone
+        let day = cal.startOfDay(for: Date()).addingTimeInterval(3 * 86400)
+        let slot = Slot(start: day.addingTimeInterval(13.5 * 3600),
+                        end: day.addingTimeInterval(14 * 3600))
         return RequestConflict(
             request: IncomingRequest(id: "seed-1", slot: slot,
                                      name: "Priya Raman", email: "priya@example.org",
@@ -107,6 +166,7 @@ enum DebugSeed {
         store.requestPage = page
         store.save()
         store.calendars = store.engine.calendars()
+        seedRequest(into: store)
     }
 
     private static func calendar(in events: EKEventStore) -> EKCalendar? {

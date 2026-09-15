@@ -207,6 +207,7 @@ enum RequestCopy {
         static let lede = "Everything so far has stayed on this device. Publishing puts the times you just previewed on askwhen.me, where the people you send the link to can ask for one."
         static let network = "Loading the price is the first time this app has contacted anyone. It asks Apple what a subscription costs in your currency — nothing about you, your calendar or your page is sent, and askwhen.me is still not involved."
         static let loading = "Asking Apple for the price…"
+        static let purchasing = "Waiting for Apple…"
         static let failedTitle = "Could not reach the App Store"
         static let failedBody = "Apple did not answer, so there is no price to show. Nothing is wrong with your page — it is still here, still on this device. Try again when you have a connection."
         static let retry = "Try again"

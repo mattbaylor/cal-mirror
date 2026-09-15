@@ -18,12 +18,20 @@ struct ContentView: View {
             .environmentObject(model)
             .task { await DebugSeed.apply(to: model) }
             .sheet(item: $model.conflict) { conflict in
+                // Accept and Decline are inert here: the request is invented,
+                // and either would call the service about it. Leaving it is
+                // real, so a hand walk through this mode is not stuck on it.
                 RequestConflictSheet(conflict: conflict,
-                                     onDecline: {}, onAcceptAnyway: {}, onLater: {})
+                                     onDecline: {}, onAcceptAnyway: {},
+                                     onLater: { model.conflict = nil })
             }
             .task { if DebugSeed.wantsConflict { model.conflict = DebugSeed.sampleConflict(model.zone) } }
         } else {
-            mainList
+            // The seed without a screen: the app's own root, with the synthetic
+            // owner's calendar and — with -AskWhenRequest — a request waiting
+            // in the queue, so Accept and Decline can be walked where they
+            // actually live.
+            mainList.task { await DebugSeed.apply(to: model) }
         }
         #else
         mainList
