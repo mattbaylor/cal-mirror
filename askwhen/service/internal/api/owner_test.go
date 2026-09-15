@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -16,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/appstore"
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/domainverify"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/mail"
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/store"
 )
@@ -56,6 +59,54 @@ func (r *recorder) NoResponse(_ context.Context, to string, ev mail.Event) error
 	return r.record("no-response", to, ev)
 }
 
+// fakeApple stands in for the verifier: a "transaction" is plain JSON, and
+// "verification" is parsing it. The real verifier has its own tests against
+// real signatures; here the question is what the handlers do with a
+// transaction Apple vouched for.
+type fakeApple struct{}
+
+func (fakeApple) DecodeTransaction(jws string) (appstore.Transaction, error) {
+	var t appstore.Transaction
+	if err := json.Unmarshal([]byte(jws), &t); err != nil || t.OriginalTransactionID == "" {
+		return t, appstore.ErrSignature
+	}
+	return t, nil
+}
+
+func (fakeApple) DecodeNotification(body []byte) (appstore.Notification, error) {
+	var n appstore.Notification
+	if err := json.Unmarshal(body, &n); err != nil || n.NotificationType == "" {
+		return n, appstore.ErrSignature
+	}
+	if n.Data.SignedTransactionInfo != "" {
+		t, err := fakeApple{}.DecodeTransaction(n.Data.SignedTransactionInfo)
+		if err != nil {
+			return n, err
+		}
+		n.Transaction = t
+	}
+	return n, nil
+}
+
+// A transaction for the top tier, a year out, so the existing tests can
+// claim any kind of hostname. Each call is a distinct subscription.
+var txSeq int
+
+func transaction(product string, expires time.Time) string {
+	txSeq++
+	b, _ := json.Marshal(map[string]any{
+		"originalTransactionId": fmt.Sprintf("2000000%09d", txSeq),
+		"transactionId":         fmt.Sprintf("2000000%09d", txSeq),
+		"productId":             product,
+		"bundleId":              "io.github.mattbaylor.cal-mirror",
+		"environment":           "Sandbox",
+		"type":                  "Auto-Renewable Subscription",
+		"expiresDate":           expires.UnixMilli(),
+		"signedDate":            time.Now().UnixMilli(),
+	})
+	return string(b)
+}
+
 func setupOwner(t *testing.T) *Owner {
 	t.Helper()
 	ctx := context.Background()
@@ -72,7 +123,9 @@ func setupOwner(t *testing.T) *Owner {
 		t.Fatal(err)
 	}
 	return &Owner{Store: s, Pepper: pepper, DumpTTL: 24 * time.Hour, TTLResolved: 48 * time.Hour,
-		Notify: &recorder{}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		Notify:  &recorder{},
+		Entitle: &Entitler{Verify: fakeApple{}, BundleID: "io.github.mattbaylor.cal-mirror", Sandbox: true},
+		Logger:  slog.New(slog.NewTextHandler(io.Discard, nil))}
 }
 
 func do(h http.HandlerFunc, method, target string, body any, bearer string, path map[string]string, hdr map[string]string) *httptest.ResponseRecorder {
@@ -104,8 +157,8 @@ func do(h http.HandlerFunc, method, target string, body any, bearer string, path
 func createPage(t *testing.T, o *Owner) (slug, token string) {
 	t.Helper()
 	w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{
-		"entitlement_hash": strings.Repeat("ab", 32),
-		"display":          map[string]string{"name": "Matt Baylor", "blurb": "30 minutes.", "tz": "America/Denver"},
+		"transaction": transaction("me.askwhen.domain.annual", time.Now().Add(365*24*time.Hour)),
+		"display":     map[string]string{"name": "Matt Baylor", "blurb": "30 minutes.", "tz": "America/Denver"},
 	}, "", nil, nil)
 	if w.Code != http.StatusCreated {
 		t.Fatalf("create: %d %s", w.Code, w.Body.String())
@@ -144,20 +197,101 @@ func TestCreateHandsBackTheTokenOnceAndStoresOnlyAHash(t *testing.T) {
 
 func TestCreateValidates(t *testing.T) {
 	o := setupOwner(t)
+	good := transaction("me.askwhen.page.annual", time.Now().Add(24*time.Hour))
 	for _, tc := range []struct {
 		name string
 		body map[string]any
 	}{
-		{"bad entitlement", map[string]any{"entitlement_hash": "nope", "display": map[string]string{"name": "M", "tz": "UTC"}}},
-		{"no name", map[string]any{"entitlement_hash": strings.Repeat("ab", 32), "display": map[string]string{"name": "", "tz": "UTC"}}},
-		{"bad tz", map[string]any{"entitlement_hash": strings.Repeat("ab", 32), "display": map[string]string{"name": "M", "tz": "Mars/Olympus"}}},
-		{"long blurb", map[string]any{"entitlement_hash": strings.Repeat("ab", 32), "display": map[string]string{"name": "M", "tz": "UTC", "blurb": strings.Repeat("x", 201)}}},
+		{"no name", map[string]any{"transaction": good, "display": map[string]string{"name": "", "tz": "UTC"}}},
+		{"bad tz", map[string]any{"transaction": good, "display": map[string]string{"name": "M", "tz": "Mars/Olympus"}}},
+		{"long blurb", map[string]any{"transaction": good, "display": map[string]string{"name": "M", "tz": "UTC", "blurb": strings.Repeat("x", 201)}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if w := do(o.Create, http.MethodPost, "/v1/pages", tc.body, "", nil, nil); w.Code != http.StatusBadRequest {
 				t.Fatalf("got %d", w.Code)
 			}
 		})
+	}
+}
+
+func TestCreateNeedsALiveSubscriptionForOurApp(t *testing.T) {
+	o := setupOwner(t)
+	display := map[string]string{"name": "M", "tz": "UTC"}
+	future := time.Now().Add(24 * time.Hour)
+	otherApp := transaction("me.askwhen.page.annual", future)
+	otherApp = strings.Replace(otherApp, "io.github.mattbaylor.cal-mirror", "com.example.other", 1)
+	revoked := strings.TrimSuffix(transaction("me.askwhen.page.annual", future), "}") + `,"revocationDate":` + fmt.Sprint(time.Now().UnixMilli()) + `}`
+	production := strings.Replace(transaction("me.askwhen.page.annual", future), `"Sandbox"`, `"Production"`, 1)
+
+	for name, tx := range map[string]string{
+		"not signed by Apple":        "garbage",
+		"another app's subscription": otherApp,
+		"expired":                    transaction("me.askwhen.page.annual", time.Now().Add(-time.Hour)),
+		"refunded":                   revoked,
+		"a product we do not sell":   transaction("me.askwhen.gold.annual", future),
+	} {
+		t.Run(name, func(t *testing.T) {
+			w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": tx, "display": display}, "", nil, nil)
+			if w.Code != http.StatusPaymentRequired {
+				t.Fatalf("got %d %s", w.Code, w.Body.String())
+			}
+		})
+	}
+	// A production transaction is accepted whether or not sandbox is.
+	if w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": production, "display": display}, "", nil, nil); w.Code != http.StatusCreated {
+		t.Fatalf("production: %d %s", w.Code, w.Body.String())
+	}
+	// And sandbox is refused once the switch is off — launch day.
+	o.Entitle.Sandbox = false
+	if w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": transaction("me.askwhen.page.annual", future), "display": display}, "", nil, nil); w.Code != http.StatusPaymentRequired {
+		t.Fatalf("sandbox after launch: %d", w.Code)
+	}
+	// With no entitler at all, nothing can be created.
+	o.Entitle = nil
+	if w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": production, "display": display}, "", nil, nil); w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("no entitler: %d", w.Code)
+	}
+}
+
+func TestTheTierBoundsPagesAndHostnames(t *testing.T) {
+	o := setupOwner(t)
+	display := map[string]string{"name": "M", "tz": "UTC"}
+	future := time.Now().Add(24 * time.Hour)
+
+	// One page at the base tier. The same subscription presented again does
+	// not get a second.
+	base := transaction("me.askwhen.page.annual", future)
+	first := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": base, "display": display}, "", nil, nil)
+	if first.Code != http.StatusCreated {
+		t.Fatalf("first page: %d %s", first.Code, first.Body.String())
+	}
+	if w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": base, "display": display}, "", nil, nil); w.Code != http.StatusPaymentRequired {
+		t.Fatalf("second page on the base tier: %d", w.Code)
+	}
+	var out createResponse
+	json.Unmarshal(first.Body.Bytes(), &out)
+
+	// And the base tier buys no hostname of either kind.
+	d := &Domains{Owner: o, Zone: "askwhen.me", Verify: domainverify.Config{Target: "edge.askwhen.me"}, Resolver: &fakeDNS{}, Logger: o.Logger}
+	if code, _ := claim(d, out.Slug, "matt.askwhen.me", out.WriteToken); code != http.StatusPaymentRequired {
+		t.Fatalf("subdomain on the base tier: %d", code)
+	}
+	if code, _ := claim(d, out.Slug, "ask.example.com", out.WriteToken); code != http.StatusPaymentRequired {
+		t.Fatalf("custom domain on the base tier: %d", code)
+	}
+
+	// The middle tier: several pages, a subdomain, no custom domain.
+	mid := transaction("me.askwhen.subdomain.annual", future)
+	w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": mid, "display": display}, "", nil, nil)
+	json.Unmarshal(w.Body.Bytes(), &out)
+	if w2 := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": mid, "display": display}, "", nil, nil); w2.Code != http.StatusCreated {
+		t.Fatalf("second page on the middle tier: %d", w2.Code)
+	}
+	if code, _ := claim(d, out.Slug, "matt.askwhen.me", out.WriteToken); code != http.StatusCreated {
+		t.Fatalf("subdomain on the middle tier: %d", code)
+	}
+	if code, _ := claim(d, out.Slug, "ask.example.com", out.WriteToken); code != http.StatusPaymentRequired {
+		t.Fatalf("custom domain on the middle tier: %d", code)
 	}
 }
 

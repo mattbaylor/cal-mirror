@@ -74,10 +74,11 @@ public final class RequestPageCoordinator: @unchecked Sendable {
     // MARK: Create
 
     /// Creates the page and stores its token. The only place the token is ever
-    /// seen in the clear; `page.slug` is set on return.
-    public func create(page: inout RequestPageConfig, entitlementHash: String) async throws {
+    /// seen in the clear; `page.slug` is set on return. `transaction` is the
+    /// signed StoreKit transaction for the AskWhen.me subscription.
+    public func create(page: inout RequestPageConfig, transaction: String) async throws {
         let display = PolicyDump.Display(name: page.displayName, blurb: page.blurb, tz: page.policy.timeZone)
-        let created = try await client.createPage(entitlementHash: entitlementHash, display: display)
+        let created = try await client.createPage(transaction: transaction, display: display)
         try tokens.store(created.writeToken, for: created.slug)
         page.slug = created.slug
         page.lastPublishedFingerprint = nil
