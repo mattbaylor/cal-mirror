@@ -1,10 +1,10 @@
 # Tasks
 
 The living board. [`STATUS.md`](STATUS.md) is the narrative — where things
-stand and what is left to ship 2.0 — and is the place to start; this is the
+stand and what is left to ship Calendar Mirror 2.0 and launch AskWhen.me — and is the place to start; this is the
 granular list underneath it.
 
-Last accurate: **11 September 2026, midday.** Anything here that the repo or the
+Last accurate: **15 September 2026, midday.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -12,6 +12,24 @@ being worked, or there is a **named ask** with what it unblocks — and an ask i
 thing to chase, not a place to stop.
 
 ---
+
+## Punch list — 15 September
+
+The order that unblocks the most. Each line names whose it is.
+
+| # | What | Whose | Unblocks |
+|---|---|---|---|
+| 1 | ~~App Store Connect~~ **done 15 Sept** — agreement active, group 22387296, three products, trial on Page only, notifications URLs set, sandbox tester exists | Matt | — |
+| 2 | The `.storekit` file, synced from ASC, checked in under `apple/` | Matt, 10 min | the purchase UI, testable offline |
+| 3 | Review draft [#84](https://github.com/mattbaylor/cal-mirror/pull/84) (privacy, billing); answer the one TODO in it — `caddy-dc` access-log retention | Matt | the privacy page ships |
+| 4 | ~~Back up the pepper~~ **done** (Infisical) | Matt | — |
+| 5 | Entitlement verification on the service: Apple JWS verifier, `POST /v1/pages` by signed transaction, tier enforcement on pages and domains | me, today | closes the free-pages hole |
+| 6 | `POST /hooks/appstore`: Server Notifications V2, the 7-day grace, the delete | me, today; sandbox proof needs #1 | lapse |
+| 7 | `CalMirrorKit` StoreKit wrapper: products, purchase, current entitlement, the JWS to send | me, today; testable against #2 | the purchase UI |
+| 8 | ~~Commit the `-target` fix~~ **done** [#87](https://github.com/mattbaylor/cal-mirror/pull/87) | | — |
+| 9 | ~~Flip on-demand TLS~~ **done 15 Sept** — two fixtures answer 200 on fresh Let's Encrypt certificates; an unclaimed name is refused at the handshake | Matt | — |
+
+Then the design loop for the app UI, in its own session.
 
 ## Asks — none open
 
@@ -26,20 +44,33 @@ Judgement, not access. Roughly in the order it starts costing.
 
 | | What | The call |
 |---|---|---|
+| ⚪ | **Apple agreements renew 14 Dec 2026** — both Paid Apps and Free Apps. Until you accept the renewed version, new products and price changes are refused; existing sales continue. Calendar a reminder for early December. | |
+| 🔴 | **The `.storekit` file** — Xcode: File → New → File → StoreKit Configuration File, tick *Sync this file with an app in App Store Connect*, save as `apple/AskWhen.storekit`, commit. Ten minutes; unblocks the purchase UI offline. | |
 | 🔴 | **Rotate five credentials before prod** | `cloudflare_apitoken`, `cloudflare_accesskey`, `cloudflare_secretaccesskey`, the R2 endpoint (carries the account hash) and `gh_claude` were printed into a session transcript on 4 Sept. You said rotate at prod rather than now; this is the reminder so it does not get lost. `~/.claude/settings.json` now denies `infisical secrets` outright. |
-| 🔴 | **Flip on-demand TLS on `caddy-dc`** | Step 6 is built, deployed and proven up to this line: the gate answers 200/200/404 for a claimed custom domain, a claimed subdomain and an unclaimed name when asked from the proxy itself. What remains is writing the global `on_demand_tls` options and the catch-all `https://` block into `/opt/caddy/Caddyfile` and reloading — on the proxy that fronts your customers' sites, which is why it stops here. `askwhen/infra/edge.md`, "The flip, as one command": one line, validates before it reloads, backup beside the file. Two fixtures are waiting for it: `ask-test.calendarmirror.com` (CNAME, in your zone) and `matt-test.askwhen.me`. Delete both, and the fixture page `qjvg8iar`, when done — or leave them as the first real customer domains. |
-| 🔴 | **Back up the pepper** | `/opt/cal-mirror/askwhen/infra/secrets/pepper` on CT 112, generated 10 Sept. It hashes every write token; lose it and every owner silently stops being able to publish. Somewhere you would keep a private key — not Infisical's `prod` env alongside things that rotate. |
 | 🔴 | **Commit the `-target` fix** | Still uncommitted in your tree (`build.sh`, `build-ui.sh`). Say the word and I will commit it; I did not want to commit your working tree unasked. |
 | 🟡 | **Edge Caddy: 2.6.2 → 2.11.4, and drop the wildcard** | Plan and argument in `askwhen/infra/edge/upgrade-plan.md`. Only apex + `www` are staged today because 2.6.2 has no DNS modules. Recommendation: upgrade for the security fixes, and do **not** add the wildcard — every `*.askwhen.me` name we would ever serve is a custom-domain CNAME, which on-demand TLS already covers. |
 | 🟡 | **Disable Universal SSL on `askwhen.me`** | Cloudflare keeps injecting CAA records for its own CAs into the zone. Harmless while the records also permit Let's Encrypt, but it is a foreign hand in a zone we otherwise control. Cloudflare → SSL/TLS → Edge Certificates → Disable Universal SSL. |
 | 🟡 | **Reserve `172.16.1.41` in pfSense** and **add CT 112 to PBS** | The guest has a static address nothing else knows about, and no backup. Both are yours because both are DC-wide config. |
 | 🟡 | **An Infisical machine identity** | User sessions expire in 20–60 minutes and each expiry cost a round trip today. A Universal Auth identity scoped to `calendarmirror-com-v2-yo/prod`, read-only, would let `infisical run` work unattended. |
 | 🟡 | **The request-page UI** | Step 4 built everything under it and nothing of it. Needed, in the order a new owner meets them: the two checkboxes in Manage Mirrors (`RequestPageConfig.blocking` / `.requestCalendar`); a settings sheet for display name, blurb, meeting title and the policy; the StoreKit entitlement → `create`; a notification per collected request with Accept / Decline; and the conflict sheet that shows `RequestChecker`'s alternatives. Yours because it is look-and-feel; the Kit's surface is in `askwhen/README.md` §4. |
-| 🟡 | **1.4.2: ship, or fold into 2.0** | On main, unreleased. askwhen ships as 2.0, so it is either a release of its own or absorbed. |
+| 🟡 | **1.4.2 folds into Calendar Mirror 2.0** | Decided 15 Sept. On main, unreleased; ships with 2.0. |
 | 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. Needs a signed, notarised build, so it is a release rather than a tag. |
 | ⚪ | **Design the emails** *(Matt, 10 Sept)* | All four — confirm, accepted, declined, no-response — are deliberately plain today: one `<p>` after another, no image, no styled button, nothing fetched. The plainness is partly a security stance (a scanner rendering the confirm mail finds nothing to click but a URL whose GET does nothing) and partly that nobody has designed them yet. Whatever they become should keep both properties; the templates are in `askwhen/service/internal/mail/postal.go`, and the same look should probably reach the request page's own states. |
 | ⚪ | **Sit with the request page** | You said you were not sold. `askwhen/web/dist/gallery.html` is every state at true size and opens straight from the filesystem. |
 | ⚪ | **`feat/synced-events-view`** | One WIP commit, no PR, abandoned mid-thought. Finish or delete. |
+
+## Things nobody had listed yet (15 Sept)
+
+| What | Why it matters |
+|---|---|
+| **iPhone-only owners will watch their page go dark.** The dump expires 24h after the last publish, and iOS runs the app when it feels like it. A Mac that is usually on is fine; a phone-only owner who does not open the app for a day serves "not taking requests". Options: a longer TTL for iOS publishers (say 7 days), or a push-triggered refresh. | Product decision, yours. Not a bug — a consequence of §6 that the copy should be honest about either way. |
+| **App Privacy labels in App Store Connect** currently say *Data Not Collected*. 2.0 sends a display name and an anonymous subscription id from the owner's device; Apple will ask. | Review blocker if wrong. |
+| **Terms for the request page** — refunds are Apple's, but a $70 custom-domain customer has no terms to read, and nothing says what happens to their domain when they lapse (answer: the grace week, then released). | Needed before the domain tier is sold. |
+| **Database backup.** PBS will snapshot CT 112 (when added), but a WAL-mode SQLite file inside a running container is not guaranteed consistent in a filesystem snapshot. A nightly `VACUUM INTO` to a file PBS then takes is the honest version. | Losing the DB loses every page and token. |
+| **DMARC to `quarantine`** on the schedule `mail.md` describes, once a few weeks of `p=none` reports look clean. | Deliverability. |
+| **A support address requesters can reach.** Mail comes from `no-reply@`; the page footer says `askwhen.me` and nothing else. Someone who gets a wrong `.ics` has nowhere to write. | Support, and Apple asks for one. |
+| **Small Business Program** enrolment, if not already — 15% instead of 30%. | Money. |
+| **`askwhen.me` registration renewal** date — put it somewhere a reminder fires. | The whole product is one lapsed domain from gone. |
 
 ## Also yours, but lower stakes
 
@@ -141,7 +172,7 @@ something of yours — `STATUS.md`, "What is left", items 3, 4, 6, 9 and 13–16
   `delete_branch_on_merge` is on so it does not come back.
 - **The SPF loop** — fixed by Matt, 4 Sept, verified across six domains.
 - **Domain verification**, **the on-demand TLS gate**, **conditional GET on both
-  read paths**, **the deriver's rejection reasons**, **askwhen steps 1 and 2**,
+  read paths**, **the deriver's rejection reasons**, **AskWhen.me steps 1 and 2**,
   **ten design docs** with *Settled* and *Proposed* kept apart — all merged.
 
 ## Standing constraints, and one landmine
@@ -156,7 +187,7 @@ something of yours — `STATUS.md`, "What is left", items 3, 4, 6, 9 and 13–16
   switch to `mattbaylor` and switch back.
 - **Never `git add -A`.** Stage explicitly.
 - **Screenshots come from a synthetic config**, never the live one.
-- **askwhen is opt-in, and not opting in changes nothing.** No network
+- **AskWhen.me is opt-in, and not opting in changes nothing.** No network
   request of any kind until the owner turns the page on. Structural, and
   checked.
 - **It is a request page, never a booking page.**

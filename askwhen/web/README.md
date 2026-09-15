@@ -1,4 +1,4 @@
-# askwhen.me — web app
+# AskWhen.me — web app
 
 The Lit application. One codebase, N pages: a slug selects a policy dump, and the
 dump is the only thing that differs between two request pages.

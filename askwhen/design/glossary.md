@@ -2,6 +2,26 @@
 
 Shared vocabulary. If a term is not here, do not invent one — add it here first.
 
+## The two products *(Matt, 15 September 2026)*
+
+| Term | Means | Not |
+|---|---|---|
+| **Calendar Mirror** | The app. $2.99, one-time. Copies events between calendars on your device. No server, ever. Version 2.0 is the release that adds the ability to enable AskWhen.me. | not "the platform", not "the home of AskWhen.me" |
+| **AskWhen.me** | A separate product, sold as a subscription, with its own server (the dead drop). You enable it from inside Calendar Mirror; the app is where you configure it and answer requests. Off by default. | not "a feature of Calendar Mirror", not "the request page product" |
+| **request page** | The public web page a stranger sees at `askwhen.me/{slug}` — the *thing AskWhen.me serves*, not the product's name. | not a synonym for AskWhen.me |
+| **enable / turn on** | The owner's act of opting into AskWhen.me. | not "set up", "activate", or "subscribe" — subscribing is Apple's word for paying |
+
+**Styling.** The product is written **AskWhen.me** — capital A, capital W, and
+always with the `.me`, which is what says it is web-based where Calendar Mirror
+is not. Hostnames, URLs and addresses stay lowercase because they are hostnames:
+`askwhen.me/x7f2k9`, `no-reply@askwhen.me`, `edge.askwhen.me`. Calendar Mirror
+never takes a suffix.
+
+Sentences that follow: *Calendar Mirror 2.0 lets you turn on AskWhen.me.*
+*AskWhen.me is a separate product with its own privacy terms; until you turn it
+on, Calendar Mirror's privacy position is unchanged.* *The Calendar Mirror app is
+where you configure AskWhen.me and answer its requests.*
+
 ## The word we do not use
 
 **Booking.** This is not a booking app and calling it one would be a promise we
@@ -29,7 +49,7 @@ calendar), *confirmed slot* before acceptance.
 | **Owner** | The person publishing availability. | Has the app, pays the subscription, accepts or declines. The service never learns their email, real name beyond a chosen display label, calendar, or any credential. |
 | **Requester** | Whoever opens the page and asks for a time. | No account, ever. Gives a name and an email, and nothing else is asked of them. |
 | **Device** | An owner's Mac, iPhone or iPad running the app. | Holds the truth. Derives slots, publishes, polls, and writes the event on accept. One device is the **publisher** (see below). |
-| **Service** | askwhen.me — storage, page, queue, mail. | A dead drop. Slots in, requests out. Cannot email the owner because it holds no address for them. |
+| **Service** | AskWhen.me — storage, page, queue, mail. | A dead drop. Slots in, requests out. Cannot email the owner because it holds no address for them. |
 | **Publisher** | The single device designated to publish. | Prevents three devices racing to write the same document. See architecture §3a. |
 
 ## Objects

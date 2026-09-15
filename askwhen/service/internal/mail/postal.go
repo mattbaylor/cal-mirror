@@ -29,7 +29,7 @@ type Postal struct {
 	// APIKey is a server credential from Postal, held in Infisical as
 	// postal_api_key. It is sent as a header, never logged, never in a URL.
 	APIKey string
-	// From is the visible sender: "askwhen.me <no-reply@askwhen.me>". The domain
+	// From is the visible sender: "AskWhen.me <no-reply@askwhen.me>". The domain
 	// must be one Postal has verified for this server, or it refuses.
 	From string
 	// Client may be nil; a timeout is applied either way, because a request
@@ -86,7 +86,7 @@ func (p *Postal) Confirmation(ctx context.Context, to, confirmURL string) error 
 
 func (p *Postal) confirmation(ctx context.Context, to, confirmURL string) (string, error) {
 	plain := strings.Join([]string{
-		"Someone — hopefully you — asked for a time on askwhen.me using this address.",
+		"Someone — hopefully you — asked for a time on AskWhen.me using this address.",
 		"",
 		"To send the request, open this link and press the button on it:",
 		"",
@@ -97,7 +97,7 @@ func (p *Postal) confirmation(ctx context.Context, to, confirmURL string) (strin
 		"the hold will simply lapse.",
 	}, "\n")
 
-	html := `<p>Someone — hopefully you — asked for a time on askwhen.me using this address.</p>` +
+	html := `<p>Someone — hopefully you — asked for a time on AskWhen.me using this address.</p>` +
 		`<p>To send the request, open this link and press the button on it:</p>` +
 		`<p><a href="` + htmlEscape(confirmURL) + `">` + htmlEscape(confirmURL) + `</a></p>` +
 		`<p>Nothing has been sent yet, and nothing will be unless you do. The time is held for fifteen minutes. ` +
@@ -106,7 +106,7 @@ func (p *Postal) confirmation(ctx context.Context, to, confirmURL string) (strin
 	return p.send(ctx, sendRequest{
 		To:        []string{to},
 		From:      p.From,
-		Subject:   "Confirm your request on askwhen.me",
+		Subject:   "Confirm your request on AskWhen.me",
 		PlainBody: plain,
 		HTMLBody:  html,
 		Tag:       "confirm",
@@ -129,12 +129,12 @@ func (p *Postal) Accepted(ctx context.Context, to string, ev Event) (string, err
 		"click and nothing to confirm — the time is yours.",
 		"",
 		"If you need to change it, reply to the person, not to this address:",
-		"askwhen.me only carried the request and holds nothing else about it.",
+		"AskWhen.me only carried the request and holds nothing else about it.",
 	}, "\n")
 	html := `<p>` + htmlEscape(ev.OwnerName) + ` accepted your request.</p>` +
 		`<p><strong>` + htmlEscape(when) + `</strong></p>` +
 		`<p>The attached calendar file adds it to your calendar. There is no link to click and nothing to confirm — the time is yours.</p>` +
-		`<p>If you need to change it, reply to the person, not to this address: askwhen.me only carried the request and holds nothing else about it.</p>`
+		`<p>If you need to change it, reply to the person, not to this address: AskWhen.me only carried the request and holds nothing else about it.</p>`
 
 	return p.send(ctx, sendRequest{
 		To:        []string{to},
@@ -200,12 +200,12 @@ func (p *Postal) noResponse(ctx context.Context, to string, ev Event) (string, e
 		"released. That is not a no — it is more likely their page was not being",
 		"checked. You are welcome to ask again.",
 		"",
-		"Everything about this request is gone from askwhen.me within two days.",
+		"Everything about this request is gone from AskWhen.me within two days.",
 	}, "\n")
 	html := `<p>Your request to ` + htmlEscape(ev.OwnerName) + ` for</p>` +
 		`<p><strong>` + htmlEscape(when) + `</strong></p>` +
 		`<p>went two weeks without an answer, so it has been closed and the time released. That is not a no — it is more likely their page was not being checked. You are welcome to ask again.</p>` +
-		`<p>Everything about this request is gone from askwhen.me within two days.</p>`
+		`<p>Everything about this request is gone from AskWhen.me within two days.</p>`
 
 	return p.send(ctx, sendRequest{
 		To:        []string{to},
