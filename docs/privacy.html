@@ -5,7 +5,7 @@
 <script src="redirect.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendar Mirror — Privacy</title>
-<meta name="description" content="Your calendar data is yours. Calendar Mirror collects nothing and makes no network requests. The optional request page runs on a server that never sees your calendar — here is exactly what it holds, and for how long.">
+<meta name="description" content="Your calendar data is yours. Calendar Mirror collects nothing and makes no network requests. askwhen.me, a separate product you can turn on, runs on a server that never sees your calendar — here is exactly what it holds, and for how long.">
 <link rel="icon" href="icon.png">
 <style>
   :root{ --bg:#0b0e14; --card:#151b28; --line:#232c3d; --tx:#e6edf3; --mut:#93a1b5;
@@ -38,11 +38,11 @@
   <h1>Privacy</h1>
   <p class="sub">Last updated: September 2026 — DRAFT for 2.0</p>
 
-  <p class="lead"><strong>Your calendar belongs to you — not to me, and not to a
+  <p class="lead"><strong>Your calendar belongs to you — not to us, and not to a
     server.</strong> Calendar Mirror has no account and makes no network requests of
-    its own. It never sends your calendar anywhere. The one optional feature that
-    does use a server — the request page — is built so the server cannot see your
-    calendar either, and this page says exactly what it holds instead.</p>
+    its own. It never sends your calendar anywhere. askwhen.me, a separate product you can
+    turn on from inside the app, does use a server — one built so it cannot see your
+    calendar either. This page says exactly what it holds instead.</p>
 
   <h2>What the app does</h2>
   <p>You tell Calendar Mirror which calendar to copy and where to copy it. It reads
@@ -52,8 +52,8 @@
 
   <h2>No collection, no tracking</h2>
   <p>No analytics. No advertising or tracking SDKs. No behavioral data. No crash or
-     usage telemetry sent to me. Calendar Mirror ships with none of that and never will —
-     surveillance isn't a feature I'm interested in building.</p>
+     usage telemetry sent to us. Calendar Mirror ships with none of that and never will —
+     surveillance isn't a feature we're interested in building.</p>
 
   <h2>No credentials, ever</h2>
   <p>Calendar Mirror works through calendars that are already set up on your device, so
@@ -65,7 +65,7 @@
     in their notes. If you would rather a provider never hold the details, don&rsquo;t send them.</p>
 
 
-  <h2>The one thing I can't control — and won't pretend to</h2>
+  <h2>What we can't control</h2>
   <p>If your destination calendar lives in an account like iCloud, Google, or
      Exchange, then once a copy lands there, <em>that provider</em> syncs and retains
      it under <em>their</em> policies — exactly as it would for any event you added
@@ -74,15 +74,16 @@
      provider's terms apply. If that matters to you, point Calendar Mirror at a
      local or self-hosted calendar as the destination.</p>
 
-  <h2>The request page (askwhen.me) — optional, and off until you turn it on</h2>
-  <p class="lead"><strong>If you never turn this on, nothing in this section applies
-     to you.</strong> The request page is off by default. Until you choose it, Calendar
+  <h2>askwhen.me — a separate product you can turn on</h2>
+  <p class="lead"><strong>Until you turn askwhen.me on, nothing in this section applies
+     to you.</strong> askwhen.me is its own product, with its own server; Calendar Mirror
+     is the app you enable it from. It is off by default. Until you choose it, Calendar
      Mirror 2.0 behaves exactly as every version before it: no account, no server, no
-     network request of any kind. Everything below describes what happens only after
-     you opt in.</p>
-  <p>Calendar Mirror 2.0 can give you a page at <code>askwhen.me/yourpage</code> where
-     a stranger can ask you for a time. That page needs a server, and this section is
-     the whole of what that server does with data. The design is called a
+     network request of any kind. Everything below describes askwhen.me only, and only
+     after you opt in.</p>
+  <p>askwhen.me gives you a page at <code>askwhen.me/yourpage</code> where a stranger can
+     ask you for a time. That page needs a server, and this section is the whole of
+     what that server does with data. The design is called a
      <em>dead drop</em>: your device works out which times to offer and sends only
      those; the server holds requests until your device collects them. At no point
      does the server have your calendar, your email address, or a way to contact you.</p>
@@ -98,7 +99,7 @@
         knowing it is public.</li>
     <li>A <strong>meeting title</strong> and length, and your time zone.</li>
     <li>An anonymous <strong>subscription identifier</strong> from Apple — a number,
-        which Apple does not tie to your name or email in anything they give me. It is
+        which Apple does not tie to your name or email in anything they give us. It is
         stored hashed. There is no account, because there is nothing to put in one.</li>
   </ul>
   <p>Your device replaces that list every few hours. If it stops, the page goes dark
@@ -116,25 +117,25 @@
         answered, and it is deleted.</li>
     <li><strong>After you answer — until the email reaches them, 48 hours at most.</strong>
         An accepted request needs their address once more, to send them the calendar
-        file; the moment my mail server reports it delivered, the request is deleted.
+        file; the moment our mail server reports it delivered, the request is deleted.
         A declined one is deleted the same way after the reply is sent.</li>
   </ul>
   <p>These limits are enforced by the database itself, not by a schedule somebody
      could forget to run. There is no requester account, no history, and nothing
      that links one request to another.</p>
 
-  <h3>What the request page does not do</h3>
+  <h3>What the askwhen.me page does not do</h3>
   <p>The page loads nothing from anyone else: no fonts, no analytics, no scripts from a
      third party, no captcha service. It makes exactly two requests, both to
      askwhen.me. That is checked by the build, which fails if a third appears.
      Rate limiting exists to stop abuse, but it does not store IP addresses: it stores
      a keyed hash that rotates daily, after which yesterday's entries cannot be linked
-     to an address even by me.</p>
+     to an address even by us.</p>
 
   <h3>Email</h3>
   <p>The confirmation, the answer, and the calendar file are sent from
-     <code>no-reply@askwhen.me</code> through a mail server I run myself, on
-     infrastructure I own. Delivery reports come back from it so that "delivered"
+     <code>no-reply@askwhen.me</code> through a mail server we run ourselves, on
+     infrastructure we own. Delivery reports come back from it so that "delivered"
      can mean the request is deleted; nothing about what an email says is logged.
      The person who asked gets your <strong>display name</strong> and the meeting
      time. They never get your email address — the server does not have it to give.</p>
@@ -145,20 +146,20 @@
      about the domain.</p>
 
   <h3>Payment</h3>
-  <p>The request page is a subscription bought through the App Store. Apple handles
-     payment; I never see a card, a name, or a billing address. Apple tells my
+  <p>askwhen.me is a subscription bought through the App Store. Apple handles
+     payment; we never see a card, a name, or a billing address. Apple tells our
      server when a subscription starts, renews, or ends, using the same anonymous
      identifier as above, so a lapsed page can be taken down.</p>
 
   <h3>Where it runs</h3>
-  <p>On a server I operate in Colorado, United States, behind a reverse proxy that
+  <p>On a server we operate in Colorado, United States, behind a reverse proxy that
      keeps ordinary access logs. <!-- TODO Matt: how long does caddy-dc keep its
      access logs, and do they hold client IPs? Say so here either way. --></p>
 
   <h2>Changes</h2>
   <p>If this policy ever changes, the update will be here and in the source, which
      is public. The bar it has to clear is simple: the app still collects nothing,
-     and the request page still holds nothing longer than it takes to get someone
+     and askwhen.me still holds nothing longer than it takes to get someone
      an answer.</p>
 
   <h2>Contact</h2>
