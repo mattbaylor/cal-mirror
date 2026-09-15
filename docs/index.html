@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="nav.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendar Mirror — keep a copy of one calendar inside another</title>
 <meta name="description" content="A small app that keeps a one-way copy of one calendar inside another, on iPhone, iPad & Mac. Your original is never touched, and nothing leaves your device. On the App Store, or free from source.">
@@ -32,11 +33,6 @@
   a{color:inherit}
   .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
 
-  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;flex-wrap:wrap;gap:12px}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
-  .brand .logo{width:30px;height:30px;border-radius:8px;display:block}
-  .nav-links{display:flex;gap:22px;align-items:center;font-size:14px;color:var(--mut);flex-wrap:wrap}
-  .nav-links a{text-decoration:none}.nav-links a:hover{color:var(--tx)}
 
   header.hero{text-align:center;padding:64px 0 26px}
   .pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
@@ -126,19 +122,9 @@
 </style>
 </head>
 <body>
+<cm-nav></cm-nav>
 <div class="wrap">
 
-  <nav>
-    <div class="brand"><img class="logo" src="icon.png" alt="Calendar Mirror icon"> Calendar Mirror</div>
-    <div class="nav-links">
-      <a href="#what">What it does</a>
-      <a href="#filters">Which events</a>
-      <a href="#how">How it works</a>
-      <a href="vs/">Compare</a>
-      <a href="changelog.html">Release notes</a>
-      <a href="https://github.com/mattbaylor/cal-mirror">GitHub ↗</a>
-    </div>
-  </nav>
 
   <header class="hero">
     <div class="pills">
@@ -397,6 +383,7 @@
       <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a> ·
       <a href="vs/">Compare</a> ·
       <a href="changelog.html">Release notes</a> ·
+      <a href="coming.html">What’s coming</a> ·
       <a href="privacy.html">Privacy</a> ·
       <a href="https://github.com/mattbaylor/cal-mirror/issues">Issues</a>
     </div>

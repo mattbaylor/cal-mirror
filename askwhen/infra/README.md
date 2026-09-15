@@ -62,7 +62,7 @@ the static image.
 Postgres would be a second container, a second backup story, and a password to
 manage — for a database whose steady state is a few hundred rows that delete
 themselves. Retention (§10) means this table is *mostly empty by design*: an
-unconfirmed request lives an hour, a confirmed one a fortnight, a resolved one
+unconfirmed request lives an hour, a confirmed one two weeks, a resolved one
 48 hours at the outside.
 
 SQLite in WAL mode handles one writer and many readers, which is exactly the

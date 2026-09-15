@@ -37,7 +37,7 @@ claim than Stripe's email and card.
 
 The trial length changed because **14 days cannot contain the value event.** The
 payoff of a request page is *a stranger asked you for a time*, and that may
-simply not happen inside a fortnight — the owner trials a page nobody used and
+simply not happen inside two weeks — the owner trials a page nobody used and
 concludes it does nothing. Ninety days is roughly the period over which "someone
 wants to meet me" has a shape. Apple allows introductory free trials up to a
 year, so the mechanics are trivial; the argument is entirely about the product
@@ -46,7 +46,7 @@ being rare rather than daily.
 Whether there is *also* a free tier is not settled — see *Proposed* below.
 
 **Known cost, accepted:** ninety days is a lot of link-sharing, so a lapse now
-strands more links in the wild than a fortnight did. The lapse behaviour below
+strands more links in the wild than two weeks did. The lapse behaviour below
 already handles this better than it looks — the slug 404s *into the invitation
 page*, so a dead link still explains itself to whoever clicks it. Worth
 re-checking if the trial ever gets longer.

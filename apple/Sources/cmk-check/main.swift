@@ -753,7 +753,7 @@ check(SnapshotGuard.decide(stabilized: true, count: 1, lastKnown: 3) == .proceed
 print("RequestPolicy:")
 // The horizon bounds are product decisions, not preferences, so nothing may get
 // past them — not the initializer, not a later assignment, not a hand-edited file.
-check(RequestPolicy().horizonDays == 14, "the default horizon is a fortnight")
+check(RequestPolicy().horizonDays == 14, "the default horizon is two weeks")
 check(RequestPolicy(horizonDays: 0).horizonDays == 2, "a horizon below two days clamps up")
 check(RequestPolicy(horizonDays: 400).horizonDays == 45, "a horizon beyond 45 days clamps down")
 do {

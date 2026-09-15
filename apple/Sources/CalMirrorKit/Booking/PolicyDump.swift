@@ -25,7 +25,7 @@ import Foundation
 /// by the owner in the knowledge that it is public.
 public struct PolicyDump: Equatable, Sendable, Codable {
 
-    /// The schema's ceiling. A fortnight of half-hour slots inside working hours
+    /// The schema's ceiling. Two weeks of half-hour slots inside working hours
     /// is ~150 entries, so this only bites on a long horizon with a high cap —
     /// and truncating is better than publishing a document the page will refuse.
     public static let maxSlots = 500

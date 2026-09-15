@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../nav.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendar Mirror vs SyncThemCalendars &mdash; Calendar Mirror</title>
 <meta name="description" content="Calendar Mirror compared with SyncThemCalendars — pricing, field masking, platforms, and which one fits your setup. Checked August 2026.">
@@ -27,11 +28,6 @@
   .wrap{max-width:820px;margin:0 auto;padding:0 22px 80px}
   a{color:var(--accent)}
 
-  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;flex-wrap:wrap;gap:12px}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:700;text-decoration:none;color:var(--tx)}
-  .brand img{width:30px;height:30px;border-radius:8px}
-  .nav-links{display:flex;gap:18px;align-items:center;font-size:14px;color:var(--mut);flex-wrap:wrap}
-  .nav-links a{text-decoration:none;color:var(--mut)}.nav-links a:hover{color:var(--tx)}
 
   h1{font-size:clamp(28px,4.6vw,38px);letter-spacing:-.7px;margin:.4em 0 .12em;line-height:1.15}
   .dateline{color:var(--dim);font-size:13.5px;margin:0 0 26px}
@@ -88,18 +84,9 @@
 </style>
 </head>
 <body>
+<cm-nav current="compare"></cm-nav>
 <div class="wrap">
 
-  <nav>
-    <a class="brand" href="../"><img src="../icon.png" alt="Calendar Mirror icon"> Calendar Mirror</a>
-    <div class="nav-links">
-      <a href="../#what">What it does</a>
-      <a href="../#filters">Filters</a>
-      <a href="index.html">Comparisons</a>
-      <a href="../changelog.html">Release notes</a>
-      <a href="https://github.com/mattbaylor/cal-mirror">GitHub &#8599;</a>
-    </div>
-  </nav>
 
   <h1>Calendar Mirror vs SyncThemCalendars</h1>
   <p class="dateline">Compared August 2026 &middot; every price and feature below was checked
@@ -167,9 +154,9 @@
       your Mac or iPhone, and the copy is one-way, like every Calendar Mirror mirror.</p>
   </div>
   <h2>What Calendar Mirror does not do, on any tier</h2>
-  <p>None of these are coming later. If you need one of them, buy something else:</p>
+  <p>None of these are coming to Calendar Mirror itself. If you need one of them, buy something else &mdash; with one exception, and it comes first:</p>
   <ul class="lose">
-    <li><b>No booking or scheduling links.</b> Nothing generates a page other people can pick a slot from.</li>
+    <li><b>No booking links &mdash; by design.</b> Nothing writes to your calendar from a web form. <b>AskWhen.me</b>, a separate subscription you turn on from Calendar Mirror, serves a <em>request</em> page instead: someone picks a time, you accept or decline, and nothing lands until you do. Coming with Calendar Mirror 2.0 &mdash; <a href="../coming.html">what&rsquo;s coming</a>.</li>
     <li><b>No unified calendar view.</b> Calendar Mirror makes copies; your calendar app displays them.</li>
     <li><b>No team, admin or SSO features.</b> It is a single-person utility.</li>
     <li><b>Apple only.</b> No Windows, no Android, no web.</li>
@@ -213,6 +200,7 @@
     <a href="../">&larr; Calendar Mirror</a> &middot;
     <a href="index.html">Comparisons</a> &middot;
     <a href="../changelog.html">Release notes</a> &middot;
+    <a href="../coming.html">What&rsquo;s coming</a> &middot;
     <a href="../privacy.html">Privacy</a> &middot;
     <a href="https://github.com/mattbaylor/cal-mirror">Source</a> &middot;
     MIT &copy; Matt Baylor
