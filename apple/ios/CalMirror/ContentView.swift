@@ -6,6 +6,31 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var phase
 
     var body: some View {
+        #if DEBUG
+        // Screenshot mode: open straight at one screen rather than automating
+        // taps to reach it. RequestPageSetupView already takes a starting
+        // step, so this only says which from outside. Gated to the simulator
+        // and to an explicit launch argument inside DebugSeed.
+        if let step = DebugSeed.startStep {
+            NavigationStack {
+                RequestPageSetupView(start: step, page: model.config.requestPage)
+            }
+            .environmentObject(model)
+            .task { await DebugSeed.apply(to: model) }
+            .sheet(item: $model.conflict) { conflict in
+                RequestConflictSheet(conflict: conflict,
+                                     onDecline: {}, onAcceptAnyway: {}, onLater: {})
+            }
+            .task { if DebugSeed.wantsConflict { model.conflict = DebugSeed.sampleConflict(model.zone) } }
+        } else {
+            mainList
+        }
+        #else
+        mainList
+        #endif
+    }
+
+    private var mainList: some View {
         NavigationStack {
             List {
                 Section {

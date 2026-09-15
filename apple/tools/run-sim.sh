@@ -8,6 +8,8 @@
 #
 #   ./apple/tools/run-sim.sh              # boot, build, install, launch
 #   ./apple/tools/run-sim.sh --clean      # wipe the app's container first
+#   SCREEN=preview ./apple/tools/run-sim.sh   # open at one screen, with a
+#                                             # seeded calendar behind it
 #   DEVICE='iPhone 16 Pro' ./apple/tools/run-sim.sh
 #
 # What it does NOT do: seed calendar events. EventKit in a fresh simulator is
@@ -28,15 +30,7 @@ echo "==> Generating the Xcode project"
 
 echo "==> Booting $DEVICE"
 # Reuse a booted device if there is one; booting a second is slow and confusing.
-UDID=$(xcrun simctl list devices available -j \
-  | python3 -c "
-import json,sys
-d=json.load(sys.stdin)['devices']
-want='''$DEVICE'''
-booted=[x for v in d.values() for x in v if x['state']=='Booted']
-named=[x for v in d.values() for x in v if x['name']==want]
-print((booted[0] if booted else named[0])['udid'] if (booted or named) else '')
-")
+UDID=$(python3 "$DIR/apple/tools/pick-sim.py" "$DEVICE" || true)
 [ -n "$UDID" ] || { echo "no simulator named '$DEVICE'. xcrun simctl list devices available"; exit 1; }
 xcrun simctl bootstatus "$UDID" -b >/dev/null 2>&1 || xcrun simctl boot "$UDID" || true
 open -a Simulator --args -CurrentDeviceUDID "$UDID" || true
@@ -79,7 +73,14 @@ else
 fi
 
 echo "==> Launching"
-xcrun simctl launch "$UDID" "$BUNDLE_ID" >/dev/null
+# SCREEN=preview ./run-sim.sh opens straight at one screen and seeds a
+# calendar, the same way the screenshots workflow drives it — so what you see
+# locally and what CI photographs are the same thing.
+if [ -n "${SCREEN:-}" ]; then
+  xcrun simctl launch "$UDID" "$BUNDLE_ID" -AskWhenSeed -AskWhenScreen "$SCREEN" >/dev/null
+else
+  xcrun simctl launch "$UDID" "$BUNDLE_ID" >/dev/null
+fi
 
 cat <<'NOTE'
 
