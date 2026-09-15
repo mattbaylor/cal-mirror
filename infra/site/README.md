@@ -6,8 +6,9 @@ our own infrastructure.
 **Why.** reHosted's pitch is *"Deplatforming is real. We can help."*, and a
 product arguing for digital sovereignty whose own marketing site ran on GitHub
 was a tell. It also buys response headers Pages cannot set — the site now
-carries a real CSP, and because it has no inline script and no third-party
-anything, that CSP is unusually tight.
+carries a real CSP, and because it has no inline script and nothing
+third-party — the one script it loads is our own Plausible — that CSP is
+unusually tight.
 
 **Accepted cost.** A datacenter outage now takes the site down alongside the
 product, where Pages would have stayed up. That is a real trade and was made
@@ -45,12 +46,32 @@ working tree through a bind mount, so a pull is live immediately with no reload.
 
 ## The old address still works
 
-`docs/redirect.js` forwards `mattbaylor.github.io/cal-mirror/*` to the same path
-here. It has to: the App Store listing's marketing URL is that address, and the
-privacy policy URL Apple requires is a page beneath it. The script checks the
-hostname, so the same file is a no-op on the live site.
+GitHub Pages answers `mattbaylor.github.io/cal-mirror/*` with a 301 to the same
+path here. It has to: the App Store listing's marketing URL is that address, and
+the privacy policy URL Apple requires is a page beneath it.
 
-It is JavaScript rather than a 301 because GitHub Pages only issues that
-redirect when it holds the custom domain itself, and this domain resolves here
-instead. A visitor with JavaScript disabled gets the old site, which is the same
-content — a worse outcome than a redirect, and not a broken one.
+The redirect is GitHub's own behaviour once the Pages site has a custom domain
+set, and it does not care where that domain's DNS points — so the domain can
+resolve to our edge and GitHub still redirects to it. Because the Pages site is
+deployed by workflow rather than from a branch, the domain is a repository
+setting rather than a `CNAME` file in `docs/`; it was set on 15 September 2026
+with:
+
+```
+gh api -X PUT repos/mattbaylor/cal-mirror/pages -f cname=calendarmirror.com
+```
+
+GitHub cannot issue a certificate for a domain that does not resolve to it, so
+that 301 lands on `http://calendarmirror.com/…` and the edge answers with its own
+308 to HTTPS. Two hops, both permanent, no JavaScript; the site sends HSTS so a
+returning browser skips the plaintext one. (Until 15 September the
+same forwarding was done by a `redirect.js` in every page, on the belief that
+Pages only redirected when it held the domain; it does not, and the script is
+gone.)
+
+## Analytics
+
+Every page loads Plausible from `stats.rehosted.us` — our own instance on our
+own infrastructure, so the "no third-party anything" claim above still holds.
+It sets no cookies and keeps no IP addresses; the privacy page says so. The CSP
+allows that one host for `script-src` and `connect-src` and nothing else.
