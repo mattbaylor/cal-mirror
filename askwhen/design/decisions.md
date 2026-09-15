@@ -51,6 +51,18 @@ already handles this better than it looks — the slug 404s *into the invitation
 page*, so a dead link still explains itself to whoever clicks it. Worth
 re-checking if the trial ever gets longer.
 
+**The trial is on the Request Page tier only.** *(15 Sept 2026, Matt, while
+creating the products.)* `me.askwhen.page.annual` carries the 3-month free
+introductory offer; `me.askwhen.subdomain.annual` ($34.99) and
+`me.askwhen.domain.annual` ($69.99) are paid from day one. The trial is for
+finding out whether anyone asks you for a time, not for trying a vanity
+domain — and Apple grants one introductory offer per customer per group
+anyway, so a trialist who upgrades pays regardless. Annual only, "1 Year
+Upfront"; the monthly-with-commitment shape Apple now offers is not enabled.
+Family Sharing off. Subscription group `AskWhen.me`, id 22387296, ranked
+Domain > Subdomain > Page. Server Notifications V2 point at
+`https://askwhen.me/hooks/appstore` and `…/hooks/appstore-sandbox`.
+
 **AskWhen.me is opt-in, and not opting in changes nothing.** *(15 Sept 2026,
 Matt, restating the packaging decision as the promise it actually is.)* An
 owner who never turns the request page on has exactly the privacy position
