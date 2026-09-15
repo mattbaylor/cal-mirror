@@ -1,7 +1,7 @@
 # Tasks
 
 The living board. [`STATUS.md`](STATUS.md) is the narrative — where things
-stand and what is left to ship 2.0 — and is the place to start; this is the
+stand and what is left to ship Calendar Mirror 2.0 and launch AskWhen.me — and is the place to start; this is the
 granular list underneath it.
 
 Last accurate: **11 September 2026, midday.** Anything here that the repo or the
@@ -35,7 +35,7 @@ Judgement, not access. Roughly in the order it starts costing.
 | 🟡 | **Reserve `172.16.1.41` in pfSense** and **add CT 112 to PBS** | The guest has a static address nothing else knows about, and no backup. Both are yours because both are DC-wide config. |
 | 🟡 | **An Infisical machine identity** | User sessions expire in 20–60 minutes and each expiry cost a round trip today. A Universal Auth identity scoped to `calendarmirror-com-v2-yo/prod`, read-only, would let `infisical run` work unattended. |
 | 🟡 | **The request-page UI** | Step 4 built everything under it and nothing of it. Needed, in the order a new owner meets them: the two checkboxes in Manage Mirrors (`RequestPageConfig.blocking` / `.requestCalendar`); a settings sheet for display name, blurb, meeting title and the policy; the StoreKit entitlement → `create`; a notification per collected request with Accept / Decline; and the conflict sheet that shows `RequestChecker`'s alternatives. Yours because it is look-and-feel; the Kit's surface is in `askwhen/README.md` §4. |
-| 🟡 | **1.4.2: ship, or fold into 2.0** | On main, unreleased. askwhen ships as 2.0, so it is either a release of its own or absorbed. |
+| 🟡 | **1.4.2 folds into Calendar Mirror 2.0** | Decided 15 Sept. On main, unreleased; ships with 2.0. |
 | 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. Needs a signed, notarised build, so it is a release rather than a tag. |
 | ⚪ | **Design the emails** *(Matt, 10 Sept)* | All four — confirm, accepted, declined, no-response — are deliberately plain today: one `<p>` after another, no image, no styled button, nothing fetched. The plainness is partly a security stance (a scanner rendering the confirm mail finds nothing to click but a URL whose GET does nothing) and partly that nobody has designed them yet. Whatever they become should keep both properties; the templates are in `askwhen/service/internal/mail/postal.go`, and the same look should probably reach the request page's own states. |
 | ⚪ | **Sit with the request page** | You said you were not sold. `askwhen/web/dist/gallery.html` is every state at true size and opens straight from the filesystem. |
@@ -141,7 +141,7 @@ something of yours — `STATUS.md`, "What is left", items 3, 4, 6, 9 and 13–16
   `delete_branch_on_merge` is on so it does not come back.
 - **The SPF loop** — fixed by Matt, 4 Sept, verified across six domains.
 - **Domain verification**, **the on-demand TLS gate**, **conditional GET on both
-  read paths**, **the deriver's rejection reasons**, **askwhen steps 1 and 2**,
+  read paths**, **the deriver's rejection reasons**, **AskWhen.me steps 1 and 2**,
   **ten design docs** with *Settled* and *Proposed* kept apart — all merged.
 
 ## Standing constraints, and one landmine
@@ -156,7 +156,7 @@ something of yours — `STATUS.md`, "What is left", items 3, 4, 6, 9 and 13–16
   switch to `mattbaylor` and switch back.
 - **Never `git add -A`.** Stage explicitly.
 - **Screenshots come from a synthetic config**, never the live one.
-- **askwhen is opt-in, and not opting in changes nothing.** No network
+- **AskWhen.me is opt-in, and not opting in changes nothing.** No network
   request of any kind until the owner turns the page on. Structural, and
   checked.
 - **It is a request page, never a booking page.**

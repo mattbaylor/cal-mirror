@@ -112,7 +112,7 @@ ever matters, belongs in Caddy where it costs no database write.
 brute-forced.
 
 **3. Counted or attributed — DECIDED 2 Sept 2026: counted, never attributed.**
-An install carries *"came from an askwhen page"* and nothing more. Aggregate
+An install carries *"came from an AskWhen.me page"* and nothing more. Aggregate
 funnel numbers, no cross-owner link, no new storage, and nothing to reverse. It
 is also the honest v1: Apple offers no reliable install attribution without
 deferred deep links or pasteboard tricks.
@@ -142,11 +142,11 @@ Group scheduling is the one that looks small and does.
 ## The coupling nobody has priced: mail
 
 askwhen's confirmation volume rides on `dlvr`, the same Postal relay carrying
-`thebaylors.org` and reHosted's customers. A spam-complaint rate on askwhen mail
+`thebaylors.org` and reHosted's customers. A spam-complaint rate on AskWhen.me mail
 damages a relay other things depend on, and reputation does not scale by adding a
 container.
 
-At volume that argues for askwhen getting its own sending address. `.168`, `.169`
+At volume that argues for AskWhen.me getting its own sending address. `.168`, `.169`
 and `.175` are free. Cheap to plan, expensive to retrofit once reputation is
 established on a shared address — see `../infra/verified.md`.
 

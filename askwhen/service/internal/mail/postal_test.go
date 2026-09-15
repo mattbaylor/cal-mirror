@@ -35,7 +35,7 @@ func fakePostal(t *testing.T, answer string) (*httptest.Server, *sendRequest, *h
 const success = `{"status":"success","time":0.02,"flags":{},"data":{"message_id":"abc@dlvr","messages":{"alex@example.com":{"id":1,"token":"x"}}}}`
 
 func client(srv *httptest.Server) *Postal {
-	return &Postal{BaseURL: srv.URL, APIKey: "k3y", From: "askwhen.me <no-reply@askwhen.me>", Client: srv.Client()}
+	return &Postal{BaseURL: srv.URL, APIKey: "k3y", From: "AskWhen.me <no-reply@askwhen.me>", Client: srv.Client()}
 }
 
 func TestSendsTheFieldsPostalExpects(t *testing.T) {
@@ -48,7 +48,7 @@ func TestSendsTheFieldsPostalExpects(t *testing.T) {
 	if len(got.To) != 1 || got.To[0] != "alex@example.com" {
 		t.Fatalf("to = %v", got.To)
 	}
-	if got.From != "askwhen.me <no-reply@askwhen.me>" {
+	if got.From != "AskWhen.me <no-reply@askwhen.me>" {
 		t.Fatalf("from = %q", got.From)
 	}
 	if got.Subject == "" || got.PlainBody == "" || got.HTMLBody == "" {
