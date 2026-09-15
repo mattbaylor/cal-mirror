@@ -45,6 +45,16 @@ struct ContentView: View {
                         }
                     }
                 }
+                // Below the mirrors and above the sync settings: this is a
+                // second thing the app does, not a setting of the first. Off
+                // by default, and drawing it costs no network.
+                Section {
+                    NavigationLink {
+                        RequestPageSetupView()
+                    } label: {
+                        RequestPageRow(page: model.config.requestPage)
+                    }
+                }
                 // iOS has no launchd; background refresh is the only unattended
                 // path, and until now there was no way to set its interval here.
                 Section("Background sync") {

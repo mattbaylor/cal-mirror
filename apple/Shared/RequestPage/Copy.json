@@ -1,0 +1,43 @@
+{
+  "_comment": [
+    "The request-page UI's words, in one place, because they are the design.",
+    "Generated from here: Shared/RequestPage/Copy.swift (what the app shows) and",
+    "tools/contact-sheet.html (what Matt reviews). Edit this file, run",
+    "tools/gen-request-copy.py, commit all three. CI diffs the generated files,",
+    "so the sheet cannot drift from the app the way a mockup does.",
+    "Glossary rules: request, never book. Ask, accept, decline. Never reserve,",
+    "never schedule-at-the-owner, never confirmed-slot-before-acceptance."
+  ],
+
+  "dormantRow": {
+    "title": "Request page",
+    "off": "Off",
+    "blurb": "Let people ask you for a time. Nothing leaves this Mac until you turn it on.",
+    "blurbPhone": "Let people ask you for a time. Nothing leaves this iPhone until you turn it on."
+  },
+
+  "explainer": {
+    "title": "A page where people can ask for a time",
+    "paragraphs": [
+      "You offer a handful of times you are willing to be asked about. Someone opens your page, picks one, and tells you who they are.",
+      "Nothing lands in your calendar until you accept. Every request comes to this device and you answer it here — askwhen.me cannot write to your calendar, because you never give it access.",
+      "Turning this on means a server holds two things: the times you chose to offer, and requests from people who asked for one. It never sees your calendar, your events, your address, or your name beyond the label you pick."
+    ],
+    "costHeading": "What it costs",
+    "cost": "Setting it up is free and happens entirely on this device. Publishing a page needs a subscription — free for the first 90 days — and that comes at the end, after you have seen the page you would be publishing.",
+    "primary": "Set up a request page",
+    "footnote": "Nothing has been sent anywhere. Setting this up does not send anything either — the first time this app touches the network is the moment you ask to see the price."
+  },
+
+  "calendars": {
+    "section": "Requests",
+    "blockTitle": "Block for requests",
+    "blockCaption": "Events here make you unavailable, so no time that clashes with one is ever offered. Turn this on for every calendar that holds real commitments.",
+    "useTitle": "Use for requests",
+    "useCaption": "Requests you accept are written here as ordinary events. Exactly one calendar.",
+    "privacy": "Only the busy-or-free shape of these calendars is ever read. Titles, locations, attendees, notes and which calendar an event came from stop at this device and are never published.",
+    "noneBlocking": "No calendar is blocking yet, so every hour in your day would be offered. Pick at least one.",
+    "noRequestCalendar": "Pick one calendar for accepted requests to be written into.",
+    "readOnly": "Read-only — accepted requests cannot be written here."
+  }
+}

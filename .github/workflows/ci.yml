@@ -29,6 +29,16 @@ jobs:
       - name: Run CalMirrorKit pure-logic self-check
         working-directory: apple
         run: swift run cmk-check
+      # The request-page copy is written once in Copy.json and generated into
+      # both the app's strings and the contact sheet Matt reviews. If those
+      # could drift, the sheet would show words the app does not ship — which
+      # is worse than having no sheet, because it gets reviewed as if it were
+      # true. Same guard the web app puts on its generated dump type.
+      - name: Request-page copy is in sync with its source
+        working-directory: apple
+        run: |
+          python3 tools/gen-request-copy.py
+          git diff --exit-code -- Shared/RequestPage/Copy.swift tools/contact-sheet.html
 
   build-standalone:
     # The engine and the menu-bar UI: plain swiftc, ad-hoc signed. No project

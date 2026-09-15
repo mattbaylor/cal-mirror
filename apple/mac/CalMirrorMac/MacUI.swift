@@ -73,6 +73,7 @@ struct MenuContent: View {
 
 struct ManageView: View {
     @ObservedObject var model: Store
+    @State private var showingSetup = false
 
     var body: some View {
         Form {
@@ -95,9 +96,26 @@ struct ManageView: View {
                     MacMirrorRow(model: model, m: $m)
                 }
             }
+            // The request page sits at the bottom of the window the two
+            // checkboxes live in, so "which of these calendars count" is asked
+            // where the owner is already looking at their calendars.
+            Section {
+                Button { showingSetup = true } label: {
+                    RequestPageRow(page: model.config.requestPage)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .formStyle(.grouped)
         .frame(minWidth: 640, minHeight: 480)
+        .sheet(isPresented: $showingSetup) {
+            NavigationStack { RequestPageSetupView() }
+                .environmentObject(model)
+                .frame(minWidth: 560, minHeight: 520)
+                .toolbar { ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { showingSetup = false }
+                } }
+        }
         .onDisappear { NSApp.setActivationPolicy(.accessory) }
     }
 }
