@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="nav.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendar Mirror — What's coming</title>
 <meta name="description" content="Calendar Mirror 2.0 adds the ability to turn on AskWhen.me: a page where other people ask you for a time and you accept or decline. What it is, why it isn't a booking page, and what it costs.">
@@ -17,12 +18,6 @@
     color:var(--tx);background:radial-gradient(1000px 500px at 80% -10%, rgba(58,160,255,.14), transparent 60%),var(--bg);
     -webkit-font-smoothing:antialiased}
   .wrap{max-width:720px;margin:0 auto;padding:0 22px 80px}
-  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;margin-bottom:20px;flex-wrap:wrap;gap:12px}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px;text-decoration:none;color:var(--tx)}
-  .brand img{width:30px;height:30px;border-radius:8px;display:block}
-  .nav-links{display:flex;gap:18px;align-items:center;font-size:14px;color:var(--mut);flex-wrap:wrap}
-  .nav-links a{text-decoration:none;color:var(--mut)}.nav-links a:hover{color:var(--tx)}
-  .nav-links a[aria-current]{color:var(--tx);font-weight:600}
   a{color:var(--accent)}
   h1{font-size:32px;letter-spacing:-.5px;margin:.2em 0 .1em}
   .sub{color:var(--mut);margin:0 0 28px}
@@ -42,19 +37,8 @@
 </style>
 </head>
 <body>
+<cm-nav current="coming"></cm-nav>
 <div class="wrap">
-  <nav>
-    <a class="brand" href="./"><img src="icon.png" alt="Calendar Mirror icon"> Calendar Mirror</a>
-    <div class="nav-links">
-      <a href="#what">What it does</a>
-      <a href="#filters">Which events</a>
-      <a href="#how">How it works</a>
-      <a href="vs/">Compare</a>
-      <a href="changelog.html">Release notes</a>
-      <a href="coming.html" aria-current="page">What’s coming</a>
-      <a href="privacy.html">Privacy</a>
-    </div>
-  </nav>
   <h1>What&rsquo;s coming</h1>
   <p class="sub">Calendar Mirror 2.0, and a second product you can turn on from it. No date &mdash; it ships when it&rsquo;s done.</p>
 

@@ -63,7 +63,7 @@ the page and *provably* do not reach the service, and that is checkable in any
 network log rather than promised in a privacy policy. It is the same claim the
 page already makes about the owner, made a second time about the visitor.
 
-Size is not a problem: a fortnight of busy intervals packed as deltas is a few
+Size is not a problem: two weeks of busy intervals packed as deltas is a few
 hundred bytes.
 
 **And it points the flywheel the right way.** Every request page is a Calendar

@@ -48,7 +48,7 @@ should appear next to the reason, every time, or it reads as a missing feature.
 **Consequence for the build:** steal the conditional shape anyway. Not for
 auto-confirming — we cannot — but for **auto-declining and prioritizing**. "Free
 email provider, no note, asking for tomorrow" is a different queue item from
-"company domain, wrote three sentences, asking for a fortnight out", and the
+"company domain, wrote three sentences, asking for two weeks out", and the
 device already has everything needed to say so. See *Worth stealing* below.
 
 ---

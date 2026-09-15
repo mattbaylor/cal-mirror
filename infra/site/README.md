@@ -74,4 +74,6 @@ gone.)
 Every page loads Plausible from `stats.rehosted.us` — our own instance on our
 own infrastructure, so the "no third-party anything" claim above still holds.
 It sets no cookies and keeps no IP addresses; the privacy page says so. The CSP
-allows that one host for `script-src` and `connect-src` and nothing else.
+allows that one host for `script-src` and `connect-src`, plus `'self'` for
+`docs/nav.js` — the site header as a web component, `<cm-nav>`, so seventeen
+pages share one copy of it — and nothing else.
