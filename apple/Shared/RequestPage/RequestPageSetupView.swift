@@ -49,23 +49,46 @@ struct RequestPageSetupView: View {
                 RequestCalendarFields(page: model.requestPageBinding,
                                       calendars: model.calendars,
                                       onChange: { model.save() })
-                Section {
-                    // Deliberately not disabled on an incomplete choice. The
-                    // warnings in the section above say what is missing, and
-                    // `isReady` refuses to publish without it — a dead button
-                    // with no explanation is the worse of the two, and this
-                    // screen is reachable again from the row at any time.
-                    Button("Continue") { step = .display }
-                }
+                next(.display)
             }
             .formStyle(.grouped)
-        default:
-            // Honest placeholder rather than a half-screen: these are the next
-            // tranche, and a convincing-looking empty step would be the kind of
-            // thing that gets reviewed as if it were real.
+        case .display:
+            Form {
+                RequestDisplayFields(page: model.requestPageBinding,
+                                     onChange: { model.save() })
+                next(.policy)
+            }
+            .formStyle(.grouped)
+        case .policy:
+            Form {
+                RequestPolicyFields(policy: model.requestPageBinding.policy,
+                                    onChange: { model.save() })
+                next(.preview)
+            }
+            .formStyle(.grouped)
+        case .preview:
+            Form {
+                RequestPreview(page: model.requestPage, busy: model.busySource)
+                next(.offer)
+            }
+            .formStyle(.grouped)
+        case .offer:
+            // The next tranche, and the one screen in this flow permitted to
+            // touch the network. An honest placeholder rather than a plausible
+            // empty screen, which would get reviewed as if it were real.
             ContentUnavailableView("Not built yet",
                                    systemImage: "hammer",
                                    description: Text("Step \(step.rawValue) — \(step.title)."))
+        }
+    }
+
+    /// Deliberately never disabled. Each screen says what is still missing
+    /// where the gap is, and `isReady` refuses to publish without it — a dead
+    /// button with no explanation attached is the worse of the two, and every
+    /// step stays reachable from the row afterwards.
+    private func next(_ to: Step) -> some View {
+        Section {
+            Button(to == .offer ? "See what it costs" : "Continue") { step = to }
         }
     }
 }

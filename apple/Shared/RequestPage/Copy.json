@@ -8,14 +8,12 @@
     "Glossary rules: request, never book. Ask, accept, decline. Never reserve,",
     "never schedule-at-the-owner, never confirmed-slot-before-acceptance."
   ],
-
   "dormantRow": {
     "title": "Request page",
     "off": "Off",
     "blurb": "Let people ask you for a time. Nothing leaves this Mac until you turn it on.",
     "blurbPhone": "Let people ask you for a time. Nothing leaves this iPhone until you turn it on."
   },
-
   "explainer": {
     "title": "A page where people can ask for a time",
     "paragraphs": [
@@ -28,7 +26,6 @@
     "primary": "Set up a request page",
     "footnote": "Nothing has been sent anywhere. Setting this up does not send anything either — the first time this app touches the network is the moment you ask to see the price."
   },
-
   "calendars": {
     "section": "Requests",
     "blockTitle": "Block for requests",
@@ -39,5 +36,75 @@
     "noneBlocking": "No calendar is blocking yet, so every hour in your day would be offered. Pick at least one.",
     "noRequestCalendar": "Pick one calendar for accepted requests to be written into.",
     "readOnly": "Read-only — accepted requests cannot be written here."
+  },
+  "display": {
+    "section": "Your page",
+    "nameTitle": "Display name",
+    "namePlaceholder": "Matt Baylor",
+    "nameCaption": "Required, and the only thing on your page that identifies you — everything else a visitor sees is a list of times. Any label works: your name, your initials, or what you do. You decide how much that discloses.",
+    "blurbTitle": "One line about it",
+    "blurbPlaceholder": "30 minutes, usually about refereeing or calendars.",
+    "blurbCaption": "Sits under your name. Anyone with the link reads it, so keep it to what the time is for.",
+    "meetingSection": "When you accept",
+    "titleTitle": "Event title",
+    "titlePlaceholder": "Meeting",
+    "titleCaption": "What the event is called in your calendar. You choose it, never the person asking — a stranger's words do not become a title in your calendar. What they write goes in the event's notes, where it is obviously theirs.",
+    "locationTitle": "Location",
+    "locationPlaceholder": "Optional — a room, or a link",
+    "locationCaption": "Goes into the event and into the calendar file the person receives, so whoever you accept will see it.",
+    "nameMissing": "A page needs a name. Without one it looks like a form asking a stranger for their email address, which is what a phishing page looks like too."
+  },
+  "policy": {
+    "section": "Your day",
+    "sentence": "Answer it the way you would say it out loud. The preview underneath shows real dates, so a mistake is visible before anyone else sees it.",
+    "dayStarts": "My day starts at",
+    "dayEnds": "and ends at",
+    "zoneTitle": "Time zone",
+    "zoneCaption": "Stated, not guessed from this device. A laptop that travels must not quietly re-read “my day starts at 9” as 9am somewhere else.",
+    "lunchTitle": "Keep a gap clear",
+    "lunchCaption": "One mid-day gap. A list of arbitrary exclusions would be a second calendar wearing a disguise — put those in a blocking calendar instead.",
+    "weekdaysTitle": "Offer on",
+    "horizonTitle": "How far ahead",
+    "horizonCaption": "How far out someone can ask. A longer horizon puts more of your future shape on one screen, so this is a privacy control as much as an accuracy one. Between 2 and 45 days; beyond that the times are fiction, because calendars fill.",
+    "noticeTitle": "Notice I need",
+    "noticeCaption": "Nothing inside this window is offered. It guards against a request landing with less warning than your device needs to collect it.",
+    "maxPerDayTitle": "Most requests a day",
+    "maxPerDayCaption": "This matters more than it looks. Publishing every free half-hour tells a stranger your week is empty; offering four says nothing about the other twelve.",
+    "slotTitle": "How long an offer is",
+    "slotCaption": "The same number becomes the meeting length on your page and in the calendar file you send.",
+    "alignTitle": "Start times land on",
+    "alignCaption": "Offers begin on a multiple of this past the hour, so people see :00 and :30 rather than :07. Only values that divide into 60 are offered, because the others walk through the hour.",
+    "bufferTitle": "Keep clear either side",
+    "bufferCaption": "Held free around anything real in your calendar, so nothing lands wheel-to-wheel against a meeting the person asking cannot see."
+  },
+  "preview": {
+    "section": "What people see",
+    "headingOne": "You are offering %d time across %d days",
+    "headingMany": "You are offering %d times across %d days",
+    "privacy": "A gap on your page could be a meeting, your lunch, a day you blacked out, or simply your daily cap. Nothing on the page says which, and that is the point.",
+    "emptyDayHeading": "Days offering nothing",
+    "whyHeading": "Why",
+    "reasons": {
+      "clockSkipped": "the clock skips that hour",
+      "pastDayEnd": "would run past the end of your day",
+      "minimumNotice": "inside your notice window",
+      "lunch": "your lunch gap",
+      "busy": "busy",
+      "cappedPerDay": "over your daily cap"
+    },
+    "dayReasons": {
+      "weekdayNotOffered": "You do not offer this weekday.",
+      "blackoutDate": "You blacked this date out.",
+      "allDayEvent": "An all-day event covers it.",
+      "dayUnavailable": "This device could not resolve the day."
+    },
+    "problems": {
+      "unknownTimeZone": "This device does not know the zone your policy names, so nothing is offered at all. Pick the zone again.",
+      "dayWindowInvalid": "The start and end of your day do not make a usable window.",
+      "maxPerDayNotPositive": "Your daily cap is zero, so nothing can be offered."
+    },
+    "cappedNote": "Times you could have offered and chose not to. That is a different answer to “why is nothing showing” than being busy.",
+    "stale": "Calculated just now from the calendars on this device. Nothing here has been published.",
+    "emptyPage": "Your page would be empty. Nobody can ask you for anything until something is offered — the reasons are on each day below."
   }
 }

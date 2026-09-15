@@ -27,7 +27,11 @@ final class Store: ObservableObject {
     private var observerToken: NSObjectProtocol?
     #endif
 
-    private let engine = MirrorEngine()
+    // Not private: the request page's preview derives slots against these same
+    // calendars, and it must ask the one engine rather than stand up a second
+    // EventKit store. `busyIntervals` is the only thing it uses, and that is
+    // where title, location, attendees and account already stop.
+    let engine = MirrorEngine()
 
     /// Config lives in the app container's Application Support (sandbox-safe).
     /// `nonisolated` so background code (iOS `BackgroundSync`) can read it too.

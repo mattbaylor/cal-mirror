@@ -780,6 +780,18 @@ do {
     check(try JSONDecoder().decode(RequestPolicy.self, from: data) == p, "a policy round-trips through encode/decode")
     check(String(data: data, encoding: .utf8)!.contains("\"mon\""), "weekdays are written as names, not Calendar numbers")
     check(RequestPolicy.Weekday.mon.calendarWeekday == 2, "mon is Calendar's 2 (Sunday is 1)")
+
+    // The settings UI binds a time picker to these strings, so this parse is
+    // now a shared contract rather than a private helper. Both sides have to
+    // agree about the edges or the UI accepts what the deriver then refuses.
+    check(RequestPolicy.minutesPastMidnight("09:30") == 570, "09:30 is 570 minutes past midnight")
+    check(RequestPolicy.minutesPastMidnight("00:00") == 0, "midnight is zero, not nil")
+    check(RequestPolicy.minutesPastMidnight("24:00") == 1440, "24:00 is a usable end — 'my day ends at midnight'")
+    check(RequestPolicy.minutesPastMidnight("24:01") == nil, "but nothing past it is")
+    check(RequestPolicy.minutesPastMidnight("07:60") == nil, "a 60th minute is refused, not carried into the next hour")
+    check(RequestPolicy.minutesPastMidnight("9:30") == 570, "a single-digit hour parses")
+    check(RequestPolicy.minutesPastMidnight("0930") == nil, "a missing separator is refused rather than guessed at")
+    check(RequestPolicy.minutesPastMidnight("") == nil, "and so is an empty string")
     check(RequestPolicy(timeZone: "Mars/Olympus").resolvedTimeZone == nil, "an unknown zone resolves to nil, not to the device's own")
 }
 

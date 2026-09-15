@@ -208,7 +208,13 @@ extension RequestPolicy {
     /// rather than guessing at an hour on the owner's behalf.
     ///
     /// 24:00 is accepted as an end so "my day ends at midnight" is expressible.
-    static func minutesPastMidnight(_ hhmm: String) -> Int? {
+    ///
+    /// Public because the settings UI binds a time picker to these same
+    /// strings. A second parser in the app would be a second opinion about what
+    /// "09:30" means, and the two would disagree on exactly the inputs that
+    /// matter — "9:30", "24:00", "07:60" — with the UI accepting what the
+    /// deriver then refuses.
+    public static func minutesPastMidnight(_ hhmm: String) -> Int? {
         let parts = hhmm.split(separator: ":")
         guard parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]),
               (0...24).contains(h), (0...59).contains(m), h * 60 + m <= 24 * 60 else { return nil }

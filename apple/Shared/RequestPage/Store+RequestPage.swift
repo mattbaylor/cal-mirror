@@ -34,4 +34,11 @@ extension Store {
     /// are still listed — the row disables its own control and says why, which
     /// is more use than a calendar silently missing from the list.
     var requestCalendarCandidates: [CalendarInfo] { calendars.filter(\.writable) }
+
+    /// What the preview derives against. Handed to the view as a function so
+    /// the same view renders from a fixture with no EventKit — which is how it
+    /// gets screenshotted from a synthetic config rather than a real calendar.
+    var busySource: (_ calendars: [CalRef], _ from: Date, _ to: Date) -> [BusyInterval] {
+        { [engine] cals, from, to in engine.busyIntervals(in: cals, from: from, to: to) }
+    }
 }

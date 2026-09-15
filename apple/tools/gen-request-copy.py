@@ -37,7 +37,7 @@ def esc(s: str) -> str:
 
 
 def gen_swift(c: dict) -> str:
-    out = [BANNER, "\nimport Foundation\n",
+    out = [BANNER, "\nimport Foundation\nimport CalMirrorKit\n",
            "\n/// The request-page UI's words. See Copy.json for why they live in one place.\n",
            "enum RequestCopy {\n"]
 
@@ -67,6 +67,45 @@ def gen_swift(c: dict) -> str:
     for k in ("section", "blockTitle", "blockCaption", "useTitle", "useCaption",
               "privacy", "noneBlocking", "noRequestCalendar", "readOnly"):
         out.append(f"        static let {k} = {swift_string(cal[k])}\n")
+    out.append("    }\n")
+
+    out.append("\n    enum Display {\n")
+    for k, v in c["display"].items():
+        out.append(f"        static let {k} = {swift_string(v)}\n")
+    out.append("    }\n")
+
+    out.append("\n    enum Policy {\n")
+    for k, v in c["policy"].items():
+        out.append(f"        static let {k} = {swift_string(v)}\n")
+    out.append("    }\n")
+
+    pv = c["preview"]
+    out.append("\n    enum Preview {\n")
+    for k in ("section", "headingOne", "headingMany", "emptyPage", "privacy",
+              "emptyDayHeading", "whyHeading", "cappedNote", "stale"):
+        out.append(f"        static let {k} = {swift_string(pv[k])}\n")
+    # Switches rather than dictionaries: the Kit's enums are closed, so a
+    # missing case is a compile error here instead of a blank line in the UI
+    # the first time somebody adds a rejection reason.
+    out.append("\n        /// Why individual candidates were dropped. Lower-case\n")
+    out.append("        /// fragments — they are joined into a sentence.\n")
+    out.append("        static func reason(_ r: Rejection) -> String {\n")
+    out.append("            switch r {\n")
+    for k, v in pv["reasons"].items():
+        out.append(f"            case .{k}: return {swift_string(v)}\n")
+    out.append("            }\n        }\n")
+    out.append("\n        /// Why a whole day was excluded before any time was considered.\n")
+    out.append("        static func reason(_ r: DayRejection) -> String {\n")
+    out.append("            switch r {\n")
+    for k, v in pv["dayReasons"].items():
+        out.append(f"            case .{k}: return {swift_string(v)}\n")
+    out.append("            }\n        }\n")
+    out.append("\n        /// Why the policy itself offers nothing, whatever the calendar says.\n")
+    out.append("        static func reason(_ p: PolicyProblem) -> String {\n")
+    out.append("            switch p {\n")
+    for k, v in pv["problems"].items():
+        out.append(f"            case .{k}: return {swift_string(v)}\n")
+    out.append("            }\n        }\n")
     out.append("    }\n}\n")
     return "".join(out)
 
@@ -82,6 +121,13 @@ def row(title, caption=None, control="toggle", value=None):
     cap = f'<p class="cap">{esc(caption)}</p>' if caption else ""
     return (f'<div class="row"><div class="rowmain"><span class="t">{esc(title)}</span>'
             f'{val}{ctl}</div>{cap}</div>')
+
+
+def field(title, value, caption, ghost=False):
+    cls = "val ghost" if ghost else "val"
+    return (f'<div class="row"><div class="rowmain"><span class="t">{esc(title)}</span>'
+            f'<span class="{cls}">{esc(value)}</span></div>'
+            f'<p class="cap">{esc(caption)}</p></div>')
 
 
 def gen_sheet(c: dict) -> str:
@@ -115,10 +161,64 @@ def gen_sheet(c: dict) -> str:
           f'<p class="cap pad8">{esc(cal["useCaption"])}</p>'
           f'<p class="cap pad8 priv">{esc(cal["privacy"])}</p></div></div>')
 
+    dsp, pol, pv = c["display"], c["policy"], c["preview"]
+
+    s4 = ('<div class="scr"><div class="nav">' + esc(dsp["section"]) + "</div>"
+          + '<div class="grp"><div class="hdr">' + esc(dsp["section"]) + "</div>"
+          + field(dsp["nameTitle"], "Matt Baylor", dsp["nameCaption"])
+          + field(dsp["blurbTitle"], dsp["blurbPlaceholder"], dsp["blurbCaption"], ghost=True)
+          + "</div>"
+          + '<div class="grp"><div class="hdr">' + esc(dsp["meetingSection"]) + "</div>"
+          + field(dsp["titleTitle"], "Meeting", dsp["titleCaption"])
+          + field(dsp["locationTitle"], dsp["locationPlaceholder"], dsp["locationCaption"], ghost=True)
+          + "</div></div>")
+
+    # The sentence, as architecture.md §3 phrases it — the whole point is that
+    # it reads aloud, so the sheet has to show it reading aloud.
+    sentence = (f'<p class="say"><b>{esc(pol["dayStarts"])}</b> <u>9:00 AM</u> '
+                f'<b>{esc(pol["dayEnds"])}</b> <u>5:00 PM</u><br>'
+                f'<b>{esc(pol["zoneTitle"])}</b> <u>America/Denver</u><br>'
+                f'<b>{esc(pol["lunchTitle"])}</b> <u>12:00</u>–<u>1:30 PM</u><br>'
+                f'<b>{esc(pol["weekdaysTitle"])}</b> '
+                + "".join(f'<span class="day {"on" if d in "MTWTF" else ""}">{d}</span>'
+                          for d in ["S", "M", "T", "W", "T", "F", "S"][0:7])
+                + "</p>")
+    s5 = ('<div class="scr"><div class="nav">' + esc(pol["section"]) + "</div>"
+          + '<div class="grp"><div class="pad14">' + sentence
+          + f'<p class="cap">{esc(pol["sentence"])}</p></div></div>'
+          + '<div class="grp">'
+          + row(pol["horizonTitle"], pol["horizonCaption"], "none", "14 days")
+          + row(pol["noticeTitle"], pol["noticeCaption"], "none", "12 hours")
+          + row(pol["maxPerDayTitle"], pol["maxPerDayCaption"], "none", "4")
+          + row(pol["slotTitle"], pol["slotCaption"], "none", "30 min")
+          + row(pol["alignTitle"], pol["alignCaption"], "none", ":00 and :30")
+          + row(pol["bufferTitle"], pol["bufferCaption"], "none", "15 min")
+          + "</div></div>")
+
+    heading = pv["headingMany"].replace("%d", "{}").format(11, 14)
+    days = [("Mon 21", ["9:00", "10:30", "2:00"]), ("Tue 22", ["9:30", "11:00"]),
+            ("Wed 23", []), ("Thu 24", ["9:00", "1:30", "3:00"])]
+    grid = ""
+    for label, times in days:
+        chips = ("".join(f'<span class="slot">{t}</span>' for t in times)
+                 or '<span class="empty">nothing offered</span>')
+        grid += f'<div class="dayrow"><span class="dl">{esc(label)}</span><span class="chips">{chips}</span></div>'
+    s6 = ('<div class="scr"><div class="nav">' + esc(pv["section"]) + "</div>"
+          + f'<div class="grp"><div class="pad14"><h4>{esc(heading)}</h4>'
+          + f'<p class="cap">{esc(pv["stale"])}</p></div>{grid}</div>'
+          + '<div class="grp"><div class="hdr">' + esc(pv["emptyDayHeading"]) + "</div>"
+          + '<div class="pad14"><p class="body sm"><b>Wed 23</b> — 6 busy, 2 '
+          + esc(pv["reasons"]["cappedPerDay"]) + ", 1 " + esc(pv["reasons"]["lunch"])
+          + f'</p><p class="cap">{esc(pv["cappedNote"])}</p></div></div>'
+          + f'<div class="grp"><p class="cap pad14 priv">{esc(pv["privacy"])}</p></div></div>')
+
     cells = [
         ("1 · The dormant row", "Off by default. Drawing this costs no network.", s1),
         ("2 · What this is", "The opt-in. Names the cost up front so screen 7 is not a surprise.", s2),
         ("3 · Which calendars count", "Two checkboxes per calendar, where the owner already is.", s3),
+        ("4 · Your page", "The one identifying field, and who titles the event.", s4),
+        ("5 · Your day", "Asked as a sentence, not a form. Bounds are product decisions.", s5),
+        ("6 · What people see", "Real dates from the real calendar, before anyone else sees them.", s6),
     ]
     body = "".join(
         f'<div class="cell"><h2>{esc(t)}</h2><p>{esc(sub)}</p>{scr}</div>'
@@ -188,10 +288,28 @@ def gen_sheet(c: dict) -> str:
       .pill {{ font-size: 11px; padding: 3px 8px; border-radius: 99px; white-space: nowrap;
         border: 1px solid var(--sep); color: var(--note); }}
       .pill.on {{ background: var(--tint); border-color: var(--tint); color: #fff; }}
+      .ghost {{ opacity: .5; }}
+      .pad14 {{ padding: 14px 16px; }}
+      .say {{ font-size: 16px; line-height: 2; margin: 0 0 10px; }}
+      .say u {{ text-decoration: none; border-bottom: 1.5px dashed var(--tint);
+        color: var(--tint); padding: 1px 3px; }}
+      .day {{ display: inline-block; width: 24px; height: 24px; line-height: 24px;
+        text-align: center; border-radius: 99px; font-size: 12px; margin-right: 3px;
+        background: var(--sep); color: var(--note); }}
+      .day.on {{ background: var(--tint); color: #fff; }}
+      h4 {{ font-size: 17px; margin: 0 0 4px; }}
+      .body.sm {{ font-size: 13.5px; margin: 0 0 6px; }}
+      .dayrow {{ display: flex; gap: 10px; align-items: baseline; padding: 9px 16px;
+        border-top: 1px solid var(--sep); }}
+      .dl {{ width: 58px; color: var(--note); font-size: 13px; flex: none; }}
+      .chips {{ display: flex; flex-wrap: wrap; gap: 5px; }}
+      .slot {{ font-size: 12.5px; padding: 3px 9px; border-radius: 6px;
+        border: 1px solid var(--tint); color: var(--tint); }}
+      .empty {{ font-size: 12.5px; color: var(--note); font-style: italic; }}
     </style>
   </head>
   <body>
-    <h1>Request page — setup, screens 1–3</h1>
+    <h1>Request page — setup, screens 1–6</h1>
     <p class="lede">Every frame at 390&nbsp;pt, the iPhone logical width. Light and dark follow
       your system setting — switch it to see both.</p>
     <p class="warn">This is not a screenshot and cannot be: the app is SwiftUI and this is HTML.
