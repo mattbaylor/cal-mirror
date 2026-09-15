@@ -19,6 +19,12 @@ metadata/{ios,mac}/privacy_policy_url.txt    the privacy page on it
 
 Upload order matters — the files are numbered in the order they should appear.
 
+## App Privacy
+
+`privacy-labels.md` — the nutrition-label questionnaire answered question by
+question for 2.0, with the reasoning and what a reviewer may ask. Hand-entered
+in App Store Connect; there is no API for it.
+
 ## Listing fields — how to fill them in, and what to avoid
 
 Paste these from `metadata/<platform>/`. Two of the fields carry traps.
