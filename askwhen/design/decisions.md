@@ -74,14 +74,9 @@ the slug does not exist until the trial is opted into. Everything before that
 writes only to the local `RequestPageConfig`, and an owner who configures a page
 and never opts in ends with a complete local policy and no slug.
 
-Whether they also end with **no network request ever made** is not settled by
-this entry, and is the one question the ordering opens: the opt-in decision
-below puts StoreKit's product load at "when the owner opens the request-page
-setup", which under this ordering is five screens before any price is shown. If
-the load moves to the tier screen instead, setup is local end to end and someone
-who explores it and backs out has still never touched the network. That is a
-stronger reading of the same promise rather than a different one, but it is
-Matt's to make, and until he does the UI must not claim either.
+They also end with **no network request ever made** — settled below, *"The
+product load happens on the offer screen"*, which resolves the one question
+this ordering opened.
 
 **The trial is on the Request Page tier only.** *(15 Sept 2026, Matt, while
 creating the products.)* `me.askwhen.page.annual` carries the 3-month free
@@ -94,6 +89,35 @@ Upfront"; the monthly-with-commitment shape Apple now offers is not enabled.
 Family Sharing off. Subscription group `AskWhen.me`, id 22387296, ranked
 Domain > Subdomain > Page. Server Notifications V2 point at
 `https://askwhen.me/hooks/appstore` and `…/hooks/appstore-sandbox`.
+
+**The offer screen sells the Request Page trial, not a choice of three.**
+*(15 September 2026)* Matt. Screen 7 of the setup flow offers
+`me.askwhen.page.annual` — 90 days free, then its price — as the single live
+action. Subdomain and domain are shown so the ladder is discoverable, but as
+*available now, or upgrade any time*, not as a third of a decision.
+
+It follows from the entry above rather than adding to it. The trial exists on
+the page tier only, and Apple grants one introductory offer per customer per
+group ever, so a three-way picker where one option is free and two are not is
+not a real choice — it is a free option with two decoys beside it, and every
+rational owner takes the free one. Worse, the two paid tiers are the two a new
+owner cannot yet evaluate: a custom subdomain is worth nothing before there is
+a page to put on it, and *several pages* answers a problem nobody has on their
+first day. They are upgrades, and they belong where the owner meets the want.
+
+**The product load happens on the offer screen.** *(15 September 2026)* Matt.
+StoreKit's `Product.products(for:)` — the app's first network request of any
+kind — runs when screen 7 is shown, not when the owner opens the setup.
+
+This sharpens the opt-in entry below, which says "the app loads products when
+the owner opens the request-page setup"; that ruled out a fetch at launch,
+and this rules out a fetch the owner never asked to pay for. Everything from
+the explainer through the preview is local, so an owner can open the setup,
+pick calendars, write a policy, look at the slots their own calendar would
+offer, decide against the whole thing and close it — having made no network
+request at all. The promise now holds through setup rather than only up to it,
+and it is testable: the offer screen is the only place in the flow that may
+touch the network before a page exists.
 
 **AskWhen.me is opt-in, and not opting in changes nothing.** *(15 Sept 2026,
 Matt, restating the packaging decision as the promise it actually is.)* An
