@@ -45,7 +45,7 @@ because that is where someone building it would actually be looking.
 
 ## The shape of the load
 
-Unusual, and favourable:
+Unusual, and favorable:
 
 | Load | Kind | Grows with |
 |---|---|---|

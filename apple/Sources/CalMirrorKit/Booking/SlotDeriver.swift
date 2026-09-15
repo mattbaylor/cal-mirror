@@ -191,7 +191,7 @@ public enum SlotDeriver {
     ///
     /// `requireExact` asks whether the instant we got back really is the time we
     /// asked for. `Calendar` will happily hand back a nearby instant for a time
-    /// the clock skipped, which is the right behaviour for a reminder and the
+    /// the clock skipped, which is the right behavior for a reminder and the
     /// wrong one for an offer — nobody can meet you at 2:30am on the morning
     /// 2:30am did not happen.
     static func wallClock(_ minute: Int, on day: Date, cal: Calendar, requireExact: Bool = false) -> Date? {

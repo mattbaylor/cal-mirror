@@ -36,7 +36,7 @@ CATCHALL = """
 # askwhen.me custom domains and subdomains. ENABLED 10 Sept 2026.
 #
 # Last, so it matches only hostnames nothing above claims. Every certificate
-# issued here was authorised by the on_demand_tls ask in the global options —
+# issued here was authorized by the on_demand_tls ask in the global options —
 # see the comment there, and askwhen/infra/edge.md in the cal-mirror repo.
 # Customers CNAME at edge.askwhen.me; *.askwhen.me is a wildcard A record.
 https:// {

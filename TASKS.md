@@ -34,13 +34,13 @@ Then the design loop for the app UI, in its own session.
 ## Asks — none open
 
 Both of the 4 September asks were answered (DNS `Edit` on the Cloudflare token;
-Postal organisation, sending domain and API key). Nothing is waiting on access.
+Postal organization, sending domain and API key). Nothing is waiting on access.
 
 ---
 
 ## Yours, and only yours
 
-Judgement, not access. Roughly in the order it starts costing.
+Judgment, not access. Roughly in the order it starts costing.
 
 | | What | The call |
 |---|---|---|
@@ -54,7 +54,7 @@ Judgement, not access. Roughly in the order it starts costing.
 | 🟡 | **An Infisical machine identity** | User sessions expire in 20–60 minutes and each expiry cost a round trip today. A Universal Auth identity scoped to `calendarmirror-com-v2-yo/prod`, read-only, would let `infisical run` work unattended. |
 | 🟡 | **The request-page UI** | Step 4 built everything under it and nothing of it. Needed, in the order a new owner meets them: the two checkboxes in Manage Mirrors (`RequestPageConfig.blocking` / `.requestCalendar`); a settings sheet for display name, blurb, meeting title and the policy; the StoreKit entitlement → `create`; a notification per collected request with Accept / Decline; and the conflict sheet that shows `RequestChecker`'s alternatives. Yours because it is look-and-feel; the Kit's surface is in `askwhen/README.md` §4. |
 | 🟡 | **1.4.2 folds into Calendar Mirror 2.0** | Decided 15 Sept. On main, unreleased; ships with 2.0. |
-| 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. Needs a signed, notarised build, so it is a release rather than a tag. |
+| 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. Needs a signed, notarized build, so it is a release rather than a tag. |
 | ⚪ | **Design the emails** *(Matt, 10 Sept)* | All four — confirm, accepted, declined, no-response — are deliberately plain today: one `<p>` after another, no image, no styled button, nothing fetched. The plainness is partly a security stance (a scanner rendering the confirm mail finds nothing to click but a URL whose GET does nothing) and partly that nobody has designed them yet. Whatever they become should keep both properties; the templates are in `askwhen/service/internal/mail/postal.go`, and the same look should probably reach the request page's own states. |
 | ⚪ | **Sit with the request page** | You said you were not sold. `askwhen/web/dist/gallery.html` is every state at true size and opens straight from the filesystem. |
 | ⚪ | **`feat/synced-events-view`** | One WIP commit, no PR, abandoned mid-thought. Finish or delete. |
@@ -69,7 +69,7 @@ Judgement, not access. Roughly in the order it starts costing.
 | **Database backup.** PBS will snapshot CT 112 (when added), but a WAL-mode SQLite file inside a running container is not guaranteed consistent in a filesystem snapshot. A nightly `VACUUM INTO` to a file PBS then takes is the honest version. | Losing the DB loses every page and token. |
 | **DMARC to `quarantine`** on the schedule `mail.md` describes, once a few weeks of `p=none` reports look clean. | Deliverability. |
 | **A support address requesters can reach.** Mail comes from `no-reply@`; the page footer says `askwhen.me` and nothing else. Someone who gets a wrong `.ics` has nowhere to write. | Support, and Apple asks for one. |
-| **Small Business Program** enrolment, if not already — 15% instead of 30%. | Money. |
+| **Small Business Program** enrollment, if not already — 15% instead of 30%. | Money. |
 | **`askwhen.me` registration renewal** date — put it somewhere a reminder fires. | The whole product is one lapsed domain from gone. |
 
 ## Also yours, but lower stakes
@@ -77,7 +77,7 @@ Judgement, not access. Roughly in the order it starts costing.
 | What | The question |
 |---|---|
 | **Overlay: how much setup?** | I would argue **zero** — EventKit permission and nothing else. Every setup step between a stranger and the thing they wanted is one most will not take. |
-| **Timezone picker on the request page** | Browser decides today. Right for almost everyone, silently wrong for the traveller. `format.js` takes the zone as an argument everywhere, so it stays a component rather than a rewrite. |
+| **Timezone picker on the request page** | Browser decides today. Right for almost everyone, silently wrong for the traveler. `format.js` takes the zone as an argument everywhere, so it stays a component rather than a rewrite. |
 | **The *Proposed* entries in `decisions.md`** | My reasoning filed as mine, not as settled. One I would argue hard for: requester text must never share a context with a config-write tool. |
 
 ## Mine, and unblocked
@@ -145,7 +145,7 @@ something of yours — `STATUS.md`, "What is left", items 3, 4, 6, 9 and 13–16
   with a one-day cache bound so the root can be reclaimed later. Deployed.
 - **Step 5, mail, is complete** ([#66](https://github.com/mattbaylor/cal-mirror/pull/66)
   [#69](https://github.com/mattbaylor/cal-mirror/pull/69)). Confirmation,
-  accepted-with-`.ics` (`METHOD:PUBLISH`, no organiser — the service has no
+  accepted-with-`.ics` (`METHOD:PUBLISH`, no organizer — the service has no
   owner address), declined, and no-response after fourteen days. All four
   verified 10 Sept from the live host into a real inbox; the mail client parsed
   the `.ics` as a calendar part. The sweep was also brought in line with §4b

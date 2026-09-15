@@ -6,7 +6,7 @@ import Security
 /// `kSecAttrAccessibleAfterFirstUnlock` so a background refresh on iOS can
 /// still poll after a reboot the owner has unlocked once; not `Always`, because
 /// a token readable from a locked phone is a token readable from a stolen one.
-/// Not synchronised to iCloud Keychain: the token names *this* page and the
+/// Not synchronized to iCloud Keychain: the token names *this* page and the
 /// page is one-per-subscription, but a second device polling the same queue
 /// would race the first on resolve. That is a later decision, not an accident.
 public struct KeychainTokenStore: TokenStore {

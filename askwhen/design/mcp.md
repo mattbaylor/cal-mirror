@@ -126,7 +126,7 @@ live attack delivered through the product's normal front door.
 Two rules, and they are cheap because they are also just good scoping:
 
 1. **Requester-supplied text never enters a context that holds config-write
-   tools.** Not summarised, not quoted, not "sanitised".
+   tools.** Not summarized, not quoted, not "sanitized".
 2. **Anything that did come from a requester is data, never instruction** — and
    since the default surface has no queue tools at all, the first rule mostly
    enforces itself. That is a reason to keep it that way, beyond the privacy one.

@@ -119,7 +119,7 @@ func TestAuthorizedDomain(t *testing.T) {
 		{"an unclaimed host is not", "evil.example.com", false},
 
 		// The query is case-sensitive, which is exactly why tlsauth.Normalize
-		// runs first. This test exists so that removing the normalisation step
+		// runs first. This test exists so that removing the normalization step
 		// breaks something.
 		{"the lookup does not fold case itself", "ASK.EXAMPLE.COM", false},
 		{"nor does it tolerate a trailing dot", "ask.example.com.", false},
@@ -177,7 +177,7 @@ func TestDeletingThePageWithdrawsItsDomains(t *testing.T) {
 func TestDomainHostMustBeLowercase(t *testing.T) {
 	// schema.sql has CHECK (host = lower(host)). Storing a mixed-case host
 	// would make it permanently unmatchable, because the lookup is exact and
-	// the normaliser always lowercases.
+	// the normalizer always lowercases.
 	s := openTestStore(t)
 	addPage(t, s, "x7f2k9")
 
@@ -203,9 +203,9 @@ func addRequest(t *testing.T, s *Store, id, slug, slotStart string, token []byte
 }
 
 func TestConfirmTokenLookupUsesAnIndex(t *testing.T) {
-	// GET /c/{confirm_token} is the endpoint the entire double opt-in defence
+	// GET /c/{confirm_token} is the endpoint the entire double opt-in defense
 	// hangs on. Without an index it is a full table scan, which degrades quietly
-	// instead of failing — the worst way for the spam defence to get slow.
+	// instead of failing — the worst way for the spam defense to get slow.
 	//
 	// The index is partial (WHERE confirm_token_hash IS NOT NULL). A planner has
 	// to work out that `= ?` cannot match NULL before it will use one, so this

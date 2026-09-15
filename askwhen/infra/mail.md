@@ -7,7 +7,7 @@
 > live and verified by Postal: SPF uses `include:spf.dlvr.rehosted.us -all`
 > (the loop was fixed on 4 Sept), the return path is Postal's own
 > `psrp.askwhen.me → rp.dlvr.rehosted.us`, MX points at Postal, and DMARC
-> reports go to `dmarc@thebaylors.org` with the cross-domain authorisation
+> reports go to `dmarc@thebaylors.org` with the cross-domain authorization
 > record in that zone. The *reasoning* below — alignment, why the signing key is
 > not on the app host, why `From:` is `askwhen.me` — is still right. The
 > procedure is not, and most of this file is procedure.
@@ -29,9 +29,9 @@ That is why `../README.md` says SPF, DKIM and DMARC must be right **before the
 first confirmation email**, and why this document exists ahead of the service
 that will send them.
 
-The second reason is subtler: double opt-in is the entire spam defence (§8).
+The second reason is subtler: double opt-in is the entire spam defense (§8).
 Every other measure — the honeypot, the per-IP limit — is a speed bump. If mail
-delivery is unreliable then the defence that matters is also the thing standing
+delivery is unreliable then the defense that matters is also the thing standing
 between honest people and the product, and the temptation to weaken it will be
 immediate and wrong.
 

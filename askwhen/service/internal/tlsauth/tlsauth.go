@@ -74,7 +74,7 @@ type Config struct {
 	// Only refusals are cached, and that asymmetry is the point. A flood of
 	// handshakes for random names would otherwise be one database read each, on
 	// a proxy shared with unrelated sites. Caching an *allow* could keep serving
-	// a domain after its owner cancelled; caching a *deny* can only make a
+	// a domain after its owner canceled; caching a *deny* can only make a
 	// newly-verified customer wait a few seconds, and Caddy retries.
 	DenyTTL time.Duration
 
@@ -218,7 +218,7 @@ func (a *Authorizer) deny(host string) {
 	defer a.mu.Unlock()
 	if len(a.denys) >= a.cfg.DenyCacheMax {
 		// Drop everything rather than evict cleverly. The cache is an
-		// optimisation whose worst case is one extra database read; an LRU here
+		// optimization whose worst case is one extra database read; an LRU here
 		// would be more code than the thing it protects.
 		clear(a.denys)
 	}

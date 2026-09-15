@@ -50,7 +50,7 @@ GitHub Pages answers `mattbaylor.github.io/cal-mirror/*` with a 301 to the same
 path here. It has to: the App Store listing's marketing URL is that address, and
 the privacy policy URL Apple requires is a page beneath it.
 
-The redirect is GitHub's own behaviour once the Pages site has a custom domain
+The redirect is GitHub's own behavior once the Pages site has a custom domain
 set, and it does not care where that domain's DNS points — so the domain can
 resolve to our edge and GitHub still redirects to it. Because the Pages site is
 deployed by workflow rather than from a branch, the domain is a repository

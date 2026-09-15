@@ -113,7 +113,7 @@ jobs:
         run: node test/no-network.mjs
 
   askwhen-service:
-    # The Go service. Only the TLS authorisation gate exists so far, and it is
+    # The Go service. Only the TLS authorization gate exists so far, and it is
     # the piece most worth a CI job: it runs on caddy-dc, the proxy that already
     # fronts unrelated customer sites, and a mistake there costs that proxy its
     # ability to issue any certificate at all.

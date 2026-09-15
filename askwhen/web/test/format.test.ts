@@ -157,7 +157,7 @@ test('spring forward: a 23-hour day, and no false ambiguity', () => {
     ['2026-09-26', ['10:00 AM']],
     ['2026-09-27', ['1:00 AM', '3:30 AM', '9:00 AM']],
   ]);
-  // Nothing collided, so nothing is labelled — the zone name is a fix for a
+  // Nothing collided, so nothing is labeled — the zone name is a fix for a
   // real problem, not decoration applied on any day a clock happens to move.
   for (const day of days) assert.equal(day.repeatedHour, false);
 });

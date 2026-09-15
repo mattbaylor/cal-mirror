@@ -197,7 +197,7 @@ exposes everything they need and `cmk-check` covers the rest (385 checks).
 
 ### 5 · Email, double opt-in, proof of work
 
-Double opt-in is the real spam defence and costs nothing extra: the address was
+Double opt-in is the real spam defense and costs nothing extra: the address was
 already needed to deliver the `.ics`. One mechanism doing anti-spam, delivery,
 and the confirmation that stands in for RSVP.
 

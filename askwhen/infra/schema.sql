@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS page (
 
   -- The one identifying field in the whole system, and the owner typed it
   -- knowing it is public. "Matt Baylor", "Matt B" and "The Referee Guy" are all
-  -- valid; the service must never try to verify or normalise it.
+  -- valid; the service must never try to verify or normalize it.
   display_name      TEXT NOT NULL CHECK (length(display_name) BETWEEN 1 AND 60),
   blurb             TEXT CHECK (blurb IS NULL OR length(blurb) <= 200),
   tz                TEXT NOT NULL,
@@ -164,7 +164,7 @@ CREATE INDEX IF NOT EXISTS page_entitlement ON page (entitlement_hash);
 -- $70 buys `ask.example.com`. So hostname and slug are not the same thing and a
 -- mapping has to exist somewhere. It is here.
 --
--- This table is also the authorisation list for Caddy's on-demand TLS. Without
+-- This table is also the authorization list for Caddy's on-demand TLS. Without
 -- it the proxy is an open certificate mint: anyone who points a DNS record at
 -- our IP gets a free Let's Encrypt certificate issued on our rate limit budget,
 -- until the budget is gone and legitimate customers stop being able to onboard.
@@ -261,9 +261,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS request_one_live_hold_per_slot
   WHERE hold_released_at IS NULL
     AND state IN ('unconfirmed', 'confirmed', 'accepted');
 
--- `GET /c/{confirm_token}` — the endpoint the entire double opt-in defence
+-- `GET /c/{confirm_token}` — the endpoint the entire double opt-in defense
 -- hangs on, and without this a full table scan. It degrades quietly rather than
--- failing, which is the worst way for the spam defence to get slow.
+-- failing, which is the worst way for the spam defense to get slow.
 --
 -- UNIQUE because two live requests sharing a confirm token would let one token
 -- confirm the other's request. A 256-bit random token will not collide, and a
@@ -322,7 +322,7 @@ CREATE INDEX IF NOT EXISTS request_queue ON request (slug, state, confirmed_at);
 -- the retention policy, and there is nothing here worth keeping longer.
 --
 -- Only accepted requests are tracked. Declined and no-response mail is
--- fire-and-forget on purpose — there is no artefact to re-deliver, and a row
+-- fire-and-forget on purpose — there is no artifact to re-deliver, and a row
 -- per notice would be a log of who was told what.
 
 CREATE TABLE IF NOT EXISTS delivery (

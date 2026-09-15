@@ -138,7 +138,7 @@ A public URL that reaches a human is a target. Three layers, **none of them a
 third party**, which matters for a product whose entire pitch is that it does not
 phone anyone.
 
-**1. Double opt-in, which is the real defence.** The requester enters an email
+**1. Double opt-in, which is the real defense.** The requester enters an email
 and gets a "confirm this request" link. Only a confirmed request enters the
 owner's queue. Spam now requires a working mailbox and a deliberate click, which
 kills essentially all of it.
@@ -304,7 +304,7 @@ rather than with features.
 ## Open engineering questions
 
 1. **Slot holds.** Two people can ask for the same time. Soft-hold with an expiry
-   and grey it out, or allow collisions and sort it out on acceptance? Holding
+   and gray it out, or allow collisions and sort it out on acceptance? Holding
    needs state and a timer; not holding is simpler and occasionally awkward.
 2. **Poll cadence.** Too slow and requests sit; too fast and it is a battery and
    bandwidth cost for a queue that is empty ~100% of the time. Push would need a

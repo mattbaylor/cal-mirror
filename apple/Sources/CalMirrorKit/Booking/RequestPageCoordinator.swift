@@ -53,7 +53,7 @@ public protocol CalendarAccess: AnyObject {
 /// it and the next cycle picks up where this one left off.
 ///
 /// One instance per app, like `MirrorEngine`. Not thread-safe; the caller
-/// serialises calls the way it serialises syncs.
+/// serializes calls the way it serializes syncs.
 public final class RequestPageCoordinator: @unchecked Sendable {
     private let engine: CalendarAccess
     private let client: AskwhenClient
