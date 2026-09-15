@@ -36,7 +36,11 @@ struct RequestLapseView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Label(heading, systemImage: symbol)
                     .font(.headline)
-                    .foregroundStyle(state == .gone ? .secondary : .orange)
+                    // Both branches qualified: .secondary is a
+                    // HierarchicalShapeStyle and .orange is a Color, and a
+                    // ternary needs one type. Deleted is past tense and reads
+                    // quieter; the other two still want attention.
+                    .foregroundStyle(state == .gone ? Color.secondary : Color.orange)
                 Text(explanation).fixedSize(horizontal: false, vertical: true)
                 if case .grace(let days) = state {
                     Text(countdown(days)).font(.callout.weight(.semibold))
