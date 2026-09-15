@@ -88,7 +88,7 @@ you which, because the device already collapsed the two before uploading.
 
 ### Size
 
-A fortnight of half-hour slots inside working hours is ~150 entries — about 12 KB
+Two weeks of half-hour slots inside working hours is ~150 entries — about 12 KB
 uncompressed, ~2 KB gzipped. Small enough to publish whole on every change.
 
 ---
@@ -248,7 +248,7 @@ unconfirmed ──▶ confirmed ──▶ queued ──▶ accepted ──▶ .i
 **Unconfirmed requests never reach the owner** and are swept after an hour. That
 one rule is most of the spam defense.
 
-**Expiry needs an answer, not silence.** If the owner is away for a fortnight the
+**Expiry needs an answer, not silence.** If the owner is away for two weeks the
 requester deserves to be told, and the service can say "no response" without ever
 having reached the owner.
 
