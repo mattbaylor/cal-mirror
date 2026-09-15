@@ -5,6 +5,7 @@ import UserNotifications
 struct CalMirrorMacApp: App {
     @StateObject private var model = Store()
     @StateObject private var notifications = RequestNotificationDelegate()
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         MenuBarExtra {
@@ -14,7 +15,18 @@ struct CalMirrorMacApp: App {
                     UNUserNotificationCenter.current().delegate = notifications
                 }
         } label: {
+            // The conflict window is declared below and something has to open
+            // it. This hangs off the LABEL, not the menu: a MenuBarExtra's menu
+            // only exists while it is open, so a conflict raised by a
+            // notification action would find nothing listening. The label is
+            // always in the hierarchy.
             Image(nsImage: menuBarImage(model.menuBarState))
+                .onChange(of: model.conflict) { _, conflict in
+                    guard conflict != nil else { return }
+                    NSApp.setActivationPolicy(.regular)
+                    openWindow(id: "conflict")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
         }
         .menuBarExtraStyle(.menu)
 

@@ -244,26 +244,59 @@ def build(c, fx):
     lp, dm = c["lapse"], c["domains"]
     fd, fl = fx["domains"], fx["lapse"]
 
-    steps.append(step(12, "A nicer address", "service",
-        "The slug always works. On top of it, a subdomain of askwhen.me that verifies instantly, or a domain the owner already controls that needs one CNAME.",
-        "Checking is not a refresh button — GET /domains makes the service re-read DNS and issue the certificate the moment the record is right, so asking is what makes it start working.",
+    def field_row(label, value, suffix=None, ghost=True):
+        sfx = f'<span class="sfx">{esc(suffix)}</span>' if suffix else ""
+        cls = "input ghost" if ghost else "input"
+        return (f'<div class="pad"><p class="cap">{esc(label)}</p>'
+                f'<div class="fieldrow"><span class="{cls}">{esc(value)}</span>{sfx}</div></div>')
+
+    steps.append(step(12, "Claiming an address", "service",
+        "The slug always works. On top of it the owner types either a label for a subdomain of askwhen.me, or a domain they already own.",
+        "Whatever is typed is normalized before it is claimed \u2014 case folded, trimmed, a pasted URL reduced to its host, a trailing dot dropped. Each of those is a correct answer arriving looking wrong, and each would otherwise claim a hostname that can never verify.",
         phone(nav(esc(dm["section"])) + grp(pad(
             f'<p class="cap">{esc(dm["current"])}</p><p class="mono">askwhen.me/{esc(o["slug"])}</p>'
             f'<p class="cap">{esc(dm["slugNote"])}</p>'))
-            + grp(pad(f'<p class="body"><span class="mono sm">{esc(fd["subdomain"])}</span> '
-                      f'<span class="ok">✓ {esc(dm["verified"])}</span></p>'))
+            + grp(f'<div class="hdr">{esc(dm["subdomainHeading"])}</div>'
+                  f'<p class="body sm pad8">{esc(dm["subdomainBody"])}</p>'
+                  + field_row("", dm["subdomainPlaceholder"], dm["subdomainSuffix"])
+                  + f'<div class="pad"><div class="btn">{esc(dm["claim"])}</div></div>')
+            + grp(f'<div class="hdr">{esc(dm["customHeading"])}</div>'
+                  f'<p class="body sm pad8">{esc(dm["customBody"])}</p>'
+                  + field_row("", dm["customPlaceholder"])
+                  + f'<div class="pad"><div class="btn">{esc(dm["claim"])}</div></div>')),
+        open_q="The field is offered only on a tier that includes it; otherwise the same section shows why, and an Upgrade button. That variant is 12b."))
+
+    steps.append(step("12b", "On a tier without it", "apple",
+        "The same two sections, with the reason and an upgrade in place of the field \u2014 rather than an input that would be refused.",
+        "This is where the $35 and $70 tiers are actually sold, which is the whole argument for not selling them during setup: a nicer address is worth nothing before there is a page at it.",
+        phone(nav(esc(dm["section"])) + grp(
+            f'<div class="hdr">{esc(dm["subdomainHeading"])}</div>'
+            f'<p class="body sm pad8">{esc(dm["subdomainBody"])}</p>'
+            f'<p class="cap pad8">{esc(dm["needsSubdomainTier"])}</p>'
+            f'<div class="pad"><div class="btn">{esc(dm["upgrade"])}</div>'
+            f'<p class="foot">{esc(dm["upgradeNote"])}</p></div>')
+            + grp(f'<div class="hdr">{esc(dm["customHeading"])}</div>'
+                  f'<p class="body sm pad8">{esc(dm["customBody"])}</p>'
+                  f'<p class="cap pad8">{esc(dm["needsDomainTier"])}</p>'
+                  f'<div class="pad"><div class="btn">{esc(dm["upgrade"])}</div></div>'))))
+
+    steps.append(step(13, "Waiting for DNS", "service",
+        "A subdomain verifies on arrival and has nothing more to say. A custom domain comes back unverified, carrying the CNAME to set and what DNS answers instead.",
+        "Checking is not a refresh button \u2014 GET /domains makes the service re-read DNS and issue the certificate the moment the record is right, so asking is what makes it start working. The service\u2019s own diagnosis is shown verbatim, because it knows what DNS answered and the device does not.",
+        phone(nav(esc(dm["section"])) + grp(pad(
+            f'<p class="body"><span class="mono sm">{esc(fd["subdomain"])}</span> '
+            f'<span class="ok">\u2713 {esc(dm["verified"])}</span></p>'))
             + grp(pad(f'<p class="body"><span class="mono sm">{esc(fd["custom"])}</span> '
-                      f'<span class="pend">◷ {esc(dm["pending"])}</span></p>'
+                      f'<span class="pend">\u25f7 {esc(dm["pending"])}</span></p>'
                       f'<p class="cap">{esc(dm["cnameHeading"])}</p>'
                       f'<p class="mono sm">{esc(fmt(dm["cnameFormat"], fd["custom"], fd["point"]))}</p>'
                       f'<p class="cap">{esc(dm["sawHeading"])}</p>'
                       f'<p class="mono sm">{esc(fd["check"])}</p>'
                       f'<p class="body sm">{esc(fd["advice"])}</p>'
                       f'<div class="btn">{esc(dm["check"])}</div>'
-                      f'<p class="foot">{esc(dm["checkNote"])}</p>'))),
-        open_q="The upgrade is offered here rather than on the offer screen — where the want appears. Apple prorates, and the note says so, because otherwise it reads as paying twice for the same year."))
+                      f'<p class="foot">{esc(dm["checkNote"])}</p>')))))
 
-    steps.append(step(13, "The subscription ends", "service",
+    steps.append(step(14, "The subscription ends", "service",
         "Seven days of grace. The page stays up saying \u201cnot currently taking requests\u201d, then askwhen.me deletes it and the link 404s.",
         "That line is the same one a page shows when the publisher has been offline a while, so a visitor learns nothing about the owner\u2019s billing. Renewing inside the grace brings the same page back at the same address, which is the fact that decides whether someone renews.",
         phone(nav(esc(lv["section"])) + grp(pad(
@@ -275,7 +308,7 @@ def build(c, fx):
             f'<div class="btn">{esc(lp["renew"])}</div>'))),
         open_q="The device counts the grace down, but the service is the authority — it deletes from Apple\u2019s server notifications and this device may have slept through it. Finding the slug gone is what settles it."))
 
-    steps.append(step(14, "It is gone", "service",
+    steps.append(step(15, "It is gone", "service",
         "The grace ran out. The page, its address and its queue are removed; a new subscription starts a new page at a new address.",
         "The sentence that matters is that the calendar is untouched \u2014 every request already accepted is an ordinary event that never depended on the page staying up.",
         phone(nav(esc(lv["section"])) + grp(pad(
@@ -373,6 +406,11 @@ h4 { font-size:18px; margin:0 0 6px; }
 .mono.sm { font-size:12.5px; margin:4px 0 10px; }
 .ok { color:var(--local); font-size:12.5px; }
 .pend { color:var(--service); font-size:12.5px; }
+.fieldrow { display:flex; align-items:center; gap:4px; margin-top:2px; }
+.input { flex:1; border:1px solid var(--edge); border-radius:7px; padding:9px 11px;
+  background:var(--grp); font-size:14px; }
+.input.ghost { color:var(--note); }
+.sfx { color:var(--note); font-size:14px; }
 .notif { background:var(--card); border:1px solid var(--edge); border-radius:14px; padding:13px 15px; margin:12px; }
 .napp { font-size:10.5px; letter-spacing:.7px; color:var(--note); margin-bottom:5px; }
 .ntitle { font-weight:600; font-size:15px; }
@@ -409,7 +447,7 @@ def main():
   <body>
     <div class="wrap">
       <h1>The request page, end to end</h1>
-      <p class="lede">Fourteen steps from an owner who has never heard of this to a stranger
+      <p class="lede">Fifteen steps from an owner who has never heard of this to a stranger
         asking for a time and being answered — and on to a nicer address, and to what happens when the subscription stops. Every screen carries what it does, why it is
         that way, and anything still open on it.</p>
       <div class="meta">

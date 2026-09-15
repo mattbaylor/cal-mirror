@@ -99,8 +99,7 @@ enum RequestCopy {
         static let decline = "Decline"
         static let titleFormat = "%@ asked for a time"
         static let bodyNoNote = "%@"
-        static let bodyWithNote = "%@
-%@"
+        static let bodyWithNote = "%@\n%@"
         static let acceptedTitle = "Accepted"
         static let acceptedBody = "%@ is in your calendar. They have been sent the details."
         static let declinedTitle = "Declined"

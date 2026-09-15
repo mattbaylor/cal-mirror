@@ -69,6 +69,14 @@ final class Store: ObservableObject {
     func bootstrap() async {
         access = await engine.requestAccess()
         if access { calendars = engine.calendars(); await syncNow() }
+        // Only once a page exists. StoreKit's update stream is local, but
+        // starting it for an owner who never opted in would still be this app
+        // reaching for something it has no business touching — and the slug is
+        // the honest test of whether they opted in.
+        if config.requestPage?.slug.isEmpty == false {
+            Task { await watchSubscription() }
+            await refreshSubscription()
+        }
     }
 
     func save() {

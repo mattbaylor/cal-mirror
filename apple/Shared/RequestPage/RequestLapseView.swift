@@ -37,7 +37,7 @@ struct RequestLapseView: View {
                 Label(heading, systemImage: symbol)
                     .font(.headline)
                     .foregroundStyle(state == .gone ? .secondary : .orange)
-                Text(body).fixedSize(horizontal: false, vertical: true)
+                Text(explanation).fixedSize(horizontal: false, vertical: true)
                 if case .grace(let days) = state {
                     Text(countdown(days)).font(.callout.weight(.semibold))
                     Text(RequestCopy.Lapse.graceWhatGoes)
@@ -74,7 +74,7 @@ struct RequestLapseView: View {
         }
     }
 
-    private var body: String {
+    private var explanation: String {
         switch state {
         case .grace:   return RequestCopy.Lapse.graceBody
         case .revoked: return RequestCopy.Lapse.revokedBody

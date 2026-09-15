@@ -93,6 +93,11 @@ h4 { font-size:18px; margin:0 0 6px; }
 .mono.sm { font-size:12.5px; margin:4px 0 10px; }
 .ok { color:var(--local); font-size:12.5px; }
 .pend { color:var(--service); font-size:12.5px; }
+.fieldrow { display:flex; align-items:center; gap:4px; margin-top:2px; }
+.input { flex:1; border:1px solid var(--edge); border-radius:7px; padding:9px 11px;
+  background:var(--grp); font-size:14px; }
+.input.ghost { color:var(--note); }
+.sfx { color:var(--note); font-size:14px; }
 .notif { background:var(--card); border:1px solid var(--edge); border-radius:14px; padding:13px 15px; margin:12px; }
 .napp { font-size:10.5px; letter-spacing:.7px; color:var(--note); margin-bottom:5px; }
 .ntitle { font-weight:600; font-size:15px; }
@@ -111,7 +116,7 @@ h4 { font-size:18px; margin:0 0 6px; }
   <body>
     <div class="wrap">
       <h1>The request page, end to end</h1>
-      <p class="lede">Fourteen steps from an owner who has never heard of this to a stranger
+      <p class="lede">Fifteen steps from an owner who has never heard of this to a stranger
         asking for a time and being answered — and on to a nicer address, and to what happens when the subscription stops. Every screen carries what it does, why it is
         that way, and anything still open on it.</p>
       <div class="meta">
@@ -290,17 +295,45 @@ h4 { font-size:18px; margin:0 0 6px; }
         <div class="rail stage-service"></div>
       </div>
       <div class="mid">
-        <h3>A nicer address</h3>
+        <h3>Claiming an address</h3>
         <span class="tag tag-service">askwhen.me</span>
-        <p class="what">The slug always works. On top of it, a subdomain of askwhen.me that verifies instantly, or a domain the owner already controls that needs one CNAME.</p>
-        <p class="why"><b>Why</b> — Checking is not a refresh button — GET /domains makes the service re-read DNS and issue the certificate the moment the record is right, so asking is what makes it start working.</p>
-        <div class="open"><b>Open</b> — The upgrade is offered here rather than on the offer screen — where the want appears. Apple prorates, and the note says so, because otherwise it reads as paying twice for the same year.</div>
+        <p class="what">The slug always works. On top of it the owner types either a label for a subdomain of askwhen.me, or a domain they already own.</p>
+        <p class="why"><b>Why</b> — Whatever is typed is normalized before it is claimed — case folded, trimmed, a pasted URL reduced to its host, a trailing dot dropped. Each of those is a correct answer arriving looking wrong, and each would otherwise claim a hostname that can never verify.</p>
+        <div class="open"><b>Open</b> — The field is offered only on a tier that includes it; otherwise the same section shows why, and an Upgrade button. That variant is 12b.</div>
       </div>
-      <div class="right"><div class="scr"><div class="nav">Address</div><div class="grp"><div class="pad"><p class="cap">Your page is at</p><p class="mono">askwhen.me/k4m2p9</p><p class="cap">This address always works and is never taken away, whatever else you add.</p></div></div><div class="grp"><div class="pad"><p class="body"><span class="mono sm">dana.askwhen.me</span> <span class="ok">✓ Working</span></p></div></div><div class="grp"><div class="pad"><p class="body"><span class="mono sm">ask.okonkwo-referees.com</span> <span class="pend">◷ Waiting for DNS</span></p><p class="cap">Add this record</p><p class="mono sm">CNAME   ask.okonkwo-referees.com   →   edge.askwhen.me</p><p class="cap">What DNS says right now</p><p class="mono sm">ask.okonkwo-referees.com. 300 IN A 203.0.113.9</p><p class="body sm">That is an A record pointing somewhere else. Replace it with the CNAME above.</p><div class="btn">Check now</div><p class="foot">Checking is what makes it start working — the service re-reads DNS every time you ask, and issues the certificate the moment the record is right.</p></div></div></div></div>
+      <div class="right"><div class="scr"><div class="nav">Address</div><div class="grp"><div class="pad"><p class="cap">Your page is at</p><p class="mono">askwhen.me/k4m2p9</p><p class="cap">This address always works and is never taken away, whatever else you add.</p></div></div><div class="grp"><div class="hdr">Your own name on askwhen.me</div><p class="body sm pad8">Something like dana.askwhen.me. Nothing to set up — it works the moment you claim it.</p><div class="pad"><p class="cap"></p><div class="fieldrow"><span class="input ghost">dana</span><span class="sfx">.askwhen.me</span></div></div><div class="pad"><div class="btn">Claim it</div></div></div><div class="grp"><div class="hdr">A domain you own</div><p class="body sm pad8">Something like ask.yourcompany.com, on a domain you already control. It needs one DNS record, and the certificate is issued for you.</p><div class="pad"><p class="cap"></p><div class="fieldrow"><span class="input ghost">ask.yourcompany.com</span></div></div><div class="pad"><div class="btn">Claim it</div></div></div></div></div>
+    </section>
+    <section class="step">
+      <div class="left">
+        <div class="num">12b</div>
+        <div class="rail stage-apple"></div>
+      </div>
+      <div class="mid">
+        <h3>On a tier without it</h3>
+        <span class="tag tag-apple">Apple</span>
+        <p class="what">The same two sections, with the reason and an upgrade in place of the field — rather than an input that would be refused.</p>
+        <p class="why"><b>Why</b> — This is where the $35 and $70 tiers are actually sold, which is the whole argument for not selling them during setup: a nicer address is worth nothing before there is a page at it.</p>
+        
+      </div>
+      <div class="right"><div class="scr"><div class="nav">Address</div><div class="grp"><div class="hdr">Your own name on askwhen.me</div><p class="body sm pad8">Something like dana.askwhen.me. Nothing to set up — it works the moment you claim it.</p><p class="cap pad8">Your own subdomain comes with the Custom Subdomain tier, which also lets you have more than one page.</p><div class="pad"><div class="btn">Upgrade</div><p class="foot">An upgrade is charged straight away, with what is left of this year credited against it. Apple handles the arithmetic and shows you the number before you agree.</p></div></div><div class="grp"><div class="hdr">A domain you own</div><p class="body sm pad8">Something like ask.yourcompany.com, on a domain you already control. It needs one DNS record, and the certificate is issued for you.</p><p class="cap pad8">Using a domain you own comes with the Custom Domain tier.</p><div class="pad"><div class="btn">Upgrade</div></div></div></div></div>
     </section>
     <section class="step">
       <div class="left">
         <div class="num">13</div>
+        <div class="rail stage-service"></div>
+      </div>
+      <div class="mid">
+        <h3>Waiting for DNS</h3>
+        <span class="tag tag-service">askwhen.me</span>
+        <p class="what">A subdomain verifies on arrival and has nothing more to say. A custom domain comes back unverified, carrying the CNAME to set and what DNS answers instead.</p>
+        <p class="why"><b>Why</b> — Checking is not a refresh button — GET /domains makes the service re-read DNS and issue the certificate the moment the record is right, so asking is what makes it start working. The service’s own diagnosis is shown verbatim, because it knows what DNS answered and the device does not.</p>
+        
+      </div>
+      <div class="right"><div class="scr"><div class="nav">Address</div><div class="grp"><div class="pad"><p class="body"><span class="mono sm">dana.askwhen.me</span> <span class="ok">✓ Working</span></p></div></div><div class="grp"><div class="pad"><p class="body"><span class="mono sm">ask.okonkwo-referees.com</span> <span class="pend">◷ Waiting for DNS</span></p><p class="cap">Add this record</p><p class="mono sm">CNAME   ask.okonkwo-referees.com   →   edge.askwhen.me</p><p class="cap">What DNS says right now</p><p class="mono sm">ask.okonkwo-referees.com. 300 IN A 203.0.113.9</p><p class="body sm">That is an A record pointing somewhere else. Replace it with the CNAME above.</p><div class="btn">Check now</div><p class="foot">Checking is what makes it start working — the service re-reads DNS every time you ask, and issues the certificate the moment the record is right.</p></div></div></div></div>
+    </section>
+    <section class="step">
+      <div class="left">
+        <div class="num">14</div>
         <div class="rail stage-service"></div>
       </div>
       <div class="mid">
@@ -314,7 +347,7 @@ h4 { font-size:18px; margin:0 0 6px; }
     </section>
     <section class="step">
       <div class="left">
-        <div class="num">14</div>
+        <div class="num">15</div>
         <div class="rail stage-service"></div>
       </div>
       <div class="mid">

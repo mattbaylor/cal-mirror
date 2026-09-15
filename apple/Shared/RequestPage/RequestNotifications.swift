@@ -130,8 +130,6 @@ enum RequestNotifications {
 @MainActor
 final class RequestNotificationDelegate: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     weak var store: Store?
-    /// Set when a conflict needs the sheet. The UI observes it and presents.
-    @Published var conflict: RequestConflict?
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             didReceive response: UNNotificationResponse) async {

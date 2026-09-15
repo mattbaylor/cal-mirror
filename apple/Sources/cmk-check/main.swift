@@ -1384,14 +1384,22 @@ do {
     let t = FakeTransport()
     let tokens = InMemoryTokenStore()
     nonisolated(unsafe) var busy: [BusyInterval] = []
-    // Never reached: every path exercised here stops before a calendar write,
-    // and busy intervals come from the closure. A stub keeps EventKit out.
-    final class NoCalendar: CalendarAccess {
+    // Busy intervals come from the closure; this stands in for the calendar.
+    // It used to trap on write, on the grounds that every path here stopped
+    // before one — which stopped being true when accept gained
+    // `overridingConflict`, the one path that writes without re-checking. It
+    // records instead, so the write can be asserted rather than assumed.
+    final class RecordingCalendar: CalendarAccess {
+        var written: [(id: String, title: String)] = []
         func busyIntervals(in: [CalRef], from: Date, to: Date) -> [BusyInterval] { [] }
         func writeAcceptedEvent(requestID: String, title: String, location: String?, notes: String?,
-                                start: Date, end: Date, into ref: CalRef) throws -> String { fatalError("not in cmk-check") }
+                                start: Date, end: Date, into ref: CalRef) throws -> String {
+            written.append((requestID, title))
+            return "event-\(requestID)"
+        }
     }
-    let coord = RequestPageCoordinator(engine: NoCalendar(),
+    let calendar = RecordingCalendar()
+    let coord = RequestPageCoordinator(engine: calendar,
                                        client: AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t),
                                        tokens: tokens, busySource: { _, _, _ in busy })
     var page = RequestPageConfig(enabled: true, policy: reqPolicy(weekdays: [.wed]), displayName: "Matt Baylor",
@@ -1463,6 +1471,8 @@ do {
         check(false, "expected accepted when overriding, got \(forced)")
     }
     check(t.calls.last?.path == "/v1/requests/r1/resolve", "and it tells the service, so the .ics is sent")
+    check(calendar.written.count == 1 && calendar.written.first?.title == "Chat",
+          "the event written carries the owner's title, never the requester's words")
 
     t.answers = [(204, [:], "")]
     _ = try! run { try await coord.decline(req, page: &page) }.get()
