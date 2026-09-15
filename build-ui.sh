@@ -18,7 +18,14 @@ while IFS= read -r f; do
 # Recursive for the same reason build.sh is: Booking/ is pure and belongs in the
 # UI target too, and a non-recursive glob would drop it without saying so.
 done < <(find "$DIR/apple/Sources/CalMirrorKit" -name '*.swift')
-swiftc -O -parse-as-library -o /tmp/CalMirrorMenu.bin "$DIR/menu.swift" "${KIT[@]}"
+# Pin the deployment target explicitly. Left to itself, swiftc infers one from
+# the host OS, and on a beta host that inference has come out a whole major
+# ABOVE both the running system and the SDK -- stamping minos 28.0 into a binary
+# built by the 26.5 SDK, which then refuses to launch on the machine that built
+# it. Info.plist's LSMinimumSystemVersion is only advisory; this load command is
+# what Gatekeeper actually enforces, so it has to be set here.
+TARGET="$(uname -m)-apple-macos14.0"
+swiftc -O -target "$TARGET" -parse-as-library -o /tmp/CalMirrorMenu.bin "$DIR/menu.swift" "${KIT[@]}"
 
 echo "==> Assembling app bundle"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS"
