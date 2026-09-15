@@ -51,6 +51,38 @@ already handles this better than it looks — the slug 404s *into the invitation
 page*, so a dead link still explains itself to whoever clicks it. Worth
 re-checking if the trial ever gets longer.
 
+**The trial opt-in comes after the preview.** *(15 September 2026)* Matt. The
+request-page setup stays local until the owner has seen their own page: blocking
+calendars, display name, meeting shape, the policy and the derived preview all
+happen with no network and nothing agreed to, and Apple's sheet is the step
+after. His reason was the short one — *"it's a free trial regardless"* — which
+disposes of the objection that a tier screen at the end of a setup flow reads as
+bait. Nothing is being charged, so there is no paywall to arrive at.
+
+The agent's argument for the same ordering, which he did not need and which is
+recorded because it is the one that will come back: the preview is the only
+honest demonstration this product can give — *eleven times across fourteen days,
+and Thursday is empty because you were busy* — and it costs nothing to show, so
+asking for a payment method first means asking someone to commit before seeing
+whether their own calendar produces a page worth having. There is also a
+commercial argument for the late placement (a configured page converts better
+than an unconfigured one) which is a sunk-cost effect, and is named here so it
+cannot hide inside the privacy argument later.
+
+**Consequence, and it is structural:** `create` needs the entitlement hash, so
+the slug does not exist until the trial is opted into. Everything before that
+writes only to the local `RequestPageConfig`, and an owner who configures a page
+and never opts in ends with a complete local policy and no slug.
+
+Whether they also end with **no network request ever made** is not settled by
+this entry, and is the one question the ordering opens: the opt-in decision
+below puts StoreKit's product load at "when the owner opens the request-page
+setup", which under this ordering is five screens before any price is shown. If
+the load moves to the tier screen instead, setup is local end to end and someone
+who explores it and backs out has still never touched the network. That is a
+stronger reading of the same promise rather than a different one, but it is
+Matt's to make, and until he does the UI must not claim either.
+
 **askwhen is opt-in, and not opting in changes nothing.** *(15 Sept 2026,
 Matt, restating the packaging decision as the promise it actually is.)* An
 owner who never turns the request page on has exactly the privacy position
