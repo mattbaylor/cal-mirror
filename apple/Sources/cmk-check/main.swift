@@ -1152,7 +1152,7 @@ do {
     check(lenient.requestPage != nil && lenient.requestPage!.policy == RequestPolicy() && lenient.requestPage!.blocking.isEmpty,
           "malformed fields fall back to defaults rather than failing the config")
 
-    var page = RequestPageConfig(slug: "x7f2k9", policy: reqPolicy(), displayName: "Matt Baylor",
+    var page = RequestPageConfig(slug: "x7f2k9", enabled: true, policy: reqPolicy(), displayName: "Matt Baylor",
                                  blurb: "30 minutes.", meetingTitle: "Chat with Matt",
                                  blocking: [CalRef(title: "Work"), CalRef(title: "Home", account: "iCloud")],
                                  requestCalendar: CalRef(title: "Requests"),
@@ -1168,6 +1168,23 @@ do {
     check(!page.isReady, "no slug → not ready (not created yet)")
     let text = String(decoding: try! JSONEncoder().encode(Config()), as: UTF8.self)
     check(!text.contains("requestPage"), "a config with no page does not write the key")
+}
+
+print("Opt-in:")
+do {
+    // The privacy position: an owner who never turns the request page on has
+    // exactly what 1.x had. Every path to a RequestPageConfig starts off.
+    check(!RequestPageConfig().enabled, "a fresh page config is off")
+    check(Config().requestPage == nil, "a fresh Config has no page at all")
+    let missing = try! JSONDecoder().decode(RequestPageConfig.self, from: Data("{}".utf8))
+    check(!missing.enabled, "a decoded config with no `enabled` key is off")
+    let garbage = try! JSONDecoder().decode(RequestPageConfig.self, from: Data(#"{"enabled":"yes"}"#.utf8))
+    check(!garbage.enabled, "a malformed `enabled` is off, not on")
+    let full = RequestPageConfig(slug: "x7f2k9", policy: reqPolicy(), displayName: "Matt",
+                                 requestCalendar: CalRef(title: "R"))
+    check(!full.isReady, "a page with a slug, a name and a calendar is still not ready until it is turned on")
+    var on = full; on.enabled = true
+    check(on.isReady, "and is, once it is")
 }
 
 print("PolicyDump.make:")
@@ -1361,12 +1378,20 @@ do {
     let coord = RequestPageCoordinator(engine: NoCalendar(),
                                        client: AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t),
                                        tokens: tokens, busySource: { _, _, _ in busy })
-    var page = RequestPageConfig(policy: reqPolicy(weekdays: [.wed]), displayName: "Matt Baylor",
+    var page = RequestPageConfig(enabled: true, policy: reqPolicy(weekdays: [.wed]), displayName: "Matt Baylor",
                                  meetingTitle: "Chat", blocking: [CalRef(title: "Work")],
                                  requestCalendar: CalRef(title: "Requests"))
 
     check((try? run { try await coord.publishIfNeeded(page: &page, now: wed) }.get()) == .notReady,
           "no slug → not ready, and nothing was sent (\(t.calls.count) calls)")
+    // Opt-in is structural: a page that has everything but the owner's yes
+    // makes no request — not a publish, not a poll.
+    var off = page; off.slug = "x7f2k9"; off.enabled = false
+    try! tokens.store("tok_off", for: "x7f2k9")
+    check((try? run { try await coord.publishIfNeeded(page: &off, now: wed) }.get()) == .notReady
+          && (try? run { try await coord.collect(page: &off) }.get()) == nil && t.calls.isEmpty,
+          "a page that is not turned on sends nothing, even with a slug and a token (\(t.calls.count) calls)")
+    try! tokens.remove(for: "x7f2k9")
 
     t.answers = [(201, [:], #"{"slug":"x7f2k9","write_token":"tok_123"}"#)]
     _ = try! run { try await coord.create(page: &page, entitlementHash: String(repeating: "ab", count: 32)) }.get()

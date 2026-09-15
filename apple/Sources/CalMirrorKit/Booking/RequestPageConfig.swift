@@ -14,6 +14,12 @@ public struct RequestPageConfig: Codable, Equatable, Sendable {
     /// Assigned by the service at creation. Empty until then, and nothing
     /// publishes or polls while it is.
     public var slug: String
+    /// **Off unless the owner turned it on.** This is the opt-in the privacy
+    /// policy rests on: until it is true the app makes no network request of
+    /// any kind, and an owner who never touches the request page has exactly
+    /// the privacy position 1.x had. Defaults to false in every path — a
+    /// fresh config, a decoded one with the key missing, a malformed one — so
+    /// there is no way to arrive at "on" except by choosing it.
     public var enabled: Bool
 
     public var policy: RequestPolicy
@@ -42,7 +48,7 @@ public struct RequestPageConfig: Codable, Equatable, Sendable {
     /// The queue's weak ETag from the last poll, so an idle poll is a 304.
     public var queueETag: String?
 
-    public init(slug: String = "", enabled: Bool = true,
+    public init(slug: String = "", enabled: Bool = false,
                 policy: RequestPolicy = RequestPolicy(),
                 displayName: String = "", blurb: String? = nil,
                 meetingTitle: String = "Meeting", meetingLocation: String? = nil,
@@ -76,7 +82,7 @@ public struct RequestPageConfig: Codable, Equatable, Sendable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         slug = try c.decodeIfPresent(String.self, forKey: .slug) ?? ""
-        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        enabled = (try? c.decodeIfPresent(Bool.self, forKey: .enabled)) ?? false
         policy = (try? c.decode(RequestPolicy.self, forKey: .policy)) ?? RequestPolicy()
         displayName = try c.decodeIfPresent(String.self, forKey: .displayName) ?? ""
         blurb = try c.decodeIfPresent(String.self, forKey: .blurb)

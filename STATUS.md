@@ -128,6 +128,7 @@ have; **mine** means it can be built and tested without you.
 - **App Store builds come from CI**, never this laptop (`ITMS-90301` on beta macOS). `release.yml`; nine signing secrets plus `CM_RELEASE_TOKEN` are in the repo.
 - **`CM_RELEASE_TOKEN`** lets `watch-review.yml` stamp the site on `main` when a version clears review. Fine-grained PAT, admin on `mattbaylor`, expires **1 September 2027**. Its fallback (open a PR) is refused by a repo setting, so renew it or turn *Allow GitHub Actions to create PRs* on before then. The push path has still never been exercised by a real release.
 - **Screenshots come from a synthetic config**, never the live one — it holds a work email, an employer, a spouse's calendar and children's names.
+- **askwhen is opt-in, and not opting in changes nothing.** Until an owner turns the request page on, the app makes no network request of any kind — not a version check, not a product fetch. `RequestPageConfig.enabled` defaults to false on every path and `cmk-check` asserts it. Anything that would make the app talk to a server before that choice is wrong.
 - **It is a request page, never a booking page.** `askwhen/design/glossary.md` before any copy.
 - **Every competitor claim** must be verifiable from that competitor's own site, linked and dated. It has been wrong three times.
 - **Never add group scheduling.** The warning is at the top of `askwhen/infra/schema.sql`; the reasoning in `design/scale.md`.

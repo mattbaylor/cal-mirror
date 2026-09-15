@@ -156,6 +156,9 @@ something of yours — `STATUS.md`, "What is left", items 3, 4, 6, 9 and 13–16
   switch to `mattbaylor` and switch back.
 - **Never `git add -A`.** Stage explicitly.
 - **Screenshots come from a synthetic config**, never the live one.
+- **askwhen is opt-in, and not opting in changes nothing.** No network
+  request of any kind until the owner turns the page on. Structural, and
+  checked.
 - **It is a request page, never a booking page.**
 - **Every competitor claim** must be verifiable from that competitor's own site,
   linked and dated. The research has been wrong three times.
