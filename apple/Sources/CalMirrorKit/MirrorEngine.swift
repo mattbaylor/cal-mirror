@@ -1,24 +1,6 @@
 import Foundation
 import EventKit
 
-/// A calendar available on this device, for pickers and matching.
-public struct CalendarInfo: Identifiable, Hashable, Sendable {
-    public let title: String
-    public let account: String
-    public let identifier: String
-    public let writable: Bool
-    public var id: String { identifier }
-    public var label: String { "\(title) — \(account)" }
-
-    /// Public so a fixture outside the Kit can describe a calendar that does
-    /// not exist — the synthetic Mac in `MacFixture` builds its list this way
-    /// rather than asking EventKit.
-    public init(title: String, account: String, identifier: String, writable: Bool) {
-        self.title = title; self.account = account
-        self.identifier = identifier; self.writable = writable
-    }
-}
-
 /// The result of syncing one mirror.
 public struct MirrorResult: Identifiable, Sendable {
     public let id: String
