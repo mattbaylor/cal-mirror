@@ -1,3 +1,10 @@
+**Run, end to end.** First in a simulator on 15 September (seven bugs
+fixed), then on 16 September against a local service with nothing mocked:
+publish, mint a personal link, a stranger asks through it with no email
+step, the next poll writes the event and resolves it. What still has not
+been exercised: the lapse states (they need an expired subscription from
+Xcode's transaction manager), and the StoreKit sandbox proof (G).
+
 # Where this is, and what is left
 
 **Written 11 September 2026; updated 16 September, evening — the three decisions are made (`decisions.md`, *All three proposals from the outside review are in*, and *AskWhen.me launches paid*).** Read this first; then [`TASKS.md`](TASKS.md) for
@@ -50,8 +57,9 @@ the accept-time re-check against the real calendar, the API client, the
 coordinator, Keychain token storage, and `SubscriptionStore` over StoreKit 2.
 
 **The UI landed 15 September** ([#99](https://github.com/mattbaylor/cal-mirror/pull/99)),
-in `apple/Shared/RequestPage/` — fifteen screens from the dormant row to a
-page that has lapsed and been deleted. Both app targets call it.
+in `apple/Shared/RequestPage/`, and was reworked on 16 September (#105–#110):
+the native pass, zero-decision setup with the preview first, Send times,
+personal links, and the key in iCloud Keychain. Both app targets call it.
 
 | | |
 |---|---|

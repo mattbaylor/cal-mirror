@@ -1,6 +1,6 @@
 # App Store assets — Calendar Mirror 1.4.0
 
-Everything App Store Connect needs for the 1.4.0 submission: ten screenshots per
+Everything App Store Connect needs for the submission (built for 1.4.0, revised for 2.0): ten screenshots per
 device class, and the four text fields for each platform.
 
 ```
@@ -109,6 +109,19 @@ config from an earlier session.
 
 If you re-shoot any of these, read every pixel of text back before committing —
 menu bars, window titles, tooltips, and the clock.
+
+**The 2.0 iPhone captures** (`ios-sendtimes-light.png`, `ios-askwhen-light.png`,
+`ios-request-light.png`, 16 Sept 2026) come from the same synthetic owner the
+review sheets use: `apple/tools/seed-config.py` writes the config and the app's
+`-AskWhenSeed` argument creates the "AskWhen Screenshots" calendar and, with
+`-AskWhenRequest`, a request from an invented requester. Nothing in them can be
+real by construction. iPad and Mac say the two new frames in words
+(`ipad_swap` / `mac_swap` in `genstore.py`), because no honest capture of a
+share sheet or a menu exists for those.
+
+**Notes for App Review** are generated too: `metadata/<platform>/review_notes.txt`
+from `REVIEW_NOTES` in `genmeta.py`, with one placeholder — the sandbox tester —
+that only Matt fills in, in App Store Connect, never in the repository.
 
 **The Mac captures come from `apple/tools/shoot-mac.sh`** (16 Sept 2026 on).
 It builds the App Store app and launches it under `-CalMirrorFixture`, a
