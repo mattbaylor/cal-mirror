@@ -92,7 +92,7 @@ def gen_swift(c: dict) -> str:
     out.append("    }\n")
 
     for name, key in (("Notification", "notification"), ("Conflict", "conflict"),
-                      ("Lapse", "lapse"), ("Domains", "domains")):
+                      ("Lapse", "lapse"), ("Domains", "domains"), ("SendTimes", "sendTimes")):
         out.append(f"\n    enum {name} {{\n")
         for k, v in c[key].items():
             out.append(f"        static let {k} = {swift_string(v)}\n")

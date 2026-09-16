@@ -9,6 +9,9 @@ struct ContentView: View {
     /// sheet and pushes the setup at its first real step.
     @State private var showingExplainer = false
     @State private var pushingSetup = false
+    /// The "Send times" line, recomputed after every sync. Local: the
+    /// deriver against this device's calendars, no service.
+    @State private var sendTimes: String?
 
     var body: some View {
         #if DEBUG
@@ -129,6 +132,25 @@ struct ContentView: View {
                         }
                     }
                 }
+                // "When are you free?" answered as a message. Above the
+                // request page because it is the daily-use thing; the page is
+                // the upsell after it, and the link rides along once it exists.
+                if model.access {
+                    Section {
+                        if let line = sendTimes {
+                            ShareLink(item: line) {
+                                Label(RequestCopy.SendTimes.row, systemImage: "text.bubble")
+                            }
+                        } else {
+                            Label(RequestCopy.SendTimes.row, systemImage: "text.bubble")
+                                .foregroundStyle(.secondary)
+                        }
+                    } footer: {
+                        Text(sendTimes == nil
+                             ? String(format: RequestCopy.SendTimes.empty, model.requestPage.policy.horizonDays)
+                             : RequestCopy.SendTimes.footer)
+                    }
+                }
                 Section {
                     if model.hasRequestPage {
                         // A page that exists, or a setup that was started:
@@ -194,6 +216,10 @@ struct ContentView: View {
                 }
             }
             .refreshable { await model.syncNow(); await model.collectRequests() }
+            .task(id: model.lastRun) {
+                guard model.access else { return }
+                sendTimes = SendTimesSource.text(config: model.config, engine: model.engine, calendars: model.calendars)
+            }
             .navigationDestination(isPresented: $pushingSetup) {
                 RequestPageSetupView(start: .calendars, page: model.config.requestPage)
             }

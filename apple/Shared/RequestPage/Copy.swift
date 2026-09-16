@@ -179,6 +179,14 @@ enum RequestCopy {
         static let failed = "AskWhen.me did not answer. Nothing was claimed — try again."
     }
 
+    enum SendTimes {
+        static let row = "Send times"
+        static let footer = "Your next three free times as a message, in your time zone, with your page’s link if you have one."
+        static let menu = "Copy Times to Send"
+        static let copied = "Copied: %@"
+        static let empty = "Nothing free to offer in the next %d days."
+    }
+
     enum Live {
         static let section = "Your page"
         static let heading = "Your page is live"

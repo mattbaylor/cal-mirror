@@ -930,6 +930,53 @@ do {
 check(SlotDeriver.derive(policy: reqPolicy(horizonDays: 400, maxPerDay: 1), busy: [], now: wed).count == 45,
       "derivation walks exactly the clamped horizon")
 
+print("SendTimes:")
+do {
+    let us = Locale(identifier: "en_US")
+    let de = Locale(identifier: "de_DE")
+    // Monday 14 Sept 2026, 8am Denver. Slots on Tue, Tue, Wed, Thu, Thu, then
+    // the following Tue (eight days out).
+    let now = mtn(2026, 9, 14, 8)
+    func slot(_ d: Int, _ h: Int, _ mi: Int = 0, minutes: Int = 30) -> Slot {
+        let start = mtn(2026, 9, d, h, mi)
+        return Slot(start: start, end: start.addingTimeInterval(Double(minutes) * 60))
+    }
+    let slots = [slot(15, 14), slot(15, 15), slot(16, 10), slot(17, 15), slot(17, 16), slot(22, 9)]
+
+    let three = SendTimes.pick(slots, zone: denver)
+    check(three.map { $0.start } == [slots[0].start, slots[2].start, slots[3].start],
+          "pick takes the earliest slot on each of the next three days")
+    let two = SendTimes.pick([slots[0], slots[1], slots[2]], zone: denver)
+    check(two.map { $0.start } == [slots[0].start, slots[1].start, slots[2].start],
+          "with only two days on offer, a day is used twice rather than a slot left out")
+    check(SendTimes.pick([], zone: denver).isEmpty, "no slots, no picks")
+
+    let line = SendTimes.text(three, zone: denver, link: "askwhen.me/k9x2f", now: now, locale: us)
+    check(line == "Tue 2–2:30pm, Wed 10–10:30am or Thu 3–3:30pm MDT — or pick one: askwhen.me/k9x2f",
+          "the line: days, spans with the period said once, the zone once, then the link — got \(line)")
+    let noLink = SendTimes.text(three, zone: denver, link: nil, now: now, locale: us)
+    check(noLink == "Tue 2–2:30pm, Wed 10–10:30am or Thu 3–3:30pm MDT", "no page, no link, still the times")
+    check(SendTimes.text([three[0]], zone: denver, link: nil, now: now, locale: us) == "Tue 2–2:30pm MDT",
+          "one pick reads as one offer, no 'or'")
+    check(SendTimes.text([], zone: denver, link: "x", now: now, locale: us) == "", "no picks, no text")
+
+    // Across noon the period is said on both ends; more than six days out the
+    // day carries its number; a 24-hour locale counts to 24.
+    let noon = Slot(start: mtn(2026, 9, 15, 11, 30), end: mtn(2026, 9, 15, 12, 30))
+    check(SendTimes.span(noon, zone: denver, locale: us) == "11:30am–12:30pm", "a span across noon names both periods")
+    check(SendTimes.label(slots[5], zone: denver, now: now, locale: us) == "Tue 22 9–9:30am",
+          "eight days out, the day carries its number")
+    check(SendTimes.span(slots[0], zone: denver, locale: de) == "14:00–14:30", "a 24-hour locale counts to 24")
+
+    // The fall-back day: 1 Nov 2026, 1:30 happens twice. Two picks with the
+    // same wall-clock label are still two picks; the date arithmetic is the
+    // deriver's, and the text just has to not merge them.
+    let fold = [Slot(start: mtn(2026, 11, 1, 1, 30), end: mtn(2026, 11, 1, 2, 0)),
+                Slot(start: mtn(2026, 11, 1, 1, 30).addingTimeInterval(3600),
+                     end: mtn(2026, 11, 1, 1, 30).addingTimeInterval(5400))]
+    check(SendTimes.pick(fold, zone: denver).count == 2, "both passes through the repeated hour survive the pick")
+}
+
 print("SlotDeriver — DST:")
 // The whole module exists to pass these. On 8 March 2026 Denver's clocks jump
 // 2am → 3am and the local day is 23 hours; on 1 November they fall back and it is

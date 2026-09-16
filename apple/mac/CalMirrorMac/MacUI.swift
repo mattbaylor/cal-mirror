@@ -33,6 +33,11 @@ struct MenuContent: View {
             Button("\(symbol(model.iconFor(m.id)))  \(m.name)\(count(m))") { openManage() }
         }
         Divider()
+        // The daily-use one: the next three free times onto the clipboard,
+        // ready to paste into whatever asked. Local; no service.
+        Button(RequestCopy.SendTimes.menu) { copyTimes() }
+            .disabled(!model.access)
+        Divider()
         Button(model.config.paused ? "Resume Syncing" : "Sync Now") {
             if model.config.paused { model.togglePause() } else { Task { await model.syncNow() } }
         }
@@ -47,6 +52,14 @@ struct MenuContent: View {
         Button("Open Calendar") { NSWorkspace.shared.open(URL(string: "ical://")!) }
         Divider()
         Button("Quit Calendar Mirror") { NSApp.terminate(nil) }
+    }
+
+    private func copyTimes() {
+        // The synthetic Mac never asks EventKit, and this would.
+        guard !model.fixture else { return }
+        guard let line = SendTimesSource.text(config: model.config, engine: model.engine, calendars: model.calendars) else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(line, forType: .string)
     }
 
     private func openManage() {
