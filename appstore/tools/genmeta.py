@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
-"""Emit App Store Connect metadata for Calendar Mirror 1.4.0, and enforce the
+"""Emit App Store Connect metadata for Calendar Mirror 2.0, and enforce the
 field limits so nothing is silently truncated at paste time.
 
-Two hard accuracy rules are baked in here:
+Hard accuracy rules baked in here:
 
-  * Realtime sync is NOT in the App Store builds. It exists only in the
-    standalone macOS build from source (`grep realtime apple/` finds nothing).
-    No sentence below may imply the store app syncs on calendar change.
-  * The store listing is named "Calendar Mirror" with subtitle "It's Your
-    Calendar: Control It". Apple already indexes both, so the keyword field
-    deliberately spends none of its 100 characters on those words.
+  * Realtime sync is in the Mac App Store build from 2.0 (it landed as 1.4.2,
+    which folds into 2.0) and is NOT on iPhone or iPad, where iOS decides when
+    the app runs. The Mac listing may say the copy follows a change; the iOS
+    listing may not, and neither may say "within seconds" or "instantly" —
+    the change notification is best-effort and the five-minute pass is the
+    backstop. BANNED below is per platform for that reason.
+  * The vocabulary is askwhen/design/glossary.md: a request page, never a
+    booking page; people ask, the owner accepts or declines; AskWhen.me is
+    styled so, and is a separate product turned on from the app, never a
+    feature of it.
+  * Nothing here may claim the app makes no network requests, because with
+    AskWhen.me on it does. What is true and stays true: the app makes none
+    until the owner turns AskWhen.me on.
+  * The store listing is named "Calendar Mirror". Apple indexes name +
+    subtitle + keywords as one pool, so the keyword field repeats none of
+    those words.
 """
 import os, sys
 
@@ -29,8 +39,8 @@ NAME = "Calendar Mirror"
 # the first chance to change it — that is what this release is for.
 SUBTITLE = "One-way sync with busy blocks"
 
-PROMO = ("Copy one calendar into another, one direction only. Skip declined, canceled "
-         "and all-day events. No account, no server, nothing leaves your device.")
+PROMO = ("Copy one calendar into another, one direction only. Skip the noise. Send your "
+         "free times as a message. No account, no server — unless you turn on AskWhen.me.")
 
 # Keywords: comma separated, no spaces after commas (spaces cost characters).
 # Nothing here repeats the app name or subtitle, which Apple indexes already.
@@ -41,36 +51,51 @@ PROMO = ("Copy one calendar into another, one direction only. Skip declined, can
 # build if it does. "shortcuts" earns its slot in 1.4.1; "duplicate" gave up its
 # place for it.
 KEYWORDS = ("copy,availability,icloud,caldav,ical,exchange,privacy,work,"
-            "shared,feed,declined,hide,ics,shortcuts")
+            "shared,feed,declined,scheduling,request")
 
 COMMON_TAIL = """
-SHORTCUTS
+SEND TIMES
 
-A Sync Now action for the Shortcuts app. Drop it into an automation and sync
-when you arrive somewhere, at a set time, or when a Focus turns on — it runs
-without opening the app and reports what changed.
+"When are you free?" One tap gives you your next three free times as a line of
+text — "Tue 2–2:30pm, Wed 10–10:30am or Thu 3–3:30pm MDT" — worked out on your
+device from the calendars you chose, ready to paste into Messages, Mail or
+Slack. Also a Shortcuts action and a Siri phrase. Nothing leaves your device.
+
+ASKWHEN.ME — A SEPARATE PRODUCT YOU CAN TURN ON
+
+Off by default; until you turn it on, the app makes no network request of any
+kind. AskWhen.me is a subscription with its own server: a page at
+askwhen.me/yourpage where people can ask you for a time.
+
+A request page, not a booking page. Your device works out which times to offer
+and sends only those — never your calendar, your events, your address, or your
+name beyond the label you choose. Someone picks a time and says who they are;
+the request comes to your device, and nothing lands in your calendar until you
+accept. Your device re-checks the time against your real calendar first.
+
+Send times can carry a personal link: it opens your page once, for a week, and
+because you sent it there is no email confirmation — if the time is still
+clear, your device accepts it for you and they get the calendar file.
+
+Free for 90 days, then $19.99 a year; your own name on askwhen.me, or your own
+domain, are upgrades. Payment is Apple's. The privacy page says what the server
+holds, and for how long.
 
 WHAT IT DOES NOT DO
 
-Being straight with you before you buy:
-
-• No booking or scheduling links.
+• No scheduling links unless you turn on AskWhen.me, a separate subscription.
 • No unified calendar view — it makes copies; your calendar app shows them.
 • No team, admin or SSO features. It is a single-person utility.
-• Attendees are never copied. Apple's calendar framework has no way to set
-  guests on an event, so a copy carries the time and whatever else you allow,
-  but never the guest list.
+• Attendees are never copied: Apple's calendar framework cannot set guests.
 • It cannot sync a calendar your device cannot already see.
 
 PRIVACY
 
-No account. No server. No analytics, no tracking, no telemetry, no ads. There
-is nothing to sign up for and no password to hand over, because it works
-through the calendars already configured on your device.
-
-Once a copy lands in an account like iCloud, Google or Exchange, that provider
-syncs and stores it under their policies, exactly as it would for any event you
-added yourself. That is the honest boundary.
+No account. No analytics, no tracking, no telemetry, no ads. No server, and no
+network request of any kind, until you turn on AskWhen.me — and its server
+never sees your calendar either. Once a copy lands in iCloud, Google or
+Exchange, that provider stores it under their policies, as for any event you
+added yourself.
 
 Open source under the MIT licence. One purchase covers iPhone, iPad and Mac.
 """
@@ -79,173 +104,111 @@ DESC_IOS = """Some calendars you can see but cannot reshare. A subscribed work
 schedule. A read-only team feed. An account that is not yours.
 
 Calendar Mirror makes an editable copy of one calendar inside another calendar
-you own — one direction only, so the original is never touched. And because the
+you own — one direction only, so the original is never touched. Because the
 copy lives in your own account, it reaches your other devices on its own.
 
 PICK TWO CALENDARS
 
-Choose the calendar to copy from and the calendar to copy into. That is the
-setup. Add as many pairs as you like; two pairs can share one destination
-without disturbing each other, and anything you add to the destination by hand
-is left alone.
-
-Repeating events, all-day events and moved occurrences all come across
-correctly.
+Choose the calendar to copy from and the one to copy into. Add as many pairs as
+you like; two can share a destination, and anything you add by hand is left
+alone. Repeating and all-day events, and moved occurrences, all come across.
 
 CHOOSE HOW MUCH CROSSES OVER
 
-Each pair decides for itself:
-
-• Full copy — titles, locations and notes as written.
-• Just the basics — real titles and locations, nothing else.
-• Busy only — every event becomes a plain block reading "Busy". Your time is
-  visible; nothing else is.
-
-Put a label in front of copied titles, too — "[Work] Standup", or even
-"[Work] Busy" on a pair that hides the details. A pair can also carry the
-source event's meeting link into the copy's notes, so a mirrored meeting is one
-you can actually join.
+Each pair decides: a full copy; titles and locations only; or "Busy" blocks
+that show your time and nothing else. Put a label in front of copied titles —
+"[Work] Standup", or "[Work] Busy" — and carry the meeting link into the copy's
+notes so a mirrored meeting is one you can join.
 
 CHOOSE WHICH EVENTS
 
-Not everything in a calendar is worth copying. A pair can skip:
-
-• Meetings you declined, or have not answered yet
-• Events the organiser cancelled
-• All-day events, and anything marked free
-• Anything shorter or longer than a set number of minutes
-• Titles containing words you choose, such as "Lunch" or "Focus time"
-• Anything outside a window of the day, on the weekdays you pick
-
-This works on calendars you do not control, which is the point — tagging
-individual events is only possible on events you wrote yourself.
-
-OR DECIDE ONE EVENT AT A TIME
-
-Type a tag into a source event's notes and that event gets its own rule:
-
-• #nomirror — never copy this one
-• #private — copy it as a busy block with no details
-• #public — copy it in full, even on a pair that normally hides things
-
-You can also point a whole pair at a tag and copy only the events you have
-marked.
+A pair can skip meetings you declined or have not answered, events the
+organizer canceled, all-day events and anything marked free, anything shorter
+or longer than you like, titles containing words you choose, and anything
+outside a window of the day on the weekdays you pick. Or tag one event at a
+time: #nomirror, #private, #public in its notes.
 
 IT TELLS YOU WHEN SOMETHING BREAKS
 
 A healthy pair is silent. If one stops syncing, an all-day warning appears in
-the destination calendar itself — so you find out on your phone, without
-opening anything. It clears the moment the pair recovers.
+the destination calendar itself, and clears the moment the pair recovers.
 
 ON IPHONE AND IPAD
 
-Every pair in one list, grouped by the calendar it copies into, with its health
-and how many events it manages. Pull down to sync immediately.
-
-Background refreshes are scheduled at the interval you choose, but iOS decides
-when they actually run — treat the setting as the earliest a sync may start,
-not a guarantee. Pull to refresh whenever you want it now.
+Every pair in one list, with its health and event count. Pull down to sync now.
+Background refreshes run at the interval you choose, when iOS allows — treat it
+as the earliest a sync may start, not a guarantee.
 """ + COMMON_TAIL
 
 DESC_MAC = """Some calendars you can see but cannot reshare. A subscribed work
 schedule. A read-only team feed. An account that is not yours.
 
 Calendar Mirror makes an editable copy of one calendar inside another calendar
-you own — one direction only, so the original is never touched. And because the
-copy lives in your own account, macOS pushes it wherever that account syncs.
+you own — one direction only, so the original is never touched. Because the
+copy lives in your account, macOS pushes it wherever that account syncs.
 
 LIVES IN YOUR MENU BAR
 
-A small icon shows how things are going at a glance, with a face that changes
-by state: a smile when every copy is current, warning triangles when one has
-fallen behind, crossed eyes when one is failing, a flat expression when paused.
-
-Click it to sync now, pause, change the interval, or open the management
-window. It can start at login and work quietly from there.
+An icon shows how things are going at a glance. Click it to sync now, pause, or
+send your times. It can start at login and work quietly from there.
 
 PICK TWO CALENDARS
 
 Choose the calendar to copy from and the one to copy into. Add as many pairs as
-you like; two can share a destination without disturbing each other, and
-anything you add by hand is left alone.
-
-Pairs are listed down the side, grouped by the calendar they copy into, and
-every section folds down to a line saying what it is set to.
-
-Repeating and all-day events, and moved occurrences, all come across
-correctly.
+you like; two can share a destination, and anything you add by hand is left
+alone. Repeating and all-day events, and moved occurrences, all come across.
 
 CHOOSE HOW MUCH CROSSES OVER
 
-Each pair decides for itself:
-
-• Full copy — titles, locations and notes as written.
-• Just the basics — real titles and locations, nothing else.
-• Busy only — a plain block reading "Busy". Your time is visible, nothing else.
-
-Put a label in front of copied titles, too — "[Work] Standup", or even
-"[Work] Busy" on a pair that hides the details. A pair can also carry the source
-event's meeting link into the copy's notes, so a mirrored meeting is one you can
-join.
+Each pair decides: a full copy; titles and locations only; or "Busy" blocks
+that show your time and nothing else. Put a label in front of copied titles —
+"[Work] Standup", or "[Work] Busy" — and carry the meeting link into the copy's
+notes so a mirrored meeting is one you can join.
 
 CHOOSE WHICH EVENTS
 
-Not everything in a calendar is worth copying. A pair can skip:
+A pair can skip meetings you declined or have not answered, events the
+organizer canceled, all-day events and anything marked free, anything shorter
+or longer than you like, titles containing words you choose, and anything
+outside a window of the day on the weekdays you pick. Or tag one event at a
+time: #nomirror, #private, #public in its notes.
 
-• Meetings you declined, or have not answered yet
-• Events the organiser cancelled
-• All-day events, and anything marked free
-• Anything shorter or longer than a set number of minutes
-• Titles containing words you choose, such as "Lunch" or "Focus time"
-• Anything outside a window of the day, on the weekdays you pick
+IT NOTICES WHEN YOUR CALENDAR CHANGES
 
-This works on calendars you do not control — tagging events one by one is only
-possible on events you wrote yourself.
-
-OR DECIDE ONE EVENT AT A TIME
-
-Type a tag into a source event's notes and that event gets its own rule:
-
-• #nomirror — never copy this one
-• #private — copy it as a busy block with no details
-• #public — copy it in full, even on a pair that normally hides things
-
-You can also point a whole pair at a tag and copy only the events you have
-marked.
+Turn on realtime and the copy follows a calendar change soon after it; a
+five-minute pass still runs underneath as the backstop.
 
 IT TELLS YOU WHEN SOMETHING BREAKS
 
 A healthy pair is silent. If one stops syncing, an all-day warning appears in
-the destination calendar itself — so you find out on your phone, without
-opening anything. It clears the moment the pair recovers.
+the destination calendar itself, and clears the moment the pair recovers.
 """ + COMMON_TAIL
 
-NEW_IOS = """Shortcuts.
+NEW_COMMON = """Send times, and a request page you can turn on.
 
-Calendar Mirror now has a Sync Now action for the Shortcuts app, on iPhone, iPad
-and Mac.
+SEND TIMES — "When are you free?" One tap gives you your next three free times
+as a line of text, ready to paste into a message. Worked out on your device;
+nothing leaves it. Also a Shortcuts action and a Siri phrase.
 
-Put it in a Shortcut, on your Home Screen, or in an automation: sync when you
-arrive at the office, every weekday at eight, or when a Focus turns on. It runs
-in the background without opening the app.
+ASKWHEN.ME — a separate subscription you can turn on from inside the app: a
+page where people ask you for a time, served by a server that never sees your
+calendar. Your device chooses what to offer and answers every request; nothing
+lands in your calendar until it has looked. Off by default; no network request
+of any kind until you turn on AskWhen.me. Free for 90 days.
 
-It reports what actually changed rather than just "done" — "3 added, 1 updated",
-or which pair failed and why. Siri understands "Sync my calendars with Calendar
-Mirror" without you building anything first.
+Setup asks nothing: turn it on, and the first thing you see is your own week.
+Send times can carry a personal link — one use, one week, no email
+confirmation, accepted for you if the time is still clear.
+
+Also: the settings read the way Apple's do, and the key to your page follows
+your iCloud Keychain to a new device.
 """
 
-NEW_MAC = """Shortcuts.
+NEW_IOS = NEW_COMMON
 
-Calendar Mirror now has a Sync Now action for the Shortcuts app, on iPhone, iPad
-and Mac.
-
-Put it in a Shortcut, on your Home Screen, or in an automation: sync when you
-arrive at the office, every weekday at eight, or when a Focus turns on. It runs
-in the background without opening the app.
-
-It reports what actually changed rather than just "done" — "3 added, 1 updated",
-or which pair failed and why. Siri understands "Sync my calendars with Calendar
-Mirror" without you building anything first.
+NEW_MAC = NEW_COMMON + """
+On the Mac: a sidebar, a toolbar and a Settings window; realtime syncing in the
+App Store build; Copy Times to Send in the menu bar.
 """
 
 def unwrap(t):
@@ -278,7 +241,10 @@ FIELDS = {
                 description=unwrap(DESC_MAC), whats_new=unwrap(NEW_MAC)),
 }
 
-BANNED = ["realtime", "real-time", "real time", "within seconds", "instantly"]
+# Per platform: the Mac store app syncs on change from 2.0; iOS never will.
+# "within seconds" and "instantly" oversell a best-effort notification anywhere.
+BANNED = {"ios": ["realtime", "real-time", "real time", "within seconds", "instantly"],
+          "mac": ["within seconds", "instantly"]}
 
 # Words too generic to be worth a keyword slot, and which Apple ignores anyway.
 STOP = {"one", "way", "with", "and", "the", "for", "your", "you", "its", "it",
@@ -316,10 +282,20 @@ for plat, fields in FIELDS.items():
         if n > lim:
             fail = True
         low = val.lower()
-        hits = [b for b in BANNED if b in low]
+        hits = [b for b in BANNED[plat] if b in low]
         if hits:
             fail = True
-            print("  !! %s/%s mentions %s — not in the App Store build" % (plat, name, hits))
+            print("  !! %s/%s mentions %s — not true of this platform's App Store build" % (plat, name, hits))
+        # The glossary: never a booking page. "booking page" survives only in the
+        # sentence that says which one this is not.
+        if low.count("booking") > 1 or "book a time" in low or "booking link" in low:
+            fail = True
+            print("  !! %s/%s says booking — it is a request page (glossary.md)" % (plat, name))
+        # The 1.x claim, unqualified. "No network request ... until you turn
+        # on AskWhen.me" is the true form and the only one allowed.
+        if "requests of its own" in low or ("no network request" in low and "until you turn on" not in low):
+            fail = True
+            print("  !! %s/%s claims no network requests without the AskWhen.me qualifier" % (plat, name))
         open(os.path.join(d, name + ".txt"), "w").write(val)
         print("%-4s %-18s %5d / %-4d %s" % (plat, name, n, lim, flag))
 
