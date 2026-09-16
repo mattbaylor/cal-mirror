@@ -4,7 +4,7 @@ The living board. [`STATUS.md`](STATUS.md) is the narrative — where things
 stand and what is left to ship Calendar Mirror 2.0 and launch AskWhen.me — and is the place to start; this is the
 granular list underneath it.
 
-Last accurate: **15 September 2026, evening.** Anything here that the repo or the
+Last accurate: **16 September 2026, evening.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
 
 **How to read it.** Nothing here is "blocked" as a resting state. Either it is
@@ -61,8 +61,7 @@ Judgment, not access. Roughly in the order it starts costing.
 |---|---|---|
 | ⚪ | **Apple agreements renew 14 Dec 2026** — both Paid Apps and Free Apps. Until you accept the renewed version, new products and price changes are refused; existing sales continue. Calendar a reminder for early December. | |
 | 🔴 | **Rotate five credentials before prod** | `cloudflare_apitoken`, `cloudflare_accesskey`, `cloudflare_secretaccesskey`, the R2 endpoint (carries the account hash) and `gh_claude` were printed into a session transcript on 4 Sept. You said rotate at prod rather than now; this is the reminder so it does not get lost. `~/.claude/settings.json` now denies `infisical secrets` outright. |
-| 🔴 | **Commit the `-target` fix** | Still uncommitted in your tree (`build.sh`, `build-ui.sh`). Say the word and I will commit it; I did not want to commit your working tree unasked. |
-| 🟡 | **Edge Caddy: 2.6.2 → 2.11.4, and drop the wildcard** | Plan and argument in `askwhen/infra/edge/upgrade-plan.md`. Only apex + `www` are staged today because 2.6.2 has no DNS modules. Recommendation: upgrade for the security fixes, and do **not** add the wildcard — every `*.askwhen.me` name we would ever serve is a custom-domain CNAME, which on-demand TLS already covers. |
+| 🔴 | **Edge Caddy: 2.6.2 → 2.11.4, and drop the wildcard** | Now a submission blocker, since AskWhen.me launches paid (decided 16 Sept). Plan and argument in `infra/edge/upgrade-plan.md` (repo root). Only apex + `www` are staged today because 2.6.2 has no DNS modules. Recommendation: upgrade for the security fixes, and do **not** add the wildcard — every `*.askwhen.me` name we would ever serve is a custom-domain CNAME, which on-demand TLS already covers. |
 | 🟡 | **Disable Universal SSL on `askwhen.me`** | Cloudflare keeps injecting CAA records for its own CAs into the zone. Harmless while the records also permit Let's Encrypt, but it is a foreign hand in a zone we otherwise control. Cloudflare → SSL/TLS → Edge Certificates → Disable Universal SSL. |
 | 🟡 | **Reserve `172.16.1.41` in pfSense** and **add CT 112 to PBS** | The guest has a static address nothing else knows about, and no backup. Both are yours because both are DC-wide config. |
 | 🟡 | **An Infisical machine identity** | User sessions expire in 20–60 minutes and each expiry cost a round trip today. A Universal Auth identity scoped to `calendarmirror-com-v2-yo/prod`, read-only, would let `infisical run` work unattended. |
@@ -70,7 +69,7 @@ Judgment, not access. Roughly in the order it starts costing.
 | 🟡 | **1.4.2 folds into Calendar Mirror 2.0** | Decided 15 Sept. On main, unreleased; ships with 2.0. |
 | 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. Needs a signed, notarized build, so it is a release rather than a tag. |
 | ⚪ | **Design the emails** *(Matt, 10 Sept)* | All four — confirm, accepted, declined, no-response — are deliberately plain today: one `<p>` after another, no image, no styled button, nothing fetched. The plainness is partly a security stance (a scanner rendering the confirm mail finds nothing to click but a URL whose GET does nothing) and partly that nobody has designed them yet. Whatever they become should keep both properties; the templates are in `askwhen/service/internal/mail/postal.go`, and the same look should probably reach the request page's own states. |
-| ⚪ | **Three proposals from the outside review** *(16 Sept)* | `decisions.md`, *From an outside review, turned consultant*: "Send times" as text from the share sheet and menu bar (no service, ships in the app); personal links accepted at send time (single-use, expiring, no confirm mail); setup with zero decisions and the preview before the offer. Yes, no, or something else on each — the first needs no service and could ship in 2.0. |
+| ⚪ | ~~**Three proposals from the outside review**~~ | **Decided 16 Sept: all three in 2.0**, after the native pass. The agent's numbers inside them (three slots, seven days, which calendars block by inference) are under *Proposed* in `decisions.md` and will be built as written unless you say otherwise. |
 | ⚪ | **Sit with the request page** | You said you were not sold. `askwhen/web/dist/gallery.html` is every state at true size and opens straight from the filesystem. |
 | ⚪ | **`feat/synced-events-view`** | One WIP commit, no PR, abandoned mid-thought. Finish or delete. |
 
@@ -85,8 +84,20 @@ Judgment, not access. Roughly in the order it starts costing.
 | **DMARC to `quarantine`** on the schedule `mail.md` describes, once a few weeks of `p=none` reports look clean. | Deliverability. |
 | **A support address requesters can reach.** Mail comes from `no-reply@`; the page footer says `askwhen.me` and nothing else. Someone who gets a wrong `.ics` has nowhere to write. | Support, and Apple asks for one. |
 | **Small Business Program** enrollment, if not already — 15% instead of 30%. | Money. |
-| **`askwhen.me` registration renewal** date — put it somewhere a reminder fires. | The whole product is one lapsed domain from gone. |
+| **`askwhen.me` registration renewal** — expires **1 September 2027** (whois, 16 Sept). Put it somewhere a reminder fires. | The whole product is one lapsed domain from gone. |
 | **An outside review found nine defects and four capture problems** *(16 Sept)* — `REVIEW.md`. The ones nobody had listed: the delete sweep has no automated test; calendar matching is by title string; banner writes swallow errors; the write token should sync via iCloud Keychain; the listing and privacy page become false in 2.0; the Mac store screenshots are of the standalone app; two Mac captures are of an inactive window; `askwhen.me` is lowercase in the explainer. | Each is a task or a decision; `REVIEW.md` says which. |
+
+## Defects from the outside review, not in 2.0 unless Matt says
+
+Each has an owner. None is on the release path; `REVIEW.md` has the detail.
+
+| # | Defect | Owner | What "done" looks like |
+|---|---|---|---|
+| D1 | The delete sweep has no automated test — the path that removes events from a shared calendar is only tested by running it | agent | An EventKit-backed test target (a throwaway local calendar in the simulator) that seeds copies, runs the sweep, and asserts exactly the marked ones are gone. `SnapshotGuard`'s `count * 4 < last` heuristic gets a case each side of the line. |
+| D2 | Calendar matching is by title string, first match wins when `account` is absent — two calendars named "Calendar" is the normal iCloud case | agent, **Matt** on migration | Match by `calendarIdentifier` first, title+account second, title-only last and only when unique; a config that resolves ambiguously is reported, not guessed. Needs a decision on how existing configs migrate. |
+| D4 | Banner writes swallow errors (`try? store.save` in `MirrorEngine.applyBanner`) — the one write whose job is to be loud fails silently | agent | The save's error is logged and surfaced in the sync status like any other write failure; a `cmk-check` case through a store that refuses. |
+| D3 | The copy's URL field carries the marker, so the source's meeting link goes in the notes | **Matt** | Structural; a decision on whether the marker moves (notes tail, or a custom property) and what that does to every existing copy. |
+| D5 | The site says "within seconds"; the store app has no realtime | agent | The site's claims policed the way `genmeta.py` polices the metadata. Folds into hurdle F. |
 
 ## Also yours, but lower stakes
 
