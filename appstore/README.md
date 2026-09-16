@@ -110,11 +110,23 @@ config from an earlier session.
 If you re-shoot any of these, read every pixel of text back before committing —
 menu bars, window titles, tooltips, and the clock.
 
-**Realtime sync is not in the App Store build.** It exists only in the standalone
-macOS build from source (`grep -r realtime apple/` finds nothing). No screenshot
-or metadata string may claim the store app syncs on calendar change.
-`tools/genmeta.py` fails the build if any of `realtime`, `real-time`, `within
-seconds` or `instantly` appears in a metadata field — keep that check.
+**The Mac captures come from `apple/tools/shoot-mac.sh`** (16 Sept 2026 on).
+It builds the App Store app and launches it under `-CalMirrorFixture`, a
+debug-only mode in which the store app never asks EventKit — the calendars,
+mirrors and statuses are the invented set in `apple/Shared/MacFixture.swift`,
+and nothing is saved — then captures the key window at each state and size
+`genstore.py` crops to. Every Mac frame is therefore of the store app (not
+the standalone one, which the earlier captures showed), of the key window,
+and of data no real calendar could reach. `mac-menu-light.png` is the one
+capture the script does not make; nothing in `genstore.py` uses it.
+
+**Realtime sync reaches the App Store build in 2.0** (it landed on `main`
+as 1.4.2, unreleased, and 1.4.2 folds into 2.0). Until that ships, no
+screenshot or metadata string may claim the store app syncs on calendar
+change, and `tools/genmeta.py` fails the build if any of `realtime`,
+`real-time`, `within seconds` or `instantly` appears in a metadata field.
+The 2.0 listing rewrite is where that check gets relaxed — deliberately,
+in the same change as the copy that starts making the claim.
 
 ## Regenerating
 

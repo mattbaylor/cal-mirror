@@ -56,7 +56,26 @@ final class Store: ObservableObject {
         return dir.appendingPathComponent("config.json")
     }
 
+    /// `-CalMirrorFixture`: a synthetic Mac for captures. EventKit is never
+    /// asked, nothing is saved, and the sync loop never starts. Debug-only;
+    /// see `MacFixture`.
+    #if DEBUG
+    let fixture = MacFixture.isRequested
+    #else
+    let fixture = false
+    #endif
+
     init() {
+        #if DEBUG
+        if fixture {
+            config = MacFixture.config
+            calendars = MacFixture.calendars
+            statuses = MacFixture.statuses
+            access = true
+            lastRun = Date().addingTimeInterval(-140)
+            return
+        }
+        #endif
         config = ConfigStore.load(from: Store.configURL)
         lastRun = UserDefaults.standard.object(forKey: "lastRun") as? Date
         #if os(macOS)
@@ -67,6 +86,7 @@ final class Store: ObservableObject {
     }
 
     func bootstrap() async {
+        guard !fixture else { return }
         access = await engine.requestAccess()
         if access { calendars = engine.calendars(); await syncNow() }
         // Only once a page exists. StoreKit's update stream is local, but
@@ -80,6 +100,8 @@ final class Store: ObservableObject {
     }
 
     func save() {
+        // The synthetic Mac must never write over the real container's config.
+        guard !fixture else { return }
         try? ConfigStore.save(config, to: Store.configURL)
         #if os(macOS)
         scheduleTimer()
@@ -87,7 +109,7 @@ final class Store: ObservableObject {
     }
 
     func syncNow() async {
-        guard access, !syncing else { return }
+        guard access, !syncing, !fixture else { return }
         syncing = true
         let cfg = config
         // Reuse the ONE long-lived engine/store (not a fresh one per sync): a

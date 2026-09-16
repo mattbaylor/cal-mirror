@@ -26,6 +26,7 @@ struct RequestPageRow: View {
                 Text(RequestCopy.DormantRow.title)
                 Text(subtitle)
                     .font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.leading)
             }
