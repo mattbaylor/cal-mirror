@@ -70,6 +70,7 @@ Judgment, not access. Roughly in the order it starts costing.
 | 🟡 | **1.4.2 folds into Calendar Mirror 2.0** | Decided 15 Sept. On main, unreleased; ships with 2.0. |
 | 🟡 | **Tag `v1.4.1` on the standalone track** | Both plists say 1.4.1; the Dev ID track stopped at `v1.4.0`. Needs a signed, notarized build, so it is a release rather than a tag. |
 | ⚪ | **Design the emails** *(Matt, 10 Sept)* | All four — confirm, accepted, declined, no-response — are deliberately plain today: one `<p>` after another, no image, no styled button, nothing fetched. The plainness is partly a security stance (a scanner rendering the confirm mail finds nothing to click but a URL whose GET does nothing) and partly that nobody has designed them yet. Whatever they become should keep both properties; the templates are in `askwhen/service/internal/mail/postal.go`, and the same look should probably reach the request page's own states. |
+| ⚪ | **Three proposals from the outside review** *(16 Sept)* | `decisions.md`, *From an outside review, turned consultant*: "Send times" as text from the share sheet and menu bar (no service, ships in the app); personal links accepted at send time (single-use, expiring, no confirm mail); setup with zero decisions and the preview before the offer. Yes, no, or something else on each — the first needs no service and could ship in 2.0. |
 | ⚪ | **Sit with the request page** | You said you were not sold. `askwhen/web/dist/gallery.html` is every state at true size and opens straight from the filesystem. |
 | ⚪ | **`feat/synced-events-view`** | One WIP commit, no PR, abandoned mid-thought. Finish or delete. |
 
@@ -85,6 +86,7 @@ Judgment, not access. Roughly in the order it starts costing.
 | **A support address requesters can reach.** Mail comes from `no-reply@`; the page footer says `askwhen.me` and nothing else. Someone who gets a wrong `.ics` has nowhere to write. | Support, and Apple asks for one. |
 | **Small Business Program** enrollment, if not already — 15% instead of 30%. | Money. |
 | **`askwhen.me` registration renewal** date — put it somewhere a reminder fires. | The whole product is one lapsed domain from gone. |
+| **An outside review found nine defects and four capture problems** *(16 Sept)* — `REVIEW.md`. The ones nobody had listed: the delete sweep has no automated test; calendar matching is by title string; banner writes swallow errors; the write token should sync via iCloud Keychain; the listing and privacy page become false in 2.0; the Mac store screenshots are of the standalone app; two Mac captures are of an inactive window; `askwhen.me` is lowercase in the explainer. | Each is a task or a decision; `REVIEW.md` says which. |
 
 ## Also yours, but lower stakes
 

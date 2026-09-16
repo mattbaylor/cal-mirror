@@ -436,6 +436,115 @@ of them is worth reopening on its own merits if it starts to bite:
 Everything here was arrived at by Claude and reads as settled in the docs it came
 from. It is not. Each needs Matt's yes, no, or something else.
 
+**From an outside review, turned consultant** *(16 September 2026.)* Three
+proposals that share one premise: the moat is not the page, it is that the
+device already holds the union of the owner's iCloud, Google and Exchange
+calendars with no OAuth grant to anyone — nobody else gets that union without
+three consent screens. The public page is where that advantage is spent on the
+smallest audience at the highest friction. These move the product to where the
+question is actually asked.
+
+**"Send times": the offer as text, from the share sheet and the menu bar.**
+*"When are you free?"* arrives in Messages, Mail and Slack, and today the owner
+answers it by opening Calendar, squinting, and typing three times by hand. The
+proposal is one action — a share-sheet extension on iOS, a menu-bar item on the
+Mac — that pastes the next few offerable slots as plain text, and optionally a
+link after them:
+
+> Tue 2–2:30, Wed 10–10:30 or Thu 3–3:30 MT — or pick one: askwhen.me/k9x2f
+
+`SlotDeriver` already produces the slots and `format.js` already groups them
+by day; the text needs **no service at all**, so it belongs in Calendar Mirror
+itself, not behind the subscription. It is the daily-use habit that makes the
+app essential — Vimcal charges $20 a month for this and is desktop-only,
+Fantastical has *Openings* inside Fantastical, and nobody has it in the iOS
+share sheet. The link is then the upsell, and it arrives already understood
+because the reader has just seen what it contains. Three details that are
+decisions: how many slots the text carries (three reads as an offer, eight as
+a timetable); whether the times are stated in the owner's zone only or also
+in the recipient's when the app can tell; and whether the link is on by
+default or a second tap. **Against it:** a share extension is a new target
+with its own EventKit grant and its own review surface, and the pasted text
+is a snapshot with nothing behind it — if the recipient answers "Wed 10" an
+hour later, the owner still has to make the event, unless the reply is a
+personal link (next).
+
+**Personal links, accepted at send time.** Every link today is the public one,
+so every request needs the honeypot, the double opt-in and an owner decision —
+three points of friction where a hosted page has one click, and the etiquette
+argument in `competitors.md` is partly a story told about that friction. A
+link the owner has *just sent to someone* is a different object: the owner's
+consent is already given, and it is given to a known person. So: a **personal
+link** is minted at share time, single-use, expiring in seven days, and carries
+a fresh publish of the moment it was sent — which pays the freshness cost
+exactly when it matters and nowhere else. Because only the person it was sent
+to holds it, it needs no confirmation mail; the link is the proof. And the
+owner **accepts when they send it**: at collect time the device runs the
+existing `RequestChecker` against the real calendar, and if the slot is still
+clear it writes the event and the requester receives the `.ics` with nobody
+tapping anything. If it is not clear, it falls back to the queue and the
+conflict sheet as today. This keeps the glossary's rule — nothing lands in the
+owner's calendar without the owner's acceptance — because the acceptance was
+given, in advance, to a named person, on the owner's device. The public page
+keeps the full request flow: honeypot, opt-in, the queue, local triage.
+
+This is Cal.com's conditional-confirmation dial done the right way round.
+Their trust signal is the requester's email domain, which needs a server
+profiling strangers. Ours is *whether the owner sent the link*, which the
+service can enforce without knowing anything about anyone — a personal slug is
+just a slug with a use count and an expiry. It dissolves the *"welded to one
+end"* criticism without giving the server the calendar, and the copy should say
+so next to the feature every time. Cost on the service: a per-slug `uses` and
+`expires` column and a create endpoint the device calls at share time; the
+deliverability worry under *Not offering a free tier* is bounded, since a
+personal link can send exactly one `.ics` to one address before it is spent.
+**Against it:** "accepted at send time" is a sentence the owner has to
+understand before they tap share, or the first automatic event will read as
+the app acting without them; the seven-day expiry and single use are numbers I
+chose; and a link forwarded by its recipient to a third person is honoured,
+because the service cannot tell — the single use is the only defence, and it
+should be said.
+
+**Setup with zero decisions, and the preview before the offer.**
+`RequestPolicy` already defaults sensibly — Monday to Friday, 30-minute slots,
+12 hours' notice, 15-minute buffers, four a day, 14-day horizon, the device's
+zone. What the setup still asks is the two calendar choices and a walk through
+fifteen screens before the owner sees a single slot. The proposal: turning the
+row on infers the rest. Every calendar on the device blocks; the default
+calendar receives; the display name comes from the Me card. The first thing
+shown after the row is the **preview** — the derived week, from the real
+calendar, with `SlotDeriver.explain`'s accounting on the empty days — and the
+offer screen comes *after* it, once the owner has seen what they would be
+publishing. Everything on the policy, calendar and settings screens becomes
+*adjust later*, behind one row. The product load stays where it is (on the
+offer, never at launch), so the no-network-before-opting-in property is
+untouched; it simply happens two screens later than today. **Against it:**
+*every calendar blocks* is wrong for the owner with a spouse's calendar or a
+subscribed sports feed on the device, and they find out only when their page
+shows nothing on Saturday; the preview's explain line is what saves that, so
+it has to be good. And *Configuration stays opinionated* below already argues
+this direction — this entry is that argument applied to the first two minutes
+rather than the settings.
+
+**The screens should read as Apple's, and mostly do not because of where the
+prose sits.** *(16 September 2026.)* Audited from the CI frames and the store
+captures in `apple/design/native.md`, with the built flows written down in
+`apple/design/flows.md` for the first time. The controls are native; the
+tells are captions inside cards instead of one-line footers, section headers
+repeating the title, *Continue* as a list row instead of a pinned prominent
+button, an explainer that is a document rather than a first-run sheet, and
+three button styles on the live page. The Mac store app has no sidebar, no
+toolbar and no Settings scene, and its store screenshots are of the
+standalone app. The order that changes the most for the least is at the end
+of `native.md`. **Against it:** most of the copy that leaves the screen is
+the copy with the most care in it; it survives in `Copy.json`, the site and
+the listing, but not where the owner is looking when they decide.
+
+**Sequencing, if all three are yes:** text first (no service, ships in the
+app), personal links second (the service change is small and it is what makes
+the text useful), setup third, then the listing and privacy page rewrite that
+2.0 owes regardless. The App Clip overlay from `overlay.md` waits for traffic.
+
 **From the first run of the UI on a Mac** *(15 September 2026, evening — the
 simulator pass `TASKS.md` "Next" 1 asked for.)* Everything below was seen
 moving on an iPhone 17 Pro simulator under Xcode 27, not read. The bugs it

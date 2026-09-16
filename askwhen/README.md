@@ -48,7 +48,9 @@ and a future split stays cheap.
 8. `design/siri.md` — the iOS surface, and what Apple actually publishes about it
 9. `design/scale.md` — what breaks in what order, and the one feature that must
    never be built
-10. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
+10. `design/marketing.md` — what is genuinely different, and the rules for
+   saying so
+11. `schema/policy-dump.schema.json` — written to *forbid*; it is where the privacy
    claim is actually made
 
 ---

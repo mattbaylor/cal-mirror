@@ -41,6 +41,13 @@ swift run cmk-check  # 23 marker/config/reverse-detector self-checks
 - **`MirrorForm.swift`** — `MirrorFields`, the per-mirror editor (name, source/dest
   pickers, reverse-guard warning, toggles, window steppers), used by both apps.
 
+## Design — `design/`
+
+- **`flows.md`** — every screen and path on iPhone, iPad, the Mac App Store
+  app and the standalone Mac app, as built, and where the three differ.
+- **`native.md`** — why the screens do not read as Apple's, screen by screen,
+  and what would; Proposed, not settled.
+
 ## Building the apps
 
 Each app has its own XcodeGen spec so it's reproducible from text:
