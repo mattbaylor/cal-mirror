@@ -403,38 +403,33 @@ one reading of *"convert the requestor into a user"* the architecture forbids: i
 creates a relationship between two people who never agreed to be associated, and
 it ends the partitioning property for the same reason group scheduling does.
 
-**The request-page UI is approved as built.** *(15 September 2026)* Matt,
-having walked the fifteen-step flow in `apple/tools/review.html`: *"it all
-looks good to me, proceed."*
+**All three proposals from the outside review are in, for 2.0.** *(16 September
+2026)* Matt, put the three as one question with a recommendation to ship 2.0
+without them and make them 2.1; he chose the other way: **"Send times" goes
+into 2.0 after the native pass, and personal links and zero-decision setup
+are both yes, in 2.0.** The sequence is the one proposed below: the native
+pass first (so nothing is styled twice), then the text (no service), then
+personal links (the service change is small and it is what makes the text
+useful), then setup, then the listing and privacy page 2.0 owes regardless.
+The reasoning that carried each is kept under this entry as it was written,
+because it is the reasoning that will be re-litigated.
 
-Recorded as one entry rather than four, because that is what it was. Four
-questions were put to him with the flow and are closed by this approval, but
-none was individually argued — so the honest record is that he reviewed the
-whole thing and accepted it, not that he ruled on each of these in turn. Any
-of them is worth reopening on its own merits if it starts to bite:
+The details inside each that were an agent's numbers rather than his are
+filed under *Proposed* as their own entries, with what will be built unless he
+says otherwise: how many slots the text carries, whose zone it states, whether
+the link is on by default; the personal link's expiry and use count; and what
+*every calendar blocks* means for a device with a spouse's or a subscribed
+feed on it.
 
-- **The policy screen carries a sentence plus six numbered settings.** In some
-  tension with *Configuration stays opinionated* below; buffer, align and slot
-  length are the candidates to fold behind a disclosure if it reads as long in
-  the simulator.
-- **The conflict sheet shows what landed as a time, never a title.**
-  `BusyInterval` carries `start`, `end` and `isAllDay` and nothing else, so
-  the app genuinely cannot name the clashing event. Showing the owner their
-  own event's title would mean a second path out of `MirrorEngine` carrying
-  more than busy-or-free, which is the boundary the whole privacy claim rests
-  on — so it stays a time until there is a reason worth that.
-- **The timezone picker is the full IANA list**, device zone pinned first.
-  This is the owner-side counterpart of the requester-side picker still open
-  under *Still open* below.
-- **Publisher nomination is folded into the live page** rather than given a
-  screen. A nomination screen with one candidate asks a question that has no
-  second answer; it becomes a real choice when a second device appears, and
-  that is when it should first be offered.
-
-## Proposed — an agent's reasoning, not a decision
-
-Everything here was arrived at by Claude and reads as settled in the docs it came
-from. It is not. Each needs Matt's yes, no, or something else.
+**AskWhen.me launches paid, from day one.** *(16 September 2026)* Matt,
+against `REVIEW.md`'s recommendation of a free beta. The 90-day trial on the
+page tier is already the free period, so what goes live paid on the first day
+is the $35 and $70 ladder. Consequence, and it is a sequencing one: the three
+things the review said should precede money — the credential rotation, an
+external check on `/healthz` with logs off the container, and the edge Caddy
+upgrade — are now **submission blockers** rather than launch-week work, and so
+are the sandbox proof and the terms for the domain tier. The offer screen and
+the listing ship as built.
 
 **From an outside review, turned consultant** *(16 September 2026.)* Three
 proposals that share one premise: the moat is not the page, it is that the
@@ -526,6 +521,74 @@ it has to be good. And *Configuration stays opinionated* below already argues
 this direction — this entry is that argument applied to the first two minutes
 rather than the settings.
 
+**Sequencing, now that all three are yes:** the native pass first, then the text (no service, ships in the
+app), personal links second (the service change is small and it is what makes
+the text useful), setup third, then the listing and privacy page rewrite that
+2.0 owes regardless. The App Clip overlay from `overlay.md` waits for traffic.
+
+**The request-page UI is approved as built.** *(15 September 2026)* Matt,
+having walked the fifteen-step flow in `apple/tools/review.html`: *"it all
+looks good to me, proceed."*
+
+Recorded as one entry rather than four, because that is what it was. Four
+questions were put to him with the flow and are closed by this approval, but
+none was individually argued — so the honest record is that he reviewed the
+whole thing and accepted it, not that he ruled on each of these in turn. Any
+of them is worth reopening on its own merits if it starts to bite:
+
+- **The policy screen carries a sentence plus six numbered settings.** In some
+  tension with *Configuration stays opinionated* below; buffer, align and slot
+  length are the candidates to fold behind a disclosure if it reads as long in
+  the simulator.
+- **The conflict sheet shows what landed as a time, never a title.**
+  `BusyInterval` carries `start`, `end` and `isAllDay` and nothing else, so
+  the app genuinely cannot name the clashing event. Showing the owner their
+  own event's title would mean a second path out of `MirrorEngine` carrying
+  more than busy-or-free, which is the boundary the whole privacy claim rests
+  on — so it stays a time until there is a reason worth that.
+- **The timezone picker is the full IANA list**, device zone pinned first.
+  This is the owner-side counterpart of the requester-side picker still open
+  under *Still open* below.
+- **Publisher nomination is folded into the live page** rather than given a
+  screen. A nomination screen with one candidate asks a question that has no
+  second answer; it becomes a real choice when a second device appears, and
+  that is when it should first be offered.
+
+## Proposed — an agent's reasoning, not a decision
+
+Everything here was arrived at by Claude and reads as settled in the docs it came
+from. It is not. Each needs Matt's yes, no, or something else.
+
+**Inside "Send times": three slots, the owner's zone, link on by default.**
+*(16 September 2026 — an agent's numbers; Matt decided the feature, not
+these.)* Three slots, because three reads as an offer and eight as a
+timetable, and because the text is for a reply in a conversation, not a
+schedule. The owner's zone only, stated once at the end (*MT*), because the
+app cannot reliably know the recipient's, and a guess stated as fact is worse
+than one honest zone. The link on by default, as a second line, because the
+link is the whole reason the text is free — the upsell arrives already
+understood — and an owner without a page simply gets no link. Each is a
+one-line change if he wants another number.
+
+**Inside personal links: seven days, one use, and the sentence on the share
+sheet.** *(16 September 2026 — the agent's numbers.)* Seven days because that
+is how long "when are you free?" stays a live question; one use because it is
+the only defence against a forwarded link. The sentence the owner reads before
+the first share — *"Whoever you send this to can take one of these times.
+It lands in your calendar if the time is still clear."* — is the part that
+stops the first automatic event reading as the app acting alone; it is copy,
+and it is his.
+
+**Inside zero-decision setup: every calendar blocks except subscribed and
+read-only ones.** *(16 September 2026.)* *Every calendar blocks* is the wrong
+default for the owner with a spouse's shared calendar or a sports feed, and
+they find out on Saturday. The inference that survives that case: writable
+calendars on the device block; subscribed, read-only and holiday calendars do
+not; the default calendar receives; the display name comes from the Me card
+and falls back to the device name. The preview's explain line then shows the
+owner what was inferred before the offer, and the calendar screen stays one
+row away as *adjust*.
+
 **The screens should read as Apple's, and mostly do not because of where the
 prose sits.** *(16 September 2026.)* Audited from the CI frames and the store
 captures in `apple/design/native.md`, with the built flows written down in
@@ -539,11 +602,6 @@ standalone app. The order that changes the most for the least is at the end
 of `native.md`. **Against it:** most of the copy that leaves the screen is
 the copy with the most care in it; it survives in `Copy.json`, the site and
 the listing, but not where the owner is looking when they decide.
-
-**Sequencing, if all three are yes:** text first (no service, ships in the
-app), personal links second (the service change is small and it is what makes
-the text useful), setup third, then the listing and privacy page rewrite that
-2.0 owes regardless. The App Clip overlay from `overlay.md` waits for traffic.
 
 **From the first run of the UI on a Mac** *(15 September 2026, evening — the
 simulator pass `TASKS.md` "Next" 1 asked for.)* Everything below was seen

@@ -1,6 +1,6 @@
 # Where this is, and what is left
 
-**Written 11 September 2026; updated 16 September.** Read this first; then [`TASKS.md`](TASKS.md) for
+**Written 11 September 2026; updated 16 September, evening — the three decisions are made (`decisions.md`, *All three proposals from the outside review are in*, and *AskWhen.me launches paid*).** Read this first; then [`TASKS.md`](TASKS.md) for
 the live board, and [`REVIEW.md`](REVIEW.md) for the outside review of 16 September and what it filed where. `HANDOFF.md` (1 September) is retired — everything in it that
 was still true is here, and everything else has been done.
 
@@ -136,7 +136,7 @@ have; **mine** means it can be built and tested without you.
 | 14 | **Indexing opt-in.** `noindex` is the default everywhere; the per-page opt-in to be listed is not built. Small. | mine |
 | 15 | **Conversion counted, never attributed.** Decided; not built. A counter, no join. | mine |
 | 16 | **Observability.** Logs on the container and nothing else. Minimum: an uptime check on `/healthz` from outside, and the logs somewhere a restart does not eat. | mine, you pick where |
-| 17 | **Edge Caddy 2.6.2 → 2.11.4** — plan in `infra/edge/upgrade-plan.md`; three years of TLS fixes. | **Yours** |
+| 17 | **Edge Caddy 2.6.2 → 2.11.4** — plan in `infra/edge/upgrade-plan.md` (repo root, not under `askwhen/`); three years of TLS fixes. Confirmed `v2.6.2` by SSH on 16 Sept. | **Yours** |
 | 18 | **CT 112 in PBS; `.41` reserved in pfSense; Universal SSL off for `askwhen.me`; an Infisical machine identity.** | **Yours** — DC-wide config |
 
 ### Later — designed, not for launch unless you say so
@@ -146,7 +146,7 @@ have; **mine** means it can be built and tested without you.
 | 19 | **MCP** (`design/mcp.md`) — the whole tool configurable from a chat session, diagnosis included. You called it "a fantastic answer for the desktop". Scope for 2.0 is your call; the deriver already reports *why* it rejected each slot, which is the half the agent surface needs. |
 | 20 | **Siri / App Intents** (`design/siri.md`). Checked against the iOS 27.0 SDK on 16 Sept: the new Calendar domain is event CRUD only, no scheduling schema anywhere, so an unbranded "help me schedule this" cannot reach us in 27; branded phrases, indexed entities and long-running intents can. The multi-turn shape exists as SPI (`_ModelDelegationIntent`) — the door to watch, not to ship on. |
 | 20b | **Looking like Apple** — `apple/design/native.md`, the screen-by-screen audit, and `apple/design/flows.md`, the three UIs as built. The Mac store app's screenshots are of the standalone app; the store app has no sidebar or toolbar. |
-| 20a | **Send times · personal links · zero-decision setup** — three proposals from the 16 Sept outside review, in `decisions.md` under *Proposed*. The first needs no service. |
+| 20a | ~~**Send times · personal links · zero-decision setup**~~ — **decided 16 Sept: all three are in 2.0**, after the native pass, in that order. `decisions.md`, *Settled*. |
 | 21 | **The overlay** for requesters who are Calendar Mirror users (`design/overlay.md`, zero-setup path decided). |
 | 22 | **Proof of work** on the request page — deferred until there is traffic to justify it (§8). |
 | 23 | **Timezone picker** on the page; browser decides today. |
@@ -156,14 +156,13 @@ have; **mine** means it can be built and tested without you.
 
 - `feat/synced-events-view` — one WIP commit, no PR. Finish or delete.
 - Tag `v1.4.1` on the standalone track (needs a notarized build).
-- The `-target` fix in `build.sh` / `build-ui.sh` is still uncommitted in your tree.
 - Two step-6 fixtures exist: `ask-test.calendarmirror.com` (CNAME in your zone) and `matt-test.askwhen.me`, on a page named in `TASKS.md`. Delete after the flip, or keep as the first real customer domains.
 
 ---
 
 ## Facts that are expensive to rediscover
 
-- **`main` is protected.** Branch, PR, CI green. `cmk-check`, both app builds, `askwhen web` and `askwhen service` all run on every PR. Branches delete on merge.
+- **`main` is protected.** Branch, PR, CI green. `cmk-check`, both app builds, `askwhen web` and `askwhen service` all run on every PR, but **only `cmk-check` is a required check** (verified against the branch-protection API, 16 Sept) — the other four can be red and the merge button still lights. Treat all five as required anyway. Branches delete on merge.
 - **`gh` has two accounts.** `mattbaylor-edify` is active and cannot push here. `gh auth switch --user mattbaylor` before any push, PR or merge; switch back after.
 - **Never `git add -A`.** Stage explicitly.
 - **App Store builds come from CI**, never this laptop (`ITMS-90301` on beta macOS). `release.yml`; nine signing secrets plus `CM_RELEASE_TOKEN` are in the repo.
