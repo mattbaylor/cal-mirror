@@ -526,6 +526,20 @@ it has to be good. And *Configuration stays opinionated* below already argues
 this direction — this entry is that argument applied to the first two minutes
 rather than the settings.
 
+**The screens should read as Apple's, and mostly do not because of where the
+prose sits.** *(16 September 2026.)* Audited from the CI frames and the store
+captures in `apple/design/native.md`, with the built flows written down in
+`apple/design/flows.md` for the first time. The controls are native; the
+tells are captions inside cards instead of one-line footers, section headers
+repeating the title, *Continue* as a list row instead of a pinned prominent
+button, an explainer that is a document rather than a first-run sheet, and
+three button styles on the live page. The Mac store app has no sidebar, no
+toolbar and no Settings scene, and its store screenshots are of the
+standalone app. The order that changes the most for the least is at the end
+of `native.md`. **Against it:** most of the copy that leaves the screen is
+the copy with the most care in it; it survives in `Copy.json`, the site and
+the listing, but not where the owner is looking when they decide.
+
 **Sequencing, if all three are yes:** text first (no service, ships in the
 app), personal links second (the service change is small and it is what makes
 the text useful), setup third, then the listing and privacy page rewrite that
