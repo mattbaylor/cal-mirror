@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -56,6 +57,7 @@ func setupRequests(t *testing.T) (*Requests, *[]delivered) {
 	h := &Requests{
 		Store: s, Pepper: pepper, Origin: "https://askwhen.me",
 		HoldInitial: 15 * time.Minute, TTLUnconfirmed: time.Hour,
+		HoldConfirmed: 24 * time.Hour, TTLConfirmed: 14 * 24 * time.Hour,
 		RatePerIP: 3, RateWindow: time.Hour, TrustedProxy: "172.16.1.4",
 		Deliver: func(ctx context.Context, to, url string) error {
 			sent = append(sent, delivered{to, url})
@@ -299,5 +301,116 @@ func TestClientIP(t *testing.T) {
 	r.RemoteAddr = "203.0.113.1:4444"
 	if got := clientIP(r, "172.16.1.4"); got != "203.0.113.1" {
 		t.Fatalf("from elsewhere, clientIP = %q, want the remote address", got)
+	}
+}
+
+// ----------------------------------------------------------- personal links
+
+// mintLink puts a live personal link in the store the way Owner.Links would.
+func mintLink(t *testing.T, h *Requests, code string, expires time.Time) {
+	t.Helper()
+	if err := h.Store.CreateLink(context.Background(), "x7f2k9", code, expires); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAPersonalLinkSkipsTheMailAndLandsConfirmed(t *testing.T) {
+	// decisions.md, "Personal links, accepted at send time": the link is the
+	// proof of address, so there is no confirmation mail, and the request is
+	// in the queue on arrival, flagged so the device accepts it without a tap.
+	h, sent := setupRequests(t)
+	const code = "abcdefghij12"
+	mintLink(t, h, code, time.Now().Add(7*24*time.Hour))
+
+	body := good()
+	body.Personal = code
+	w, out := submit(h, "x7f2k9", body, "203.0.113.5:1234", nil)
+	if w.Code != http.StatusAccepted || !out.OK || out.Reason != "personal" {
+		t.Fatalf("status %d, reply %+v", w.Code, out)
+	}
+	if len(*sent) != 0 {
+		t.Fatalf("a personal request sent %d confirmation mails; want none", len(*sent))
+	}
+
+	var state string
+	var confirmedAt sql.NullString
+	if err := h.Store.DB().QueryRow(`SELECT state, confirmed_at FROM request`).Scan(&state, &confirmedAt); err != nil {
+		t.Fatalf("no request row: %v", err)
+	}
+	if state != "confirmed" || !confirmedAt.Valid {
+		t.Fatalf("state %q confirmed_at %v; want confirmed on arrival", state, confirmedAt)
+	}
+	q, err := h.Store.Queue(context.Background(), "x7f2k9")
+	if err != nil || len(q) != 1 || !q[0].Personal {
+		t.Fatalf("queue = %+v (%v); want one personal request", q, err)
+	}
+}
+
+func TestAPersonalLinkIsSingleUse(t *testing.T) {
+	// The only defence against a forwarded link, so it has to hold under a
+	// race: the claim is a conditional UPDATE, not a read then a write.
+	h, _ := setupRequests(t)
+	const code = "abcdefghij12"
+	mintLink(t, h, code, time.Now().Add(7*24*time.Hour))
+
+	first := good()
+	first.Personal = code
+	if w, _ := submit(h, "x7f2k9", first, "203.0.113.5:1234", nil); w.Code != http.StatusAccepted {
+		t.Fatalf("first use: %d", w.Code)
+	}
+	second := good()
+	second.Personal = code
+	second.Slot = "2026-09-02T20:00:00Z" // the other offered slot, so only the link can refuse it
+	w, out := submit(h, "x7f2k9", second, "203.0.113.6:1234", nil)
+	if w.Code != http.StatusGone || out.Reason != "link" {
+		t.Fatalf("second use: status %d, reply %+v; want 410 link", w.Code, out)
+	}
+	var n int
+	h.Store.DB().QueryRow(`SELECT count(*) FROM request`).Scan(&n)
+	if n != 1 {
+		t.Fatalf("%d requests after a spent link; want 1", n)
+	}
+}
+
+func TestAnExpiredOrUnknownPersonalLinkIsGone(t *testing.T) {
+	h, _ := setupRequests(t)
+	mintLink(t, h, "expiredlink1", time.Now().Add(-time.Minute))
+
+	for i, code := range []string{"expiredlink1", "neverminted1", "short", "UPPERCASE123"} {
+		body := good()
+		body.Personal = code
+		// A different address each time: the per-IP limit is three an hour.
+		w, out := submit(h, "x7f2k9", body, fmt.Sprintf("203.0.113.%d:1234", 10+i), nil)
+		if w.Code != http.StatusGone || out.Reason != "link" {
+			t.Fatalf("%q: status %d, reply %+v; want 410 link", code, w.Code, out)
+		}
+	}
+	var n int
+	h.Store.DB().QueryRow(`SELECT count(*) FROM request`).Scan(&n)
+	if n != 0 {
+		t.Fatalf("%d requests recorded through dead links", n)
+	}
+}
+
+func TestAPersonalLinkStillRespectsTheSlotHold(t *testing.T) {
+	// A personal link changes who vouches for the address, not §4b: a slot
+	// somebody else holds is still held. And the link is not spent by a
+	// refusal — the transaction rolled back.
+	h, _ := setupRequests(t)
+	if w, _ := submit(h, "x7f2k9", good(), "203.0.113.5:1234", nil); w.Code != http.StatusAccepted {
+		t.Fatal("public request should have held the slot")
+	}
+	const code = "abcdefghij12"
+	mintLink(t, h, code, time.Now().Add(7*24*time.Hour))
+	body := good()
+	body.Personal = code
+	w, out := submit(h, "x7f2k9", body, "203.0.113.6:1234", nil)
+	if w.Code != http.StatusConflict || out.Reason != "held" {
+		t.Fatalf("status %d, reply %+v; want 409 held", w.Code, out)
+	}
+	var used sql.NullString
+	h.Store.DB().QueryRow(`SELECT used_at FROM personal_link WHERE code = ?`, code).Scan(&used)
+	if used.Valid {
+		t.Fatal("a refused request spent the link")
 	}
 }

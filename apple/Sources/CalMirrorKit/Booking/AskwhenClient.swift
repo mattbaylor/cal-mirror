@@ -15,15 +15,22 @@ public struct IncomingRequest: Codable, Equatable, Identifiable, Sendable {
     /// slot is on offer again and somebody else may have asked; the accept
     /// path re-checks the calendar either way.
     public let holdUntil: Date
+    /// Came through a personal link the owner minted and sent. The owner's
+    /// acceptance was given in advance, to a known person, so the device
+    /// accepts it without a tap if the slot is still clear — `decisions.md`,
+    /// "Personal links, accepted at send time". Absent from an older service
+    /// or a public request, and false then.
+    public let personal: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, name, email, note
+        case id, name, email, note, personal
         case slotStart = "slot_start", slotEnd = "slot_end", holdUntil = "hold_until"
     }
 
-    public init(id: String, slot: Slot, name: String, email: String, note: String?, holdUntil: Date) {
+    public init(id: String, slot: Slot, name: String, email: String, note: String?, holdUntil: Date,
+                personal: Bool = false) {
         self.id = id; self.slot = slot; self.name = name; self.email = email
-        self.note = note; self.holdUntil = holdUntil
+        self.note = note; self.holdUntil = holdUntil; self.personal = personal
     }
 
     public init(from decoder: Decoder) throws {
@@ -32,6 +39,7 @@ public struct IncomingRequest: Codable, Equatable, Identifiable, Sendable {
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
         email = try c.decodeIfPresent(String.self, forKey: .email) ?? ""
         note = try c.decodeIfPresent(String.self, forKey: .note)
+        personal = try c.decodeIfPresent(Bool.self, forKey: .personal) ?? false
         let s = try c.decode(String.self, forKey: .slotStart)
         let e = try c.decode(String.self, forKey: .slotEnd)
         let h = try c.decode(String.self, forKey: .holdUntil)
@@ -52,6 +60,45 @@ public struct IncomingRequest: Codable, Equatable, Identifiable, Sendable {
         try c.encode(ISO8601.string(from: slot.start), forKey: .slotStart)
         try c.encode(ISO8601.string(from: slot.end), forKey: .slotEnd)
         try c.encode(ISO8601.string(from: holdUntil), forKey: .holdUntil)
+        if personal { try c.encode(true, forKey: .personal) }
+    }
+}
+
+/// A personal link, as the service minted it: single use, seven days, the
+/// owner's consent carried in advance. The URL is what goes after the times
+/// in "Send times".
+public struct PersonalLink: Codable, Equatable, Sendable {
+    public let code: String
+    public let url: String
+    public let expiresAt: Date
+
+    enum CodingKeys: String, CodingKey { case code, url, expiresAt = "expires_at" }
+
+    public init(code: String, url: String, expiresAt: Date) {
+        self.code = code; self.url = url; self.expiresAt = expiresAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        code = try c.decode(String.self, forKey: .code)
+        url = try c.decode(String.self, forKey: .url)
+        let e = try c.decode(String.self, forKey: .expiresAt)
+        guard let d = ISO8601.date(from: e) else {
+            throw DecodingError.dataCorruptedError(forKey: .expiresAt, in: c, debugDescription: "expires_at must be ISO-8601")
+        }
+        expiresAt = d
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(code, forKey: .code)
+        try c.encode(url, forKey: .url)
+        try c.encode(ISO8601.string(from: expiresAt), forKey: .expiresAt)
+    }
+
+    /// The address without its scheme, the way the text carries it.
+    public var display: String {
+        url.replacingOccurrences(of: "https://", with: "")
     }
 }
 
@@ -142,6 +189,14 @@ public struct AskwhenClient: Sendable {
         let (data, resp) = try await exchange(req)
         guard resp.statusCode == 204 else { throw failure(resp, data) }
         return resp.value(forHTTPHeaderField: "ETag") ?? ""
+    }
+
+    /// Mint a personal link. Owner-authenticated; the page must exist.
+    public func createLink(slug: String, token: String) async throws -> PersonalLink {
+        let (data, resp) = try await exchange(request("POST", "/v1/pages/\(slug)/links", token: token))
+        guard resp.statusCode == 201 else { throw failure(resp, data) }
+        do { return try JSONDecoder().decode(PersonalLink.self, from: data) }
+        catch { throw AskwhenError.malformed }
     }
 
     public func deletePage(slug: String, token: String) async throws {

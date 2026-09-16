@@ -382,6 +382,8 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 		Origin:         cfg.origin,
 		HoldInitial:    15 * time.Minute,
 		TTLUnconfirmed: time.Hour,
+		HoldConfirmed:  holdConfirmed,
+		TTLConfirmed:   ttlConfirmed,
 		RatePerIP:      10,
 		RateWindow:     time.Hour,
 		TrustedProxy:   cfg.trustedProxy,
@@ -395,6 +397,7 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 	owner := &api.Owner{
 		Store:       st,
 		Pepper:      cfg.pepper,
+		Origin:      cfg.origin,
 		DumpTTL:     24 * time.Hour,
 		TTLResolved: ttlResolved,
 		Notify:      notifier(post, log),
@@ -413,6 +416,7 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 	mux.HandleFunc("PUT /v1/pages/{slug}", owner.Publish)
 	mux.HandleFunc("DELETE /v1/pages/{slug}", owner.Delete)
 	mux.HandleFunc("GET /v1/pages/{slug}/queue", owner.Queue)
+	mux.HandleFunc("POST /v1/pages/{slug}/links", owner.Links)
 	mux.HandleFunc("POST /v1/requests/{id}/resolve", owner.Resolve)
 
 	return mux
@@ -445,7 +449,31 @@ func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slo
 		return
 	}
 
+	// A personal code shares the URL shape with a slug on purpose — a link
+	// the owner sent looks like any page — and is resolved to its page here.
+	// Spent and expired both answer 410 with a reason the web app turns into
+	// "ask for a fresh one": unlike a missing page (§4c), the holder of a
+	// personal link is somebody the owner chose to tell.
+	personal := false
 	dumpETag, err := st.DumpETag(r.Context(), slug)
+	if errors.Is(err, store.ErrNoPage) && len(slug) == api.LinkCodeLength {
+		target, state, lerr := st.LinkPage(r.Context(), slug, time.Now())
+		switch {
+		case lerr != nil:
+			log.Error("link page", "err", lerr)
+			http.Error(w, "unavailable", http.StatusServiceUnavailable)
+			return
+		case state == store.LinkLive:
+			personal, slug = true, target
+			dumpETag, err = st.DumpETag(r.Context(), slug)
+		case state == store.LinkSpent || state == store.LinkExpired:
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusGone)
+			fmt.Fprint(w, `{"reason":"link"}`)
+			return
+		}
+	}
 	if errors.Is(err, store.ErrNoPage) {
 		http.NotFound(w, r)
 		return
@@ -507,6 +535,19 @@ func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slo
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
 	}
+	if personal {
+		// The one difference the page can see: it says so, and it sends the
+		// code back with the request. A personal dump carries its own
+		// validator, so a cache holding the public page's bytes never serves
+		// them under the personal URL, and it is never stored regardless —
+		// the link is single use, and the page is read once.
+		if body, err = withPersonal(body); err != nil {
+			log.Error("dump personal", "slug", slug, "err", err)
+			http.Error(w, "unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Cache-Control", "no-store")
+	}
 	// A publish can land between the two reads. Serving the new bytes under the
 	// old validator would leave every cache holding a document it thinks is
 	// current and is not.
@@ -515,6 +556,16 @@ func serveDump(w http.ResponseWriter, r *http.Request, st *store.Store, log *slo
 	// §8: noindex by default. The page opts in per slug; the dump never does.
 	w.Header().Set("X-Robots-Tag", "noindex")
 	w.Write(body)
+}
+
+// withPersonal marks a dump as served under a personal link.
+func withPersonal(body []byte) ([]byte, error) {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(body, &m); err != nil {
+		return nil, err
+	}
+	m["personal"] = json.RawMessage("true")
+	return json.Marshal(m)
 }
 
 // internalOnly admits a request only when it came straight from the proxy's

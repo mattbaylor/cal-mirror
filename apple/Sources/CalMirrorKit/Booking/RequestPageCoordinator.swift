@@ -175,6 +175,30 @@ public final class RequestPageCoordinator: @unchecked Sendable {
         return .published(slots: dump.slots.count, reason: reason)
     }
 
+    // MARK: Personal links
+
+    /// Mint a personal link to put after the times in "Send times". The page
+    /// is published first — the link carries a fresh publish of the moment it
+    /// was sent, which pays the freshness cost exactly when it matters and
+    /// nowhere else — and the link is single use and seven days, both of
+    /// which the service enforces. `decisions.md`, "Personal links".
+    public func mintLink(page: inout RequestPageConfig, now: Date = Date()) async throws -> PersonalLink {
+        guard page.isReady else { throw RequestPageError.notCreated }
+        guard let token = try tokens.token(for: page.slug) else { throw RequestPageError.noToken }
+        _ = try await publishIfNeeded(page: &page, now: now)
+        return try await client.createLink(slug: page.slug, token: token)
+    }
+
+    /// A request through a personal link, accepted the way the owner already
+    /// agreed to when they sent it: the same re-check, the same write, the
+    /// same resolve — with nobody tapping. A conflict falls back to the
+    /// queue and the sheet exactly as a public request would; the owner's
+    /// consent was to the time being clear, not to a double booking.
+    public func acceptIfClear(_ request: IncomingRequest, page: inout RequestPageConfig,
+                              now: Date = Date()) async throws -> AcceptOutcome {
+        try await accept(request, page: &page, now: now)
+    }
+
     // MARK: Collect
 
     /// Polls the queue. `nil` means nothing changed since the last poll — the

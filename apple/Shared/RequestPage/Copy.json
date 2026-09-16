@@ -257,7 +257,8 @@
     "footer": "Your next three free times as a message, in your time zone, with your page’s link if you have one.",
     "menu": "Copy Times to Send",
     "copied": "Copied: %@",
-    "empty": "Nothing free to offer in the next %d days."
+    "empty": "Nothing free to offer in the next %d days.",
+    "footerPage": "Whoever you send this to can take one of these times. It lands in your calendar if the time is still clear."
   },
   "longForm": {
     "_comment": "Not on any screen. The captions and paragraphs the native pass took off the screens, kept for the site and the App Store listing (hurdle F).",

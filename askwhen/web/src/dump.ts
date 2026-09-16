@@ -9,7 +9,7 @@
 
 import example from '../../schema/policy-dump.example.json' with { type: 'json' };
 import type { PolicyDump } from './generated/policy-dump.ts';
-import { fetchDump } from './service.ts';
+import { fetchDump, type DumpResult } from './service.ts';
 import { DEFAULT_SLUG, slugFromLocation, type LocationLike } from './slug.ts';
 import denverDst from '../test/fixtures/dst-america-denver.json' with { type: 'json' };
 import aucklandDst from '../test/fixtures/dst-pacific-auckland.json' with { type: 'json' };
@@ -38,7 +38,7 @@ export function bundledSlugs(): string[] {
  * is the common case and must never say *why* it is missing. Lapsed, deleted,
  * expired and never-existed all look identical from out here, deliberately.
  */
-export async function loadDump(slug: string, loc: LocationLike | undefined = globalThis.location): Promise<PolicyDump | null> {
+export async function loadDump(slug: string, loc: LocationLike | undefined = globalThis.location): Promise<DumpResult> {
   if (loc?.protocol === 'file:') return BUNDLED.get(slug) ?? null;
   return fetchDump(slug);
 }

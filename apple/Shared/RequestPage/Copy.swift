@@ -185,6 +185,7 @@ enum RequestCopy {
         static let menu = "Copy Times to Send"
         static let copied = "Copied: %@"
         static let empty = "Nothing free to offer in the next %d days."
+        static let footerPage = "Whoever you send this to can take one of these times. It lands in your calendar if the time is still clear."
     }
 
     enum Live {

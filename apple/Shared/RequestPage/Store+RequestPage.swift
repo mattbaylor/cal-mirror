@@ -71,7 +71,21 @@ extension Store {
     /// for the same reason: a coordinator that exists has still never spoken to
     /// anything, but building it where it is used keeps that obvious.
     func requestCoordinator() -> RequestPageCoordinator {
-        RequestPageCoordinator(engine: engine, tokens: KeychainTokenStore())
+        RequestPageCoordinator(engine: engine, client: Self.client, tokens: KeychainTokenStore())
+    }
+
+    /// Production, unless a debug build in the simulator was launched with
+    /// `-AskWhenService http://localhost:8080` — how the whole loop is driven
+    /// against a local service with nothing mocked. Never a release path:
+    /// the argument is read only under both gates.
+    static var client: AskwhenClient {
+        #if DEBUG && targetEnvironment(simulator)
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-AskWhenService"), i + 1 < args.count, let url = URL(string: args[i + 1]) {
+            return AskwhenClient(baseURL: url)
+        }
+        #endif
+        return AskwhenClient()
     }
 
     /// Create the page with Apple's signed transaction, then persist the slug.

@@ -184,6 +184,33 @@ CREATE TABLE IF NOT EXISTS domain (
 
 CREATE INDEX IF NOT EXISTS domain_slug ON domain (slug);
 
+-- ------------------------------------------------------------ personal links
+
+-- A link the owner minted at share time and sent to one person — "Send times"
+-- with a link after it. Single use and short-lived, and it carries the
+-- owner's consent in advance: a request through one skips the confirmation
+-- mail (the link is the proof) and is accepted on the device without a tap if
+-- the slot is still clear. decisions.md, "Personal links, accepted at send
+-- time". Forwarding cannot be detected; the single use is the only defence,
+-- and `used_at` is claimed in the same statement that checks it.
+--
+-- No column on `request` for "came through a personal link": the link row
+-- points at the request it was spent on, and the queue reads the join. That
+-- keeps this file IF NOT EXISTS end to end — an ALTER TABLE is not idempotent
+-- in SQLite.
+CREATE TABLE IF NOT EXISTS personal_link (
+  code        TEXT PRIMARY KEY
+                CHECK (length(code) = 12 AND code NOT GLOB '*[^a-z0-9]*'),
+  slug        TEXT NOT NULL REFERENCES page (slug) ON DELETE CASCADE,
+  created_at  TEXT NOT NULL,
+  expires_at  TEXT NOT NULL,
+  used_at     TEXT,
+  request_id  TEXT REFERENCES request (id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS personal_link_slug    ON personal_link (slug);
+CREATE INDEX IF NOT EXISTS personal_link_expires ON personal_link (expires_at);
+
 -- ------------------------------------------------------------------ requests
 
 CREATE TABLE IF NOT EXISTS request (

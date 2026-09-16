@@ -6,7 +6,7 @@
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { fetchDump, submitRequest } from '../src/service.ts';
+import { fetchDump, submitRequest, LINK_GONE } from '../src/service.ts';
 
 // What service.ts actually passes: a plain headers object and a string body.
 type Init = { method?: string; headers: Record<string, string>; body: string; cache?: string };
@@ -123,4 +123,24 @@ test('slugFromLocation: a path slug, a query slug, the host sentinel, or the exa
   assert.equal(at('file:', '/Users/matt/dist/index.html'), DEFAULT_SLUG);
   // Never a real slug: the service reserves it, and the length rule keeps them apart.
   assert.ok('host'.length < 6);
+});
+
+test('a personal link: the code rides with the request and the answer says so', async () => {
+  // decisions.md, "Personal links, accepted at send time". The service
+  // answers 202 with reason "personal" — no email step — and the page has
+  // a state for that.
+  stub(answer(202, { ok: true, reason: 'personal', message: 'Sent.' }));
+  const r = await submitRequest('x7f2k9', {
+    slot: '2026-09-12T16:00:00Z', name: 'Ada', email: 'ada@example.com', personal: 'abcdefghij12',
+  });
+  assert.deepEqual(r, { ok: true, personal: true });
+  assert.equal(JSON.parse(calls[0].init.body).personal, 'abcdefghij12');
+});
+
+test('a spent or expired personal link is its own reason, on the dump and on the submit', async () => {
+  stub(answer(410, { reason: 'link' }));
+  assert.equal(await fetchDump('abcdefghij12'), LINK_GONE);
+  stub(answer(410, { ok: false, reason: 'link', message: 'Ask for a fresh one.' }));
+  assert.deepEqual(await submitRequest('x7f2k9', { slot: 's', name: 'n', email: 'e', personal: 'abcdefghij12' }),
+    { ok: false, reason: 'link' });
 });

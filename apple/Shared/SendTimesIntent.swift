@@ -22,7 +22,20 @@ struct SendTimesIntent: AppIntent {
         }
         let cfg = ConfigStore.load(from: Store.configURL)
         let calendars = engine.calendars()
-        guard let line = SendTimesSource.text(config: cfg, engine: engine, calendars: calendars) else {
+        // A personal link for this send when there is a live page; the
+        // public address if the service cannot be reached.
+        var link = SendTimesSource.publicLink(cfg)
+        var page = cfg.requestPage ?? RequestPageConfig()
+        if page.isReady {
+            let coordinator = RequestPageCoordinator(engine: engine, tokens: KeychainTokenStore())
+            if let minted = try? await coordinator.mintLink(page: &page) {
+                var saved = cfg
+                saved.requestPage = page
+                try? ConfigStore.save(saved, to: Store.configURL)
+                link = minted.display
+            }
+        }
+        guard let line = SendTimesSource.text(config: cfg, engine: engine, calendars: calendars, link: link) else {
             let days = (cfg.requestPage ?? RequestPageConfig()).policy.horizonDays
             return .result(value: "", dialog: IntentDialog(stringLiteral: String(format: RequestCopy.SendTimes.empty, days)))
         }

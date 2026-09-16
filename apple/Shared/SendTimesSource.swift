@@ -14,9 +14,19 @@ import CalMirrorKit
 enum SendTimesSource {
     static let count = 3
 
-    /// Nil when there is nothing to offer inside the horizon.
+    /// The page's public address, when there is a page. What the text carries
+    /// before a personal link has been minted, and what it falls back to when
+    /// minting fails — the times are still the point.
+    static func publicLink(_ config: Config) -> String? {
+        let page = config.requestPage ?? RequestPageConfig()
+        return page.enabled && !page.slug.isEmpty ? "askwhen.me/\(page.slug)" : nil
+    }
+
+    /// Nil when there is nothing to offer inside the horizon. `link` is what
+    /// goes after the times — a personal link when one was minted, the
+    /// public address otherwise, nothing for an owner with no page.
     static func text(config: Config, engine: CalendarAccess, calendars: [CalendarInfo],
-                     now: Date = Date(), locale: Locale = .current) -> String? {
+                     link: String?, now: Date = Date(), locale: Locale = .current) -> String? {
         let page = config.requestPage ?? RequestPageConfig()
         let policy = page.policy
         let zone = policy.resolvedTimeZone ?? .current
@@ -32,7 +42,25 @@ enum SendTimesSource {
         let slots = SlotDeriver.derive(policy: policy, busy: busy, now: now)
         let picks = SendTimes.pick(slots, count: count, zone: zone)
         guard !picks.isEmpty else { return nil }
-        let link = page.enabled && !page.slug.isEmpty ? "askwhen.me/\(page.slug)" : nil
         return SendTimes.text(picks, zone: zone, link: link, now: now, locale: locale)
+    }
+}
+
+extension Store {
+    /// The line as it is sent: with a personal link minted for this send when
+    /// there is a live page (`decisions.md`, "Personal links, accepted at send
+    /// time"), the public address if minting fails, nothing for an owner with
+    /// no page. This is the one place "Send times" touches the network, and
+    /// only when the owner opted in — a page that is not on mints nothing.
+    func sendTimesLine() async -> String? {
+        guard access, !fixture else { return nil }
+        var link = SendTimesSource.publicLink(config)
+        var page = requestPage
+        if page.isReady, let minted = try? await requestCoordinator().mintLink(page: &page) {
+            requestPage = page
+            save()
+            link = minted.display
+        }
+        return SendTimesSource.text(config: config, engine: engine, calendars: calendars, link: link)
     }
 }

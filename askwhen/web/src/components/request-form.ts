@@ -33,6 +33,8 @@ type Errors = { name?: string; email?: string };
  */
 export class RequestForm extends LitElement {
   ownerName = '';
+  /** Through a personal link there is no confirmation step to mention. */
+  personal = false;
   dayLabel = '';
   time = '';
   minutes = 0;
@@ -42,6 +44,7 @@ export class RequestForm extends LitElement {
 
   static override properties = {
     ownerName: { type: String },
+    personal: { type: Boolean },
     dayLabel: { type: String },
     time: { type: String },
     minutes: { type: Number },
@@ -177,8 +180,9 @@ export class RequestForm extends LitElement {
           <label for="email">
             Your email
             <span class="hint"
-              >${this.ownerName || 'They'} never sees it until you confirm it, and it is only used
-              to send you this one reply.</span
+              >${this.personal
+                ? 'Only used to send you the calendar details for this one time.'
+                : `${this.ownerName || 'They'} never sees it until you confirm it, and it is only used to send you this one reply.`}</span
             >
           </label>
           <input

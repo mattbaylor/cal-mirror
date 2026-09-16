@@ -343,6 +343,10 @@ type Request struct {
 	Email     string
 	Note      string
 	HoldUntil string
+	// Personal is true for a request that came through a personal link the
+	// owner minted and sent: no confirmation mail was needed, and the device
+	// accepts it without a tap if the slot is still clear.
+	Personal bool
 }
 
 // ErrSlotHeld means somebody else is already asking for that slot.
@@ -441,6 +445,112 @@ func (s *Store) ConfirmRequest(ctx context.Context, id string, holdUntil, purgeA
 }
 
 func nowRFC3339() string { return time.Now().UTC().Format(time.RFC3339) }
+
+// ------------------------------------------------------------ personal links
+
+// ErrLinkSpent covers a personal link that was already used, has expired, or
+// never existed. The page tells the holder to ask for a fresh one; it does not
+// say which, for the same reason §4c gives.
+var ErrLinkSpent = errors.New("personal link spent")
+
+// LinkState is what a lookup of a personal code reports. Only `LinkLive`
+// serves a page; the other two get the same "ask for a fresh one" from the
+// web app, but the owner's side may want to know which.
+type LinkState int
+
+const (
+	LinkNone LinkState = iota
+	LinkLive
+	LinkSpent
+	LinkExpired
+)
+
+// CreateLink mints a personal link for a page. The code is the caller's (it
+// is unguessable by construction, 12 characters of base-36), and the page
+// must exist — the foreign key says so.
+func (s *Store) CreateLink(ctx context.Context, slug, code string, expires time.Time) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO personal_link (code, slug, created_at, expires_at)
+		VALUES (?, ?, ?, ?)`, code, slug, nowRFC3339(), expires.UTC().Format(time.RFC3339))
+	if err != nil && strings.Contains(err.Error(), "FOREIGN KEY") {
+		return ErrNoPage
+	}
+	if err != nil {
+		return fmt.Errorf("create link: %w", err)
+	}
+	return nil
+}
+
+// LinkPage resolves a personal code to the page it opens, and says whether it
+// still opens it.
+func (s *Store) LinkPage(ctx context.Context, code string, now time.Time) (string, LinkState, error) {
+	var slug, expires string
+	var used sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		SELECT slug, expires_at, used_at FROM personal_link WHERE code = ?`, code).
+		Scan(&slug, &expires, &used)
+	if err == sql.ErrNoRows {
+		return "", LinkNone, nil
+	}
+	if err != nil {
+		return "", LinkNone, fmt.Errorf("link page: %w", err)
+	}
+	if used.Valid {
+		return slug, LinkSpent, nil
+	}
+	if expires <= now.UTC().Format(time.RFC3339) {
+		return slug, LinkExpired, nil
+	}
+	return slug, LinkLive, nil
+}
+
+// CreatePersonalRequest spends a personal link and records the request it
+// was spent on, already confirmed — the link is the proof of address, so there
+// is no mail to click. One transaction: the UPDATE that claims the link is
+// conditional on it being unused and unexpired, so two submissions racing on
+// a forwarded link cannot both get through, and the slot hold is the same
+// unique index the public path relies on.
+func (s *Store) CreatePersonalRequest(ctx context.Context, r Request, code string,
+	holdUntil, purgeAfter time.Time) error {
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("create personal request: %w", err)
+	}
+	defer tx.Rollback()
+
+	now := nowRFC3339()
+	// Claim first, point at the request after: the request row does not
+	// exist yet and the foreign key is checked per statement.
+	res, err := tx.ExecContext(ctx, `
+		UPDATE personal_link SET used_at = ?
+		WHERE code = ? AND slug = ? AND used_at IS NULL AND expires_at > ?`,
+		now, code, r.Slug, now)
+	if err != nil {
+		return fmt.Errorf("spend link: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		return ErrLinkSpent
+	}
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO request (id, slug, slot_start, slot_end, requester_name,
+		                     requester_email, note, state, confirm_token_hash,
+		                     created_at, confirmed_at, hold_until, purge_after)
+		VALUES (?, ?, ?, ?, ?, ?, ?, 'confirmed', NULL, ?, ?, ?, ?)`,
+		r.ID, r.Slug, r.SlotStart, r.SlotEnd, r.Name, r.Email, r.Note,
+		now, now, holdUntil.UTC().Format(time.RFC3339), purgeAfter.UTC().Format(time.RFC3339))
+	if err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed") &&
+		strings.Contains(err.Error(), "slot_start") {
+		return ErrSlotHeld
+	}
+	if err != nil {
+		return fmt.Errorf("create personal request: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE personal_link SET request_id = ? WHERE code = ?`, r.ID, code); err != nil {
+		return fmt.Errorf("spend link: %w", err)
+	}
+	return tx.Commit()
+}
 
 // SlotIsOffered reports whether a slot start appears in the page's published
 // dump.
@@ -608,11 +718,12 @@ func (s *Store) DeletePage(ctx context.Context, slug string) error {
 // Queue is what the owner's device collects: confirmed requests, oldest first.
 func (s *Store) Queue(ctx context.Context, slug string) ([]Request, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, slug, slot_start, slot_end, state, requester_name,
-		       requester_email, note, hold_until
-		FROM request
-		WHERE slug = ? AND state = 'confirmed'
-		ORDER BY confirmed_at ASC`, slug)
+		SELECT r.id, r.slug, r.slot_start, r.slot_end, r.state, r.requester_name,
+		       r.requester_email, r.note, r.hold_until,
+		       EXISTS (SELECT 1 FROM personal_link l WHERE l.request_id = r.id)
+		FROM request r
+		WHERE r.slug = ? AND r.state = 'confirmed'
+		ORDER BY r.confirmed_at ASC`, slug)
 	if err != nil {
 		return nil, fmt.Errorf("queue: %w", err)
 	}
@@ -623,7 +734,7 @@ func (s *Store) Queue(ctx context.Context, slug string) ([]Request, error) {
 		var r Request
 		var name, email, note sql.NullString
 		if err := rows.Scan(&r.ID, &r.Slug, &r.SlotStart, &r.SlotEnd, &r.State,
-			&name, &email, &note, &r.HoldUntil); err != nil {
+			&name, &email, &note, &r.HoldUntil, &r.Personal); err != nil {
 			return nil, fmt.Errorf("queue: %w", err)
 		}
 		r.Name, r.Email, r.Note = name.String, email.String, note.String
@@ -1045,6 +1156,13 @@ func (s *Store) Sweep(ctx context.Context, now time.Time, confirmedFor time.Dura
 		return out, fmt.Errorf("sweep purge: %w", err)
 	}
 	out.Purged, _ = r3.RowsAffected()
+
+	// A personal link that was never used dies two days after it expired;
+	// one that was used follows its request out (ON DELETE SET NULL, then
+	// this). Either way nothing here outlives its purpose by more than a
+	// sweep or two.
+	_, _ = s.db.ExecContext(ctx, `DELETE FROM personal_link WHERE expires_at < ? AND request_id IS NULL`,
+		now.Add(-48*time.Hour).UTC().Format(time.RFC3339))
 
 	// Rate-limit rows die with their window. Two days is generous; the point
 	// is that they cannot accumulate.

@@ -37,6 +37,11 @@ type Requests struct {
 	HoldInitial time.Duration
 	// TTLUnconfirmed is how long an unconfirmed request exists at all.
 	TTLUnconfirmed time.Duration
+	// A request through a personal link is confirmed on arrival, so it takes
+	// the confirmed hold and the confirmed TTL straight away — the same two
+	// numbers Confirm uses.
+	HoldConfirmed time.Duration
+	TTLConfirmed  time.Duration
 
 	// RatePerIP is the submissions allowed per address per window. The decision
 	// of 2 Sept 2026 scoped the limit to this endpoint alone: page views stay
@@ -62,6 +67,9 @@ type submission struct {
 	Email   string `json:"email"`
 	Note    string `json:"note"`
 	Trapped bool   `json:"trapped"`
+	// Personal is the code of the link this arrived through, or empty for the
+	// public page. See links.go.
+	Personal string `json:"personal"`
 }
 
 type reply struct {
@@ -159,6 +167,45 @@ func (h *Requests) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	now := time.Now()
+	req := store.Request{
+		ID: newID(), Slug: slug, SlotStart: in.Slot, SlotEnd: end,
+		Name: in.Name, Email: in.Email, Note: in.Note,
+	}
+
+	// Through a personal link: no confirmation mail, because the link is the
+	// proof — the owner sent it to this person. The link is spent in the same
+	// transaction that records the request, and the request lands in the
+	// queue already confirmed, where the device accepts it without a tap if
+	// the slot is still clear.
+	if in.Personal != "" {
+		if !validLinkCode(in.Personal) {
+			writeJSON(w, http.StatusGone, reply{Reason: "link",
+				Message: "This link has been used, or it has expired. Ask whoever sent it for a fresh one."})
+			return
+		}
+		err = h.Store.CreatePersonalRequest(ctx, req, in.Personal,
+			now.Add(h.HoldConfirmed), now.Add(h.TTLConfirmed))
+		switch {
+		case errors.Is(err, store.ErrLinkSpent):
+			writeJSON(w, http.StatusGone, reply{Reason: "link",
+				Message: "This link has been used, or it has expired. Ask whoever sent it for a fresh one."})
+			return
+		case errors.Is(err, store.ErrSlotHeld):
+			writeJSON(w, http.StatusConflict, reply{Reason: "held",
+				Message: "Someone just asked for that time. Pick another."})
+			return
+		case err != nil:
+			h.Logger.Error("requests: create personal", "err", err)
+			writeJSON(w, http.StatusServiceUnavailable, reply{Message: "Please try again in a moment."})
+			return
+		}
+		h.Logger.Info("requests: created via personal link", "slug", slug, "slot", in.Slot)
+		writeJSON(w, http.StatusAccepted, reply{OK: true, Reason: "personal",
+			Message: "Sent. If the time is still clear it goes straight into their calendar, and the details come to you by email."})
+		return
+	}
+
 	token, hash, err := tokens.New(h.Pepper)
 	if err != nil {
 		h.Logger.Error("requests: token", "err", err)
@@ -166,11 +213,6 @@ func (h *Requests) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
-	req := store.Request{
-		ID: newID(), Slug: slug, SlotStart: in.Slot, SlotEnd: end,
-		Name: in.Name, Email: in.Email, Note: in.Note,
-	}
 	err = h.Store.CreateRequest(ctx, req, hash, now.Add(h.HoldInitial), now.Add(h.TTLUnconfirmed))
 	if errors.Is(err, store.ErrSlotHeld) {
 		// §4b. Somebody else asked first. Told plainly rather than as an error,

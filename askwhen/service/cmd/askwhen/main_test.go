@@ -447,3 +447,67 @@ func TestALapsedPageServesNotTakingRequestsThenNothing(t *testing.T) {
 		t.Fatalf("after grace: %d, want 404 — indistinguishable from never-existed", w.Code)
 	}
 }
+
+func TestAPersonalLinkServesItsPageOnceAndThenSaysSo(t *testing.T) {
+	// decisions.md, "Personal links": a code the owner sent looks like any
+	// page and opens the same dump, marked personal, uncached. Spent or
+	// expired it answers 410 with a reason — unlike a missing page (§4c), the
+	// holder is somebody the owner chose to tell.
+	h, st := testRoutesAndStore(t)
+	ctx := context.Background()
+	const code = "abcdefghij12"
+	if err := st.CreateLink(ctx, "x7f2k9", code, time.Now().Add(7*24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	w := do(h, http.MethodGet, "/p/"+code+".json", nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("live link: %d %s", w.Code, w.Body.String())
+	}
+	var got struct {
+		Slug     string `json:"slug"`
+		Personal bool   `json:"personal"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &got)
+	if !got.Personal || got.Slug != "x7f2k9" {
+		t.Fatalf("personal dump = %+v; want the page's slug, marked personal", got)
+	}
+	if cc := w.Header().Get("Cache-Control"); cc != "no-store" {
+		t.Fatalf("a personal dump is cacheable (%q); it must not be", cc)
+	}
+	// The shell is served for the code exactly as for a slug.
+	if s := do(h, http.MethodGet, "/"+code, nil); s.Code != http.StatusOK {
+		t.Fatalf("shell for a personal code: %d", s.Code)
+	}
+
+	// Spent.
+	if err := st.CreatePersonalRequest(ctx, store.Request{ID: "r1", Slug: "x7f2k9",
+		SlotStart: "2026-09-12T16:00:00Z", SlotEnd: "2026-09-12T16:30:00Z", Name: "A", Email: "a@example.com"},
+		code, time.Now().Add(24*time.Hour), time.Now().Add(14*24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if w := do(h, http.MethodGet, "/p/"+code+".json", nil); w.Code != http.StatusGone ||
+		!strings.Contains(w.Body.String(), `"link"`) {
+		t.Fatalf("spent link: %d %s; want 410 with reason link", w.Code, w.Body.String())
+	}
+	// Expired.
+	if err := st.CreateLink(ctx, "x7f2k9", "expiredlink1", time.Now().Add(-time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if w := do(h, http.MethodGet, "/p/expiredlink1.json", nil); w.Code != http.StatusGone {
+		t.Fatalf("expired link: %d; want 410", w.Code)
+	}
+	// Never minted: a twelve-character slug that is not a page is a missing
+	// page, exactly as before.
+	if w := do(h, http.MethodGet, "/p/neverminted1.json", nil); w.Code != http.StatusNotFound {
+		t.Fatalf("unknown code: %d; want 404", w.Code)
+	}
+}
+
+func TestMintingAPersonalLinkNeedsTheWriteToken(t *testing.T) {
+	h, _ := testRoutesAndStore(t)
+	w := do(h, http.MethodPost, "/v1/pages/x7f2k9/links", nil)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("unauthenticated mint: %d; want the same 404 as a wrong token", w.Code)
+	}
+}

@@ -138,6 +138,9 @@ struct ContentView: View {
                 if model.access {
                     Section {
                         if let line = sendTimes {
+                            // A String, on purpose: the share sheet offers
+                            // Copy and pastes it as text. Any other
+                            // representation becomes a file attachment.
                             ShareLink(item: line) {
                                 Label(RequestCopy.SendTimes.row, systemImage: "text.bubble")
                             }
@@ -148,7 +151,8 @@ struct ContentView: View {
                     } footer: {
                         Text(sendTimes == nil
                              ? String(format: RequestCopy.SendTimes.empty, model.requestPage.policy.horizonDays)
-                             : RequestCopy.SendTimes.footer)
+                             : model.requestPage.isReady ? RequestCopy.SendTimes.footerPage
+                                                         : RequestCopy.SendTimes.footer)
                     }
                 }
                 Section {
@@ -218,7 +222,11 @@ struct ContentView: View {
             .refreshable { await model.syncNow(); await model.collectRequests() }
             .task(id: model.lastRun) {
                 guard model.access else { return }
-                sendTimes = SendTimesSource.text(config: model.config, engine: model.engine, calendars: model.calendars)
+                // On open and after every foreground sync: the line, with a
+                // personal link minted for it when there is a live page. A
+                // link that is never sent expires in seven days and the
+                // service sweeps it; the share sheet needs a String ready.
+                sendTimes = await model.sendTimesLine()
             }
             .navigationDestination(isPresented: $pushingSetup) {
                 RequestPageSetupView(start: .calendars, page: model.config.requestPage)

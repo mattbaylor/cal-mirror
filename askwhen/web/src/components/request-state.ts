@@ -12,6 +12,8 @@ import { tokens, base } from '../styles.ts';
 /** Every end state the page can land on. The union is the contract. */
 export type RequestStateName =
   | 'confirm-your-email'
+  | 'sent-personal'
+  | 'link-gone'
   | 'submitted'
   | 'accepted'
   | 'declined'
@@ -34,6 +36,20 @@ const STATES: Record<RequestStateName, Spec> = {
     body: (o) =>
       `We have sent a message to that address. Click the link in it and your request goes to ${o.ownerName} — until you do, nothing reaches them. The time is held for fifteen minutes.`,
     tone: 'wait',
+  },
+  'sent-personal': {
+    icon: '📤',
+    title: 'Sent',
+    body: (o) =>
+      `${o.ownerName} sent you this link, so there is nothing to confirm. If that time is still clear in their calendar it goes straight in, and the details come to you by email. If something has landed on it since, ${o.ownerName} will be in touch.`,
+    tone: 'good',
+  },
+  'link-gone': {
+    icon: '🔗',
+    title: 'This link has been used, or it has expired',
+    body: () =>
+      'A link like this opens the page once, for the person it was sent to, and for a week. Ask whoever sent it for a fresh one.',
+    tone: 'plain',
   },
   submitted: {
     icon: '📤',

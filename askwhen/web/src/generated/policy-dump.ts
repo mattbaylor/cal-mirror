@@ -45,6 +45,10 @@ export interface PolicyDump {
    * @maxItems 500
    */
   held?: string[];
+  /**
+   * Added by the SERVICE on the way out when the dump was fetched through a personal link the owner minted and sent (decisions.md, 'Personal links, accepted at send time'). The page then sends the link's code back with the request, skips the confirmation-mail step, and says the request goes straight into the owner's calendar if the time is still clear. Never sent by the device; a personal dump is never cached.
+   */
+  personal?: boolean;
 }
 
 /** One offer, as the schema spells it: start and end, ISO-8601 UTC. */

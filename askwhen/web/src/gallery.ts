@@ -135,6 +135,22 @@ add(
   ),
 );
 
+// Personal links (decisions.md): the page as the one person it was sent to
+// sees it — no email step — and the page after the link is spent.
+add(
+  frame('Through a personal link', 'The owner sent this; the path has no email step', () =>
+    page({ ...fresh(example), personal: true }, { zone: 'America/Denver', locale: 'en-US' }),
+  ),
+  frame('Sent through a personal link', 'It lands if the time is still clear; nothing to confirm', () =>
+    page({ ...fresh(example), personal: true }, { zone: 'America/Denver', locale: 'en-US', state: 'sent-personal' }),
+  ),
+  frame('Link used or expired', 'The one missing page the holder is told about', () => {
+    const el = page(null);
+    el.linkGone = true;
+    return el;
+  }),
+);
+
 add(
   frame('Expired dump', 'Lapse and expiry share one voice, and never say which', () =>
     page({ ...example, expires: '2026-08-31T00:00:00Z' }, { zone: 'America/Denver' }),
