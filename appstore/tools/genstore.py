@@ -172,15 +172,28 @@ FRAMES = [
          shot=dict(iphone="ios-detail-light.png", ipad="ipad-detail.png", mac="mac-selection-light.png"),
          crop=dict(iphone=(0, 1395, 1206, 1905), ipad=(0, 560, 2064, 1235)),
          mac_crop=(0, 0, 940, 880)),
-    # 6
-    dict(kind="list", grad=G_BLUE,
-         head="Filter on what the events already say.",
-         sub="Works on calendars you don't control — a subscribed work feed, a team calendar.",
-         items=["Declined, unanswered or canceled",
-                "All-day events, and anything marked free",
-                "Shorter than 15 minutes, or longer than 8 hours",
-                "Titles containing “Lunch” or “Focus time”",
-                "Only 8am–6pm, Monday to Friday"]),
+    # 6 — 2.0. Send times: the daily-use one. The phone shows the share
+    # sheet with the line; iPad and Mac say it in words (the Mac's is a menu
+    # item, and no capture of a menu is made).
+    dict(kind="shot", grad=G_BLUE,
+         head="When are you free? Answer from the app.",
+         sub="One tap: your next three free times as a line of text, worked out on your device, ready to paste.",
+         shot=dict(iphone="ios-sendtimes-light.png"),
+         crop=dict(iphone=(0, 0, 1206, 1900)),
+         ipad_swap=dict(kind="list", grad=G_BLUE,
+                        head="When are you free? Answer from the app.",
+                        sub="Send times: your next three free times as a line of text.",
+                        items=["“Tue 2–2:30pm, Wed 10–10:30am or Thu 3–3:30pm MDT”",
+                               "Worked out on your device from the calendars you chose",
+                               "Ready to paste into Messages, Mail or Slack",
+                               "Also a Shortcuts action and a Siri phrase"]),
+         mac_swap=dict(kind="list", grad=G_BLUE,
+                       head="When are you free? Answer from the menu bar.",
+                       sub="Copy Times to Send: your next three free times as a line of text.",
+                       items=["“Tue 2–2:30pm, Wed 10–10:30am or Thu 3–3:30pm MDT”",
+                              "Worked out on your Mac from the calendars you chose",
+                              "On the clipboard, ready to paste anywhere",
+                              "Also a Shortcuts action and a Siri phrase"])),
     # 7
     dict(mac_swap=dict(kind="icons", grad=G_DEEP,
                        head="Five faces, one glance.",
@@ -194,14 +207,29 @@ FRAMES = [
                 "#private — copy it as a busy block",
                 "#public — copy it in full",
                 "Point a whole mirror at a tag to copy only what you've marked"]),
-    # 8
-    dict(kind="list", grad=G_TEAL,
-         head="Label it. Link it.",
-         sub="Two things a copy can carry across.",
-         items=["Put “[Work]” in front of every copied title",
-                "It applies to hidden titles too — “[Work] Busy”",
-                "Carry the meeting link into the copy's notes",
-                "So a mirrored meeting is one you can actually join"]),
+    # 8 — 2.0. AskWhen.me, as the preview the owner sees before the offer.
+    # Every word of the frame is glossary.md: a request page, never booking.
+    dict(kind="shot", grad=G_TEAL,
+         head="A request page whose server never sees your calendar.",
+         sub="AskWhen.me — a separate subscription you can turn on. Your device chooses the times; nothing lands until you accept.",
+         shot=dict(iphone="ios-askwhen-light.png"),
+         crop=dict(iphone=(0, 0, 1206, 1900)),
+         ipad_swap=dict(kind="list", grad=G_TEAL,
+                        head="A request page whose server never sees your calendar.",
+                        sub="AskWhen.me — a separate subscription you can turn on from inside the app.",
+                        items=["Your device works out which times to offer and sends only those",
+                               "Someone picks one; the request comes to your device",
+                               "Nothing lands in your calendar until you accept",
+                               "Off by default — no network request until you turn it on",
+                               "Free for 90 days, then $19.99 a year"]),
+         mac_swap=dict(kind="list", grad=G_TEAL,
+                       head="A request page whose server never sees your calendar.",
+                       sub="AskWhen.me — a separate subscription you can turn on from inside the app.",
+                       items=["Your Mac works out which times to offer and sends only those",
+                              "Someone picks one; the request comes to your Mac",
+                              "Nothing lands in your calendar until you accept",
+                              "Off by default — no network request until you turn it on",
+                              "Free for 90 days, then $19.99 a year"])),
     # 9
     dict(kind="shot", grad=G_BLUE,
          head="Silent when it works. Loud when it stops.",
@@ -210,8 +238,8 @@ FRAMES = [
          crop=dict(ipad=(0, 0, 2064, 1465))),
     # 10
     dict(kind="list", grad=G_DARK,
-         head="No account. No server. Nothing leaves your device.",
-         sub="It works through the calendars already set up on your device.",
+         head="No account. No server — until you turn one on.",
+         sub="It works through the calendars already set up on your device, and makes no network request until you turn on AskWhen.me.",
          items=["Nothing to sign up for, no password to hand over",
                 "No analytics, no tracking, no telemetry",
                 "Open source, MIT licensed",
@@ -227,8 +255,10 @@ METRICS = {
 
 
 def build(platform, idx, spec):
-    if platform == "mac" and spec.get("mac_swap"):
-        spec = spec["mac_swap"]
+    # A frame can say the same thing differently per platform — a shot on the
+    # phone, words on the iPad or the Mac where no honest capture exists.
+    if spec.get(platform + "_swap"):
+        spec = spec[platform + "_swap"]
     size = SIZES[platform]
     m = METRICS[platform]
     base = gradient(size, *spec["grad"]).convert("RGBA")

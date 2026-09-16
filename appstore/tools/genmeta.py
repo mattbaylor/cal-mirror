@@ -25,7 +25,8 @@ import os, sys
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "metadata")
 LIMITS = {"name": 30, "subtitle": 30, "promotional_text": 170,
-          "description": 4000, "whats_new": 4000, "keywords": 100}
+          "description": 4000, "whats_new": 4000, "keywords": 100,
+          "review_notes": 4000}
 
 # The listing name and subtitle. Apple indexes NAME + SUBTITLE + KEYWORDS for
 # search and treats them as one pool, so a word spent in one is wasted in the
@@ -204,6 +205,58 @@ Also: the settings read the way Apple's do, and the key to your page follows
 your iCloud Keychain to a new device.
 """
 
+# Notes for App Review. One text for both platforms; the reviewer reads it
+# once. The sandbox tester is the one line only Matt can fill in.
+REVIEW_NOTES = """Calendar Mirror 2.0 is two things, and the notes are in that order.
+
+1. THE APP (no account, no sign-in). It copies one calendar into another on
+the device with EventKit. Grant Calendar access when asked, tap + to add a
+pair, pick a source and a destination, and sync. Nothing here uses the
+network. New in 2.0: "Send times" — one tap gives the next three free times
+as a line of text via the share sheet, worked out on the device. Also a
+Shortcuts action ("Send Times") and a Siri phrase.
+
+2. ASKWHEN.ME (auto-renewable subscription, off by default). A request page
+at askwhen.me/<page> where other people can ask the owner for a time. It is
+a separate product turned on from inside the app; until the owner turns it
+on, the app makes no network request of any kind — the first request of the
+app's life is StoreKit loading the price, on the screen that shows it.
+
+How to reach it: the "Request page" row → Continue on the sheet → the app
+infers calendars and shows a preview of the owner's own week → "See what it
+costs" → the offer. Products: me.askwhen.page.annual ($19.99/yr, 3-month
+free introductory offer), me.askwhen.subdomain.annual ($34.99/yr) and
+me.askwhen.domain.annual ($69.99/yr); the offer screen sells the first, the
+other two are upgrades on the address screen. "Restore Purchases" is on the
+offer screen.
+
+SANDBOX TESTER: [PLACEHOLDER — Matt: the sandbox Apple Account and password
+from App Store Connect › Users and Access › Sandbox]
+
+What happens after a purchase: the app sends Apple's signed transaction to
+our server, which verifies it offline against Apple's root and creates the
+page. The screen then shows the page's address (askwhen.me/xxxxxx). To see
+the whole loop: open that address in Safari, pick a time, enter a name and
+an email you can read, and confirm from the email that arrives (from
+no-reply@askwhen.me). The request then appears in the app under "Waiting for
+you" and as a notification with Accept and Decline. Accept writes the event
+into the owner's calendar and emails the requester a calendar file.
+
+Personal links: "Send times" from an owner with a live page appends a
+one-use link; a request through it needs no email confirmation and is
+accepted automatically if the time is still clear.
+
+What the server holds: the offered times (not the calendar), the display
+name, an anonymous Apple transaction identifier (hashed), and requests until
+they are answered and delivered. Full detail, in the product's voice:
+https://calendarmirror.com/privacy.html. Terms for the subscription:
+https://calendarmirror.com/terms.html. Support: support@askwhen.me.
+
+The Mac build has a menu-bar item; the window opens from it ("Manage
+Mirrors…"). Realtime syncing (on calendar change) is macOS only and is
+labelled as such; iOS syncs on open, pull to refresh, and background refresh.
+"""
+
 NEW_IOS = NEW_COMMON
 
 NEW_MAC = NEW_COMMON + """
@@ -275,6 +328,7 @@ for plat, fields in FIELDS.items():
         fail = True
     d = os.path.join(OUT, plat)
     os.makedirs(d, exist_ok=True)
+    fields = dict(fields, review_notes=REVIEW_NOTES.strip() + "\n")
     for name, val in fields.items():
         n = len(val)
         lim = LIMITS[name]
@@ -282,7 +336,10 @@ for plat, fields in FIELDS.items():
         if n > lim:
             fail = True
         low = val.lower()
-        hits = [b for b in BANNED[plat] if b in low]
+        # The review notes are for the reviewer, not the store, and say
+        # plainly which platform has what; the platform ban is for copy a
+        # buyer reads.
+        hits = [] if name == "review_notes" else [b for b in BANNED[plat] if b in low]
         if hits:
             fail = True
             print("  !! %s/%s mentions %s — not true of this platform's App Store build" % (plat, name, hits))
@@ -293,7 +350,7 @@ for plat, fields in FIELDS.items():
             print("  !! %s/%s says booking — it is a request page (glossary.md)" % (plat, name))
         # The 1.x claim, unqualified. "No network request ... until you turn
         # on AskWhen.me" is the true form and the only one allowed.
-        if "requests of its own" in low or ("no network request" in low and "until you turn on" not in low):
+        if "requests of its own" in low or ("no network request" in low and "until" not in low):
             fail = True
             print("  !! %s/%s claims no network requests without the AskWhen.me qualifier" % (plat, name))
         open(os.path.join(d, name + ".txt"), "w").write(val)
