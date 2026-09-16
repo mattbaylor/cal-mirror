@@ -99,8 +99,13 @@ struct ManageView: View {
                 // thing the app does, listed after the mirrors, in the window
                 // where the owner is already looking at their calendars.
                 Section("AskWhen.me") {
-                    Button { showingSetup = true } label: {
-                        RequestPageRow(page: model.config.requestPage)
+                    Button {
+                        // A key with no config: carry on at the same address.
+                        if !model.hasRequestPage, model.recoverableSlug != nil { model.reattachRequestPage() }
+                        showingSetup = true
+                    } label: {
+                        RequestPageRow(page: model.config.requestPage,
+                                       recoverable: model.hasRequestPage ? nil : model.recoverableSlug)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)

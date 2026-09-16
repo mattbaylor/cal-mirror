@@ -18,7 +18,9 @@
     "title": "Request page",
     "off": "Off",
     "blurb": "Let people ask you for a time. Nothing leaves this Mac until you turn it on.",
-    "blurbPhone": "Let people ask you for a time. Nothing leaves this iPhone until you turn it on."
+    "blurbPhone": "Let people ask you for a time. Nothing leaves this iPhone until you turn it on.",
+    "inKeychain": "askwhen.me/%@ is yours — its key is in your iCloud Keychain. Reconnect this device and the page keeps that address.",
+    "carryOn": "Reconnect"
   },
   "explainer": {
     "symbol": "calendar.badge.clock",
@@ -147,7 +149,7 @@
     "creating": "Creating your page…",
     "createFailedTitle": "Apple said yes, AskWhen.me did not answer",
     "createFailedBody": "Your subscription went through and you will not be charged twice. Try again; nothing is lost.",
-    "tokenWarning": "The page’s key lives only in this device’s keychain; there is no account to recover it from."
+    "tokenWarning": "The page’s key goes into your iCloud Keychain, so a new device finds it. There is no account and no password."
   },
   "live": {
     "section": "Your page",
@@ -158,8 +160,8 @@
     "openTitle": "Open it",
     "deviceSection": "This device",
     "publishes": "Publishes your page",
-    "holdsKey": "Holds the only key",
-    "deviceFooter": "Other devices can answer requests; only this one publishes, and it holds the key that keeps the page yours. Switching off stops publishing at once.",
+    "holdsKey": "Key in your iCloud Keychain",
+    "deviceFooter": "Other devices can answer requests; only this one publishes. The page’s key is in your iCloud Keychain, so a new device or a reinstall finds it. Switching off stops publishing at once.",
     "turnOff": "Request page",
     "notPublished": "Nothing has been published yet — the first upload happens on the next sync."
   },

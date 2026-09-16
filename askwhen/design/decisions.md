@@ -550,6 +550,15 @@ before any more code. **Against it:** *Not now* on the explainer is a second
 way out where the Mac sheet already has Done, so it is iOS-only; and the
 first-run sheet has no *Learn more*, so the long form is only on the web.
 
+**The row for a page the Keychain knows and the device does not says
+"Reconnect".** *(16 September 2026)* Matt. Not *Carry on* (promises the
+setup back, when only the address and the key survive), not *Set up* (reads
+as brand new, as if starting over), not *Restore* (Apple's word for
+purchases, and loaded). *Reconnect* is what actually happens — this device
+rejoins a page that never stopped existing — and the line under it says
+what is kept: *"askwhen.me/x7f2k9 is yours — its key is in your iCloud
+Keychain. Reconnect this device and the page keeps that address."*
+
 **The request-page UI is approved as built.** *(15 September 2026)* Matt,
 having walked the fifteen-step flow in `apple/tools/review.html`: *"it all
 looks good to me, proceed."*
@@ -612,6 +621,27 @@ not; the default calendar receives; the display name comes from the Me card
 and falls back to the device name. The preview's explain line then shows the
 owner what was inferred before the offer, and the calendar screen stays one
 row away as *adjust*.
+
+**Accept should claim on the service before it writes.** *(16 September
+2026 — raised by the write token going into iCloud Keychain; a decision,
+because it changes what "accept" means when it fails.)* Today accept
+re-checks the calendar, writes the event, then tells the service; a 404 back
+means another device already resolved it, which is read as success. With
+the key on every device the owner has, two devices can both accept the same
+request before either polls — the service refuses the second resolve, but
+the second event is already in the calendar. The design has always allowed
+many collectors (*One publisher per owner*), so the race is not new; the
+synced key just makes it likely. The fix is to reverse the last two steps:
+re-check, resolve on the service (which is the claim — the first device
+wins and the second gets the 404 *before* writing), then write the event.
+The cost is the case the current order was chosen for: a write that fails
+after the service has told the requester they are accepted. That case
+already exists in the other direction (`writtenButNotResolved`), it has a
+notification, and it is rarer than two devices. **Against it:** the
+requester's mail goes out before the event exists, so a calendar refusing
+the write leaves the owner holding an acceptance with nothing behind it,
+and the fix for that is the same notification the other order already
+sends. Not built; filed on `TASKS.md`.
 
 **The screens should read as Apple's, and mostly do not because of where the
 prose sits.** *(16 September 2026.)* Audited from the CI frames and the store

@@ -134,11 +134,22 @@ struct ContentView: View {
                         // A page that exists, or a setup that was started:
                         // straight to it. The pitch is over.
                         NavigationLink {
-                            RequestPageSetupView(start: model.requestPage.slug.isEmpty ? .calendars : .live,
-                                                 page: model.config.requestPage)
+                            RequestPageSetupView(page: model.config.requestPage)
                         } label: {
                             RequestPageRow(page: model.config.requestPage)
                         }
+                    } else if let slug = model.recoverableSlug {
+                        // The key is here, the config is not: carry on at
+                        // the same address, straight to the calendars.
+                        Button { model.reattachRequestPage(); pushingSetup = true } label: {
+                            HStack {
+                                RequestPageRow(page: nil, recoverable: slug)
+                                Image(systemName: "chevron.forward")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .buttonStyle(.plain)
                     } else {
                         // Nothing yet: the row presents the explainer as a
                         // sheet, and Continue on it pushes the setup.

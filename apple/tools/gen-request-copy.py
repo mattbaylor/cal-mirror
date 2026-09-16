@@ -52,7 +52,7 @@ def gen_swift(c: dict) -> str:
 
     d = c["dormantRow"]
     out.append("\n    enum DormantRow {\n")
-    for k in ("title", "off", "blurb", "blurbPhone"):
+    for k in ("title", "off", "blurb", "blurbPhone", "inKeychain", "carryOn"):
         out.append(f"        static let {k} = {swift_string(d[k])}\n")
     out.append("        /// The one-liner names the device it is running on, because\n")
     out.append("        /// \"nothing leaves this device\" is the promise and it reads as\n")

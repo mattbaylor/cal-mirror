@@ -85,6 +85,7 @@ Judgment, not access. Roughly in the order it starts costing.
 | **A support address requesters can reach.** Mail comes from `no-reply@`; the page footer says `askwhen.me` and nothing else. Someone who gets a wrong `.ics` has nowhere to write. | Support, and Apple asks for one. |
 | **Small Business Program** enrollment, if not already — 15% instead of 30%. | Money. |
 | **`askwhen.me` registration renewal** — expires **1 September 2027** (whois, 16 Sept). Put it somewhere a reminder fires. | The whole product is one lapsed domain from gone. |
+| **Hurdle E is done** *(16 Sept)* — the write token is synchronizable in iCloud Keychain, pre-2.0 tokens migrate on first read, and a fresh install that finds a key with no config offers *Reconnect* at the same address. Proven on the simulator: seed a page, delete `config.json`, relaunch, the row names the slug and says *Reconnect*; tap, and setup resumes at the calendars with the slug restored. | — |
 | **Hurdles C and D are done** *(16 Sept)* — the native pass ([#105](https://github.com/mattbaylor/cal-mirror/pull/105), approved on the frames) and the Mac store app's sidebar, toolbar and Settings scene with every Mac capture re-shot from the store app by `apple/tools/shoot-mac.sh`. Next: E (iCloud Keychain), then Send times. | — |
 | **An outside review found nine defects and four capture problems** *(16 Sept)* — `REVIEW.md`. The ones nobody had listed: the delete sweep has no automated test; calendar matching is by title string; banner writes swallow errors; the write token should sync via iCloud Keychain; the listing and privacy page become false in 2.0; the Mac store screenshots are of the standalone app; two Mac captures are of an inactive window; `askwhen.me` is lowercase in the explainer. | Each is a task or a decision; `REVIEW.md` says which. |
 
@@ -99,6 +100,7 @@ Each has an owner. None is on the release path; `REVIEW.md` has the detail.
 | D4 | Banner writes swallow errors (`try? store.save` in `MirrorEngine.applyBanner`) — the one write whose job is to be loud fails silently | agent | The save's error is logged and surfaced in the sync status like any other write failure; a `cmk-check` case through a store that refuses. |
 | D3 | The copy's URL field carries the marker, so the source's meeting link goes in the notes | **Matt** | Structural; a decision on whether the marker moves (notes tail, or a custom property) and what that does to every existing copy. |
 | D5 | The site says "within seconds"; the store app has no realtime | agent | The site's claims policed the way `genmeta.py` polices the metadata. Folds into hurdle F. |
+| — | Accept writes the event before it resolves on the service, so two devices holding the (now synced) key can both write before either learns the other accepted | agent, **Matt** to say yes | `decisions.md`, *Accept should claim on the service before it writes*. Reverse the two steps in `RequestPageCoordinator.accept`; a `cmk-check` case where the service 404s the resolve asserts nothing was written. |
 
 ## Also yours, but lower stakes
 

@@ -35,6 +35,28 @@ extension Store {
     /// state someone who backs out of setup is left in.
     var hasRequestPage: Bool { config.requestPage != nil }
 
+    /// A page this device has the key to and no config for: the token came
+    /// through iCloud Keychain (a reinstall, or a second device) and the
+    /// config, which is local, did not. Read from the Keychain once at
+    /// launch, and only when there is no page configured — a Keychain read
+    /// is local, so the no-network-before-opting-in promise is untouched.
+    func findRecoverableRequestPage() {
+        guard config.requestPage == nil else { recoverableSlug = nil; return }
+        recoverableSlug = (try? KeychainTokenStore().slugs())?.first
+    }
+
+    /// Carry on with the page the Keychain has the key to: the slug is
+    /// restored and the page turned on, so requests are collected from the
+    /// next poll; the calendars, name and policy are local and the owner
+    /// re-enters them — `isReady` keeps the page from being republished
+    /// until they have. Nothing about the page on the service changes.
+    func reattachRequestPage() {
+        guard let slug = recoverableSlug else { return }
+        requestPage = RequestPageConfig(slug: slug, enabled: true)
+        recoverableSlug = nil
+        save()
+    }
+
     /// Writable calendars, for the "use for requests" choice. Read-only ones
     /// are still listed — the row disables its own control and says why, which
     /// is more use than a calendar silently missing from the list.

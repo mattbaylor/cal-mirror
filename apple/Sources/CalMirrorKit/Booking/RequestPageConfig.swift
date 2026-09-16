@@ -117,6 +117,9 @@ public protocol TokenStore: Sendable {
     func token(for slug: String) throws -> String?
     func store(_ token: String, for slug: String) throws
     func remove(for slug: String) throws
+    /// Every slug this store holds a token for. How a fresh install finds
+    /// the page its iCloud Keychain already has the key to.
+    func slugs() throws -> [String]
 }
 
 public final class InMemoryTokenStore: TokenStore, @unchecked Sendable {
@@ -126,4 +129,5 @@ public final class InMemoryTokenStore: TokenStore, @unchecked Sendable {
     public func token(for slug: String) throws -> String? { lock.lock(); defer { lock.unlock() }; return tokens[slug] }
     public func store(_ token: String, for slug: String) throws { lock.lock(); defer { lock.unlock() }; tokens[slug] = token }
     public func remove(for slug: String) throws { lock.lock(); defer { lock.unlock() }; tokens[slug] = nil }
+    public func slugs() throws -> [String] { lock.lock(); defer { lock.unlock() }; return tokens.keys.sorted() }
 }

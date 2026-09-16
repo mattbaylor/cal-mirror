@@ -22,7 +22,19 @@ struct RequestPageSetupView: View {
     /// for. A page that was configured but never published resumes where the
     /// flow left off.
     init(start: Step? = nil, page: RequestPageConfig? = nil) {
-        _step = State(initialValue: start ?? (page?.slug.isEmpty == false ? .live : .explainer))
+        _step = State(initialValue: start ?? Self.resume(for: page))
+    }
+
+    /// Where an owner lands. A page with an address and its local half —
+    /// calendars and a name — is live (on or off; the live page is where it
+    /// is switched). A page with an address and no local half was carried
+    /// over through iCloud Keychain, and resumes at the calendars until it
+    /// can publish again. A page with no address resumes where setup left
+    /// off, and no page at all gets the explainer.
+    static func resume(for page: RequestPageConfig?) -> Step {
+        guard let page else { return .explainer }
+        if !page.slug.isEmpty, page.requestCalendar != nil, !page.displayName.isEmpty { return .live }
+        return .calendars
     }
 
     enum Step: Int, CaseIterable {

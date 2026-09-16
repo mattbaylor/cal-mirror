@@ -82,7 +82,7 @@ Real, verified, and not yet dealt with. Ordered by what a user would hit.
 | A2 | **No observability.** Logs on the container; no external `/healthz` check; logs die with a restart. | `STATUS.md` item 16 | high for a paid service |
 | A3 | **Edge Caddy 2.6.2** — three years of TLS fixes behind. | `infra/edge/upgrade-plan.md` | high |
 | A4 | **Three friction points for the requester** — pick, confirm by email, wait for the owner — where a hosted page has one click. The etiquette argument is partly a story about this. | design | product |
-| A5 | **The write token cannot be recovered.** No account means no reset; a reinstall with no other device loses the page. | `KeychainTokenStore` | medium — fix: `kSecAttrSynchronizable` |
+| A5 | ~~**The write token cannot be recovered.**~~ Fixed 16 Sept: `kSecAttrSynchronizable`, migration of pre-2.0 items, and a *Reconnect* row on a device that has the key and no config. | `KeychainTokenStore` | done |
 | A6 | **The listing and privacy page become false in 2.0.** *No booking or scheduling links* and *makes no network requests of its own* are both true today and both wrong the day it ships. | `appstore/metadata`, `docs/privacy.html` | review blocker |
 | A7 | **Barely run.** First simulator pass 15 Sept; StoreKit sandbox proof pending; notification actions untested end to end. | `STATUS.md` | readiness |
 | A8 | **Apple-only owners, $20/yr, no per-meeting Zoom/Teams link, snapshot freshness** against free-and-good Zcal, Rallly, Google. The buyer is a niche inside a niche. | `competitors.md` says so itself | market |

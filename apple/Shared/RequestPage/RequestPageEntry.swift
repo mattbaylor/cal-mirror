@@ -19,6 +19,10 @@ import CalMirrorKit
 /// own Button would nest a control inside a control on one of them.
 struct RequestPageRow: View {
     let page: RequestPageConfig?
+    /// A slug this device holds a key to but no config for — a reinstall, or
+    /// a second device — so the row can offer to carry on rather than to
+    /// start over.
+    var recoverable: String? = nil
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
@@ -42,13 +46,18 @@ struct RequestPageRow: View {
     /// slug is more use than the word "On", because it is the thing the owner
     /// wants to read back.
     private var state: String {
-        guard let p = page, p.enabled else { return RequestCopy.DormantRow.off }
+        guard let p = page, p.enabled else {
+            return recoverable == nil ? RequestCopy.DormantRow.off : RequestCopy.DormantRow.carryOn
+        }
         return p.slug.isEmpty ? "Not published" : "askwhen.me/\(p.slug)"
     }
 
     /// The pitch is only worth the space while it is still a pitch.
     private var subtitle: String {
-        guard let p = page, p.enabled else { return RequestCopy.DormantRow.blurbForPlatform }
+        guard let p = page, p.enabled else {
+            if let slug = recoverable { return String(format: RequestCopy.DormantRow.inKeychain, slug) }
+            return RequestCopy.DormantRow.blurbForPlatform
+        }
         return p.displayName.isEmpty ? "Set up" : p.displayName
     }
 }
