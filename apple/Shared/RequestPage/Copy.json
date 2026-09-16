@@ -252,6 +252,13 @@
     "taken": "That address is already claimed.",
     "failed": "AskWhen.me did not answer. Nothing was claimed — try again."
   },
+  "sendTimes": {
+    "row": "Send times",
+    "footer": "Your next three free times as a message, in your time zone, with your page’s link if you have one.",
+    "menu": "Copy Times to Send",
+    "copied": "Copied: %@",
+    "empty": "Nothing free to offer in the next %d days."
+  },
   "longForm": {
     "_comment": "Not on any screen. The captions and paragraphs the native pass took off the screens, kept for the site and the App Store listing (hurdle F).",
     "explainer": {

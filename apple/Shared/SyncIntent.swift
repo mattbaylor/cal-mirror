@@ -82,5 +82,11 @@ struct CalMirrorShortcuts: AppShortcutsProvider {
                       "Sync \(.applicationName) now"],
             shortTitle: "Sync Now",
             systemImageName: "arrow.triangle.2.circlepath")
+        AppShortcut(
+            intent: SendTimesIntent(),
+            phrases: ["Send times with \(.applicationName)",
+                      "When am I free in \(.applicationName)"],
+            shortTitle: "Send Times",
+            systemImageName: "text.bubble")
     }
 }

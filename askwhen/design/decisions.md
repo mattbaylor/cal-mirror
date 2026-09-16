@@ -603,6 +603,34 @@ link is the whole reason the text is free — the upsell arrives already
 understood — and an owner without a page simply gets no link. Each is a
 one-line change if he wants another number.
 
+**"Send times" on iOS is the app's row and the intent, not a share
+extension.** *(16 September 2026 — an agent's reading of the surface; the
+feature is Matt's decision, this is how it was built.)* The proposal named a
+share-sheet extension. A share extension runs when the owner shares
+*content from* another app, and here there is no content — the owner is
+replying in Messages, Mail or Slack. So the iOS surfaces that fit are the
+ones that put text *into* that reply: a **Send times** row in the app that
+opens the system share sheet with the line (Messages, Mail, Slack, Copy),
+and a **Send Times** App Intent, which is the line as a Shortcuts action, a
+Siri phrase (*"Send times with Calendar Mirror"*), an Action Button, and —
+on macOS 26 — a Spotlight action; a shortcut can hand the text straight to
+Messages. On the Mac the menu item is **Copy Times to Send**, onto the
+clipboard, as the proposal said. Both platforms and the intent call one
+`SendTimesSource`, so they cannot offer different times. **Against it:** an
+extension would have put the times one tap closer inside Messages; if that
+turns out to be the ask, it is a new target with its own EventKit grant and
+review surface, and it is 2.1.
+
+**Inside "Send times": one time per day first.** *(16 September 2026 — the
+agent's rule.)* `pick` takes the earliest offerable time on each of the next
+days that offer one, and only uses a day twice when fewer than three days
+do. Three from the same afternoon reads as *"I am free Tuesday"*; one each
+from Tuesday, Wednesday and Thursday reads as a choice. The day carries its
+number once it is more than six days out (*Tue 22*), because *Tue* alone
+then means two days. An owner with no request page gets the same line from
+the default policy, with writable calendars blocking and subscribed ones
+not — the inference zero-decision setup will make — and no link.
+
 **Inside personal links: seven days, one use, and the sentence on the share
 sheet.** *(16 September 2026 — the agent's numbers.)* Seven days because that
 is how long "when are you free?" stays a live question; one use because it is
