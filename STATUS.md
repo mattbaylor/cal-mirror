@@ -187,23 +187,86 @@ have; **mine** means it can be built and tested without you.
 | `DomainChecker` (in the service) | every 5 min | unverified custom domains re-checked |
 | `Sweeper` (in the service) | every 60s | holds lapse, requests expire and purge |
 
-## Picking it up cold
+## Picking it up cold — the final hurdles
 
-Paste into a fresh session:
+Paste into a fresh session. Written 16 September 2026, after the outside
+review; it supersedes the earlier version of this section.
 
 ```
-You are picking up cal-mirror and askwhen.me. Read STATUS.md at the repo root,
-then TASKS.md, then askwhen/README.md and askwhen/design/decisions.md. Where
-STATUS.md makes a claim the repo, the GitHub API or the live service can
-settle, check rather than trust, and say what has drifted.
+You are picking up cal-mirror and askwhen.me for the last stretch: shipping
+Calendar Mirror 2.0 and launching AskWhen.me. Read, in this order: STATUS.md,
+REVIEW.md, TASKS.md, askwhen/design/decisions.md (Settled first, then the
+Proposed entries dated 16 September), apple/design/native.md. Where any of
+them makes a claim the repo, the GitHub API or the live service can settle,
+check rather than trust, and say what has drifted.
 
-Matt makes design decisions; code proceeds without asking because it can be
-tested. Anything you would decide about how something looks or what the
-product does goes in decisions.md as Proposed, not Settled.
+How we work. Matt makes design and product decisions; code proceeds without
+asking because it can be tested. Anything about how something looks or what
+the product does goes in decisions.md as Proposed, not Settled. Nothing is
+"blocked" as a resting state: either it is being worked, or there is a named
+ask for what unblocks it. Track it and ask; do not park it.
 
-Nothing is "blocked" as a resting state: either it is being worked, or there
-is a named ask for what unblocks it. Track it and ask; do not park it.
+Non-negotiable, in STATUS.md "Facts that are expensive to rediscover": main
+is protected (branch, PR, CI green); gh has two accounts and only mattbaylor
+can push — switch before, switch back after; never git add -A; App Store
+builds come from CI, never this laptop; screenshots come from a synthetic
+config, never the live one; the glossary (request, never book; AskWhen.me
+styled so); the app makes no network request before the owner opts in.
 
-Constraints in STATUS.md, "Facts that are expensive to rediscover", are not
-negotiable. The two gh accounts and the no `git add -A` rule will bite first.
+Start by putting three decisions to Matt, because everything after depends
+on them. Give a recommendation with each; do not survey.
+
+  1. Scope of 2.0. Ship the request page as built, or fold in "Send times"
+     (decisions.md, Proposed, 16 Sept) — it needs no service and is the
+     daily-use habit. Recommendation: fold it in only if the native pass
+     (below) is done first; otherwise ship 2.0 and make it 2.1.
+  2. Personal links accepted at send time, and zero-decision setup — yes,
+     no, or later. Both change screens the native pass will touch.
+  3. How AskWhen.me launches: paid subscription on day one, or free beta /
+     waitlist until it has survived a month of strangers. REVIEW.md
+     recommends the second. Matt's call, and it changes the offer screen
+     and the listing copy.
+
+Then the hurdles, in the order they block a release. "Matt" means judgment
+or access only he has; "agent" means it can be built and tested without him.
+
+  A. Rotate the five leaked credentials (Matt, an hour). Prod is now.
+  B. Observability before money (agent, Matt picks where): an external
+     check on /healthz, logs shipped off CT 112, and a nightly VACUUM INTO
+     for the SQLite file. Then the edge Caddy 2.6.2 -> 2.11.4 upgrade
+     (Matt, plan in askwhen/infra/edge/upgrade-plan.md).
+  C. The native pass (agent), in native.md's order: captions to one-line
+     footers and first-section headers dropped on every step; Continue
+     pinned to the bottom, prominent; the explainer as a first-run sheet
+     with three feature rows; ShareLink on the live page; the blue summary
+     line to secondary. Fix "askwhen.me" to "AskWhen.me" in Copy.json.
+     Re-run screenshots.yml, put the frames beside Settings > Screen Time
+     at true size, light and dark, and show Matt before more code.
+  D. The Mac store app gets the shared sidebar, a toolbar, and a Settings
+     scene (agent). Re-shoot every Mac capture from the key window, from the
+     store app, from the synthetic config. Today the store screenshots show
+     the standalone app.
+  E. The write token synchronizable in iCloud Keychain (agent, small).
+  F. The listing and the privacy page for 2.0 (agent drafts, Matt
+     approves): remove "No booking or scheduling links" and "makes no
+     network requests of its own"; say what AskWhen.me's server holds and
+     for how long, in the product's voice; the App Privacy labels in App
+     Store Connect by hand from appstore/privacy-labels.md (Matt); a support
+     address; terms for the domain tier; the askwhen.me renewal reminder.
+  G. Proof against the sandbox (Matt, with a CI build): a real purchase
+     creates a page; EXPIRED starts grace; DID_RENEW ends it. Then
+     AW_APPSTORE_SANDBOX=0.
+  H. Screenshots and review notes for 2.0 from the synthetic config (Matt
+     runs, agent fixes what it finds), then release from CI (Matt).
+     1.4.2 folds in. Tag v1.4.1 on the standalone track when a notarized
+     build is convenient; it does not block.
+  I. Launch AskWhen.me the way decision 3 said. Conversion counted, never
+     attributed. Indexing stays opt-in and off.
+
+Defects the review found that are not on that list — the delete sweep with
+no automated test, title-string calendar matching, banner writes that
+swallow errors — go in TASKS.md with an owner, not into 2.0 unless Matt says.
+
+Report progress against the letters. When a step is done, say what proved
+it, not that it is done.
 ```
