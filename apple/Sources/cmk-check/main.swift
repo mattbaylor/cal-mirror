@@ -1379,6 +1379,28 @@ do {
           "a 200 that is not the contract → malformed")
 }
 
+print("TokenStore:")
+do {
+    // slugs() is how a fresh install learns which page its iCloud Keychain
+    // holds the key to. The Keychain itself cannot run here; the in-memory
+    // store proves the protocol's shape, and the app's resume logic below
+    // proves what the app does with an answer.
+    let tokens = InMemoryTokenStore()
+    check((try? tokens.slugs()) == [], "no tokens, no slugs")
+    try? tokens.store("t1", for: "x7f2k9")
+    try? tokens.store("t2", for: "a1b2c3")
+    check((try? tokens.slugs()) == ["a1b2c3", "x7f2k9"], "slugs() lists every slug with a token, sorted")
+    try? tokens.remove(for: "x7f2k9")
+    check((try? tokens.slugs()) == ["a1b2c3"], "a removed token's slug is gone")
+
+    // A page carried over through iCloud Keychain: the slug and enabled,
+    // nothing local. It must not be ready — publishing it would overwrite
+    // the live page with an empty name — and it must still be on, so the
+    // queue is collected from the next poll.
+    let carried = RequestPageConfig(slug: "x7f2k9", enabled: true)
+    check(carried.enabled && !carried.isReady, "a carried-over page is on but not ready to publish")
+}
+
 print("RequestPageCoordinator:")
 do {
     let t = FakeTransport()

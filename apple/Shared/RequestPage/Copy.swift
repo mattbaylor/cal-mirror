@@ -12,6 +12,8 @@ enum RequestCopy {
         static let off = "Off"
         static let blurb = "Let people ask you for a time. Nothing leaves this Mac until you turn it on."
         static let blurbPhone = "Let people ask you for a time. Nothing leaves this iPhone until you turn it on."
+        static let inKeychain = "askwhen.me/%@ is in your iCloud Keychain. Pick the calendars and it carries on at the same address."
+        static let carryOn = "Carry on"
         /// The one-liner names the device it is running on, because
         /// "nothing leaves this device" is the promise and it reads as
         /// boilerplate when the device is abstract.
@@ -186,8 +188,8 @@ enum RequestCopy {
         static let openTitle = "Open it"
         static let deviceSection = "This device"
         static let publishes = "Publishes your page"
-        static let holdsKey = "Holds the only key"
-        static let deviceFooter = "Other devices can answer requests; only this one publishes, and it holds the key that keeps the page yours. Switching off stops publishing at once."
+        static let holdsKey = "Key in your iCloud Keychain"
+        static let deviceFooter = "Other devices can answer requests; only this one publishes. The page’s key is in your iCloud Keychain, so a new device or a reinstall finds it. Switching off stops publishing at once."
         static let turnOff = "Request page"
         static let notPublished = "Nothing has been published yet — the first upload happens on the next sync."
     }
@@ -222,7 +224,7 @@ enum RequestCopy {
         static let creating = "Creating your page…"
         static let createFailedTitle = "Apple said yes, AskWhen.me did not answer"
         static let createFailedBody = "Your subscription went through and you will not be charged twice. Try again; nothing is lost."
-        static let tokenWarning = "The page’s key lives only in this device’s keychain; there is no account to recover it from."
+        static let tokenWarning = "The page’s key goes into your iCloud Keychain, so a new device finds it. There is no account and no password."
     }
 
     enum Preview {

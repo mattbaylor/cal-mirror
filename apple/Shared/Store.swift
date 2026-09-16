@@ -20,6 +20,8 @@ final class Store: ObservableObject {
     /// this is what this device currently knows of it, and it is what the
     /// notification actions resolve an id against.
     @Published var pendingRequests: [IncomingRequest] = []
+    /// See `findRecoverableRequestPage()`.
+    @Published var recoverableSlug: String?
     /// Set when an accept found the slot taken. Presenting it is the UI's.
     @Published var conflict: RequestConflict?
     /// A request the owner tapped through to from a notification.
@@ -97,6 +99,7 @@ final class Store: ObservableObject {
             Task { await watchSubscription() }
             await refreshSubscription()
         }
+        findRecoverableRequestPage()
     }
 
     func save() {
