@@ -8,10 +8,11 @@ import CalMirrorKit
 /// > their day.
 ///
 /// So the first group is a sentence with the values inline, and the zone is
-/// stated **on the line** rather than inferred. Everything below it is a number
-/// with its consequence written next to it, because most of these are privacy
-/// settings wearing the clothes of preferences — `maxPerDay` and `horizonDays`
-/// especially, and neither is obvious from its name.
+/// stated **on the line** rather than inferred. Below it the six numbers sit in
+/// three groups, each with a one-line footer stating its consequence
+/// (`native.md`, §2) — because most of these are privacy settings wearing the
+/// clothes of preferences, `maxPerDay` and `horizonDays` especially. The
+/// paragraph each used to carry is under `longForm` in `Copy.json`.
 struct RequestPolicyFields: View {
     @Binding var policy: RequestPolicy
     let onChange: () -> Void
@@ -62,8 +63,6 @@ struct RequestPolicyFields: View {
             #if !os(macOS)
             .pickerStyle(.navigationLink)
             #endif
-            Text(RequestCopy.Policy.zoneCaption)
-                .font(.caption).foregroundStyle(.secondary)
 
             Toggle(RequestCopy.Policy.lunchTitle, isOn: Binding(
                 get: { policy.lunch != nil },
@@ -75,21 +74,17 @@ struct RequestPolicyFields: View {
                     timeField(\.lunchTo)
                 }
             }
-            Text(RequestCopy.Policy.lunchCaption)
-                .font(.caption).foregroundStyle(.secondary)
-
             VStack(alignment: .leading, spacing: 6) {
                 Text(RequestCopy.Policy.weekdaysTitle)
                 WeekdayPicker(weekdays: Binding(
                     get: { policy.weekdays },
                     set: { policy.weekdays = $0; onChange() }))
             }
-        } header: {
-            Text(RequestCopy.Policy.section)
         } footer: {
-            Text(RequestCopy.Policy.sentence)
+            Text(RequestCopy.Policy.dayFooter)
         }
 
+        // The two that shape how much of the week a stranger sees.
         Section {
             // Clamped by RequestPolicy's own setter, so the stepper's range and
             // the model agree by construction rather than by my remembering to
@@ -98,37 +93,35 @@ struct RequestPolicyFields: View {
                     value: Binding(get: { policy.horizonDays },
                                    set: { policy.horizonDays = $0; onChange() }),
                     in: RequestPolicy.horizonRange)
-            caption(RequestCopy.Policy.horizonCaption)
-
-            choice(RequestCopy.Policy.noticeTitle, Self.noticeChoices, \.minNoticeHours) {
-                $0 == 0 ? "None" : "\($0) hours"
-            }
-            caption(RequestCopy.Policy.noticeCaption)
-
             Stepper("\(RequestCopy.Policy.maxPerDayTitle): \(policy.maxPerDay)",
                     value: Binding(get: { policy.maxPerDay },
                                    set: { policy.maxPerDay = max(1, $0); onChange() }),
                     in: 1...12)
-            caption(RequestCopy.Policy.maxPerDayCaption)
+        } footer: {
+            Text(RequestCopy.Policy.shapeFooter)
+        }
 
+        Section {
+            choice(RequestCopy.Policy.noticeTitle, Self.noticeChoices, \.minNoticeHours) {
+                $0 == 0 ? "None" : "\($0) hours"
+            }
+        } footer: {
+            Text(RequestCopy.Policy.noticeFooter)
+        }
+
+        // The three that shape each offer.
+        Section {
             choice(RequestCopy.Policy.slotTitle, Self.slotChoices, \.slotMinutes) { "\($0) min" }
-            caption(RequestCopy.Policy.slotCaption)
-
             choice(RequestCopy.Policy.alignTitle, Self.alignChoices, \.align) { Self.alignLabel($0) }
-            caption(RequestCopy.Policy.alignCaption)
-
             choice(RequestCopy.Policy.bufferTitle, Self.bufferChoices, \.bufferMinutes) {
                 $0 == 0 ? "Nothing" : "\($0) min"
             }
-            caption(RequestCopy.Policy.bufferCaption)
+        } footer: {
+            Text(RequestCopy.Policy.offerFooter)
         }
     }
 
     // MARK: Pieces
-
-    private func caption(_ s: String) -> some View {
-        Text(s).font(.caption).foregroundStyle(.secondary)
-    }
 
     private func choice(_ title: String, _ options: [Int],
                         _ key: WritableKeyPath<RequestPolicy, Int>,
@@ -201,13 +194,25 @@ private extension RequestPolicy {
 struct WeekdayPicker: View {
     @Binding var weekdays: [RequestPolicy.Weekday]
 
+    static func longName(_ d: RequestPolicy.Weekday) -> String {
+        switch d {
+        case .sun: return "Sunday"
+        case .mon: return "Monday"
+        case .tue: return "Tuesday"
+        case .wed: return "Wednesday"
+        case .thu: return "Thursday"
+        case .fri: return "Friday"
+        case .sat: return "Saturday"
+        }
+    }
+
     private let order: [(RequestPolicy.Weekday, String)] = [
         (.sun, "S"), (.mon, "M"), (.tue, "T"), (.wed, "W"),
         (.thu, "T"), (.fri, "F"), (.sat, "S"),
     ]
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 0) {
             ForEach(order, id: \.0) { day, label in
                 let on = weekdays.contains(day)
                 Button {
@@ -216,14 +221,19 @@ struct WeekdayPicker: View {
                 } label: {
                     Text(label)
                         .font(.caption)
-                        .frame(width: 26, height: 26)
+                        .frame(width: 30, height: 30)
                         .background(on ? Color.accentColor : Color.secondary.opacity(0.15))
                         .foregroundStyle(on ? Color.white : Color.primary)
                         .clipShape(Circle())
+                        // The circle is 30pt; the tap target is the 44pt Apple
+                        // asks for, without the chips growing to fill a row.
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(String(describing: day))
+                .accessibilityLabel(Self.longName(day))
                 .accessibilityValue(on ? "offered" : "not offered")
+                .accessibilityAddTraits(on ? .isSelected : [])
             }
         }
     }

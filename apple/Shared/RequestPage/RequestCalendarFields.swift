@@ -12,17 +12,20 @@ import CalMirrorKit
 /// `accept` writes into a single `CalRef` — and the place to make that
 /// impossible is the control, not a validation message afterwards.
 ///
-/// The privacy caption is not decoration. `MirrorEngine.busyIntervals` is where
-/// title, location, attendees, calendar and account stop, and this is the only
-/// screen where the owner hands over a calendar, so it is the one place that
-/// sentence is load-bearing.
+/// The footer's "only busy or free is ever read" is not decoration.
+/// `MirrorEngine.busyIntervals` is where title, location, attendees, calendar
+/// and account stop, and this is the only screen where the owner hands over a
+/// calendar, so it is the one place that sentence is load-bearing. The long
+/// form is under `longForm` in `Copy.json` for the listing.
 struct RequestCalendarFields: View {
     @Binding var page: RequestPageConfig
     let calendars: [CalendarInfo]
     let onChange: () -> Void
 
     var body: some View {
-        Section(RequestCopy.Calendars.section) {
+        // No header: the screen's title is the header (native.md, section 3),
+        // and the one footer states the consequence of both switches.
+        Section {
             if calendars.isEmpty {
                 Text("No calendars yet — grant Calendar access and they will appear here.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -33,11 +36,6 @@ struct RequestCalendarFields: View {
                     blocking: blockingBinding(cal),
                     isRequestCalendar: requestBinding(cal))
             }
-
-            Text(RequestCopy.Calendars.blockCaption)
-                .font(.caption).foregroundStyle(.secondary)
-            Text(RequestCopy.Calendars.useCaption)
-                .font(.caption).foregroundStyle(.secondary)
 
             // Shown only when it is actionable. A standing warning that is
             // always on screen stops being read, and both of these describe a
@@ -50,9 +48,8 @@ struct RequestCalendarFields: View {
                 Label(RequestCopy.Calendars.noRequestCalendar, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption).foregroundStyle(.orange)
             }
-
-            Text(RequestCopy.Calendars.privacy)
-                .font(.caption).foregroundStyle(.secondary)
+        } footer: {
+            Text(RequestCopy.Calendars.footer)
         }
     }
 

@@ -13,14 +13,17 @@ struct RequestLiveView: View {
     @Binding var page: RequestPageConfig
     let onChange: () -> Void
 
-    @State private var copied = false
     @State private var notifyStatus: UNAuthorizationStatus = .notDetermined
 
     private var url: String { "askwhen.me/\(page.slug)" }
+    private var shareURL: URL { URL(string: "https://\(url)")! }
 
     var body: some View {
+        // The headline, the address, and two tinted rows. One button style
+        // on the screen, not three (native.md, §5): sharing is the system's
+        // sheet, which covers copy, Messages, Mail and AirDrop.
         Section {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(RequestCopy.Live.heading).font(.title2.weight(.semibold))
                 Text(RequestCopy.Live.lede).fixedSize(horizontal: false, vertical: true)
                 Text(url)
@@ -29,73 +32,69 @@ struct RequestLiveView: View {
                     .padding(.top, 4)
                 if page.lastPublishedAt == nil {
                     Text(RequestCopy.Live.notPublished)
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.footnote).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            Button(copied ? RequestCopy.Live.copied : RequestCopy.Live.copy) {
-                copy("https://\(url)")
+            ShareLink(item: shareURL) {
+                Text(RequestCopy.Live.share)
             }
-            .buttonStyle(.borderedProminent)
-            Link(RequestCopy.Live.openTitle, destination: URL(string: "https://\(url)")!)
-            Text(RequestCopy.Live.openNote).font(.caption).foregroundStyle(.secondary)
-        } header: {
-            Text(RequestCopy.Live.section)
+            Link(RequestCopy.Live.openTitle, destination: shareURL)
+        } footer: {
+            Text(RequestCopy.Live.linkFooter)
         }
 
         // Asked here and not at launch, and not at the start of setup:
         // requests cannot arrive before there is a page, so asking earlier
-        // would be asking permission to do nothing. The consequence is stated
-        // because it is real — a stranger's name and note land on a lock
-        // screen, and the owner should know that before saying yes.
-        Section(RequestCopy.Notification.permissionHeading) {
-            Text(RequestCopy.Notification.permissionBody)
-                .font(.callout).fixedSize(horizontal: false, vertical: true)
-            Text(RequestCopy.Notification.permissionNote)
-                .font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            switch notifyStatus {
-            case .notDetermined:
-                Button(RequestCopy.Notification.permissionAsk) {
-                    Task {
-                        _ = await RequestNotifications.requestPermission()
-                        RequestNotifications.registerCategory()
-                        notifyStatus = await RequestNotifications.authorization()
+        // would be asking permission to do nothing. The section goes away
+        // once granted; while denied it says where the switch is.
+        if notifyStatus == .notDetermined || notifyStatus == .denied {
+            Section {
+                if notifyStatus == .denied {
+                    Label(RequestCopy.Notification.permissionDenied, systemImage: "bell.slash")
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Button(RequestCopy.Notification.permissionAsk) {
+                        Task {
+                            _ = await RequestNotifications.requestPermission()
+                            RequestNotifications.registerCategory()
+                            notifyStatus = await RequestNotifications.authorization()
+                        }
                     }
                 }
-                .buttonStyle(.borderedProminent)
-            case .denied:
-                Label(RequestCopy.Notification.permissionDenied, systemImage: "bell.slash")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            default:
-                Label("On", systemImage: "bell.badge").font(.caption).foregroundStyle(.secondary)
+            } header: {
+                Text(RequestCopy.Notification.permissionHeading)
+            } footer: {
+                // The consequence is stated because it is real — a stranger's
+                // name and note land on a lock screen.
+                Text(RequestCopy.Notification.permissionFooter)
             }
         }
 
-        Section(RequestCopy.Live.tokenHeading) {
-            Text(RequestCopy.Live.tokenBody)
-                .font(.callout).fixedSize(horizontal: false, vertical: true)
-        }
-
-        // Screen 10, folded in here rather than given a screen of its own: an
-        // owner setting up their first device is not choosing between devices
-        // yet, and a nomination screen with one candidate on it asks a question
-        // that has no second answer. It becomes a real choice when a second
-        // device appears, which is where it should first be offered.
-        Section(RequestCopy.Live.publisherHeading) {
-            Text(RequestCopy.Live.publisherBody)
-                .font(.callout).fixedSize(horizontal: false, vertical: true)
-        }
-
-        Section(RequestCopy.Live.offHeading) {
-            Text(RequestCopy.Live.offBody)
-                .font(.callout).fixedSize(horizontal: false, vertical: true)
+        // What this device is to the page, as facts with checkmarks, and the
+        // one switch. Publisher nomination (screen 10) is folded in here as a
+        // statement rather than given a screen: with one device it is a
+        // question with no second answer. The key warning is the important
+        // fact — no account, no password, so the keychain entry is genuinely
+        // the only thing keeping the page theirs.
+        Section {
+            LabeledContent(RequestCopy.Live.publishes) {
+                Image(systemName: "checkmark").foregroundStyle(.secondary)
+            }
+            LabeledContent(RequestCopy.Live.holdsKey) {
+                Image(systemName: "checkmark").foregroundStyle(.secondary)
+            }
             // Off, not delete. Deleting the page takes the slug with it and
             // every link already sent goes dead, so that belongs behind a
-            // confirmation rather than beside an explanation.
+            // confirmation rather than beside a switch.
             Toggle(RequestCopy.Live.turnOff, isOn: Binding(
-                get: { !page.enabled },
-                set: { page.enabled = !$0; onChange() }))
+                get: { page.enabled },
+                set: { page.enabled = $0; onChange() }))
+        } header: {
+            Text(RequestCopy.Live.deviceSection)
+        } footer: {
+            Text(RequestCopy.Live.deviceFooter)
         }
         .task { await refreshStatus() }
     }
@@ -103,15 +102,5 @@ struct RequestLiveView: View {
     private func refreshStatus() async {
         notifyStatus = await RequestNotifications.authorization()
         if notifyStatus != .notDetermined { RequestNotifications.registerCategory() }
-    }
-
-    private func copy(_ s: String) {
-        #if os(macOS)
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(s, forType: .string)
-        #else
-        UIPasteboard.general.string = s
-        #endif
-        copied = true
     }
 }

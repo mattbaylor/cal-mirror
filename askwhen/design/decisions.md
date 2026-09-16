@@ -589,6 +589,30 @@ and falls back to the device name. The preview's explain line then shows the
 owner what was inferred before the offer, and the calendar screen stays one
 row away as *adjust*.
 
+**The native pass, as built.** *(16 September 2026 — an agent's arrangement of
+approved copy; look-and-feel is Matt's, so this is Proposed until he has seen
+the frames.)* Items 1–4 of `native.md`'s "What to do first", on every step:
+every caption is now a one-line `Section` footer stating a consequence; no
+first section carries a header; Continue is pinned to the bottom, full width
+and the only prominent control; the explainer is a first-run sheet (symbol,
+title, three feature rows, one footnote naming the cost, Continue, Not now),
+presented from the row on iOS; the live page has a `ShareLink` in the toolbar
+and as one tinted row, *Open it* as a row, notifications as a row that goes
+away once granted, and the token, publisher and off paragraphs as one *This
+device* group with two checkmarks and a switch; the preview's count is the
+one large text on its screen; the weekday chips have 44pt targets and full
+day names for VoiceOver; the summary line under a mirror is secondary, not
+tinted; Sync is a symbol beside +. `AskWhen.me` is styled so in every line of
+prose. Six copy lines became eight one-liners on *Your day*, grouped three
+ways — the two that shape how much of the week shows, the notice window, and
+the three that shape each offer — rather than six single-row sections, which
+read as a longer screen for the same words. Everything that left the screen
+is under `longForm` in `Copy.json` for the site and the listing. Frames from
+the simulator, light and dark, beside Settings › Screen Time, were shown
+before any more code. **Against it:** *Not now* on the explainer is a second
+way out where the Mac sheet already has Done, so it is iOS-only; and the
+first-run sheet has no *Learn more*, so the long form is only on the web.
+
 **The screens should read as Apple's, and mostly do not because of where the
 prose sits.** *(16 September 2026.)* Audited from the CI frames and the store
 captures in `apple/design/native.md`, with the built flows written down in

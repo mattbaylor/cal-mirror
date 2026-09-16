@@ -21,12 +21,14 @@ struct RequestPreview: View {
     var now: Date = Date()
 
     var body: some View {
+        // The count is the large-number moment on this screen and the only
+        // large text on it (native.md, §6); the screen's title is its header.
         Section {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(heading).font(.headline)
-                Text(RequestCopy.Preview.stale)
-                    .font(.caption).foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(count).font(.largeTitle.weight(.bold))
+                Text(across).font(.body).foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .combine)
             if let problem = diagnosis.policyProblem {
                 Label(RequestCopy.Preview.reason(problem), systemImage: "exclamationmark.triangle.fill")
                     .font(.callout).foregroundStyle(.orange)
@@ -38,8 +40,12 @@ struct RequestPreview: View {
                     DayOfferRow(label: label(for: day.day), slots: slotsOn(day.day), zone: zone)
                 }
             }
-        } header: {
-            Text(RequestCopy.Preview.section)
+        } footer: {
+            // "Why is Thursday empty" is answered by the section below when
+            // there is one; when every day offers something, the gap line
+            // still belongs here, because it is about the gaps within a day.
+            Text(emptyDays.isEmpty ? RequestCopy.Preview.stale + " " + RequestCopy.Preview.privacy
+                                   : RequestCopy.Preview.stale)
         }
 
         // Only the days that offered nothing, because "why is Thursday empty"
@@ -47,23 +53,19 @@ struct RequestPreview: View {
         // screen cannot answer, since the answer is an interaction between the
         // policy and the contents of a calendar.
         if !emptyDays.isEmpty {
-            Section(RequestCopy.Preview.emptyDayHeading) {
+            Section {
                 ForEach(emptyDays, id: \.day) { day in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(label(for: day.day)).font(.callout)
-                        Text(explanation(day)).font(.caption).foregroundStyle(.secondary)
+                    LabeledContent(label(for: day.day)) {
+                        Text(explanation(day)).multilineTextAlignment(.trailing)
                     }
                 }
-                if emptyDays.contains(where: { ($0.rejections[.cappedPerDay] ?? 0) > 0 }) {
-                    Text(RequestCopy.Preview.cappedNote)
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+            } header: {
+                Text(RequestCopy.Preview.emptyDayHeading)
+            } footer: {
+                let capped = emptyDays.contains { ($0.rejections[.cappedPerDay] ?? 0) > 0 }
+                Text(capped ? RequestCopy.Preview.privacy + " " + RequestCopy.Preview.cappedNote
+                            : RequestCopy.Preview.privacy)
             }
-        }
-
-        Section {
-            Text(RequestCopy.Preview.privacy)
-                .font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -90,10 +92,12 @@ struct RequestPreview: View {
 
     private var zone: TimeZone { page.policy.resolvedTimeZone ?? .current }
 
-    private var heading: String {
+    private var count: String {
         let n = slots.count
-        let template = n == 1 ? RequestCopy.Preview.headingOne : RequestCopy.Preview.headingMany
-        return String(format: template, n, page.policy.horizonDays)
+        return String(format: n == 1 ? RequestCopy.Preview.countOne : RequestCopy.Preview.countMany, n)
+    }
+    private var across: String {
+        String(format: RequestCopy.Preview.across, page.policy.horizonDays)
     }
 
     /// The day key is `yyyy-MM-dd` in the owner's zone; turn it back into

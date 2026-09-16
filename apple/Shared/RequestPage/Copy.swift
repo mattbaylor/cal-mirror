@@ -25,70 +25,65 @@ enum RequestCopy {
     }
 
     enum Explainer {
+        /// One feature row of the first-run sheet: a symbol, a headline,
+        /// one line. Three of them replace the four paragraphs the explainer
+        /// used to be (apple/design/native.md, section 1).
+        struct Feature { let symbol: String; let headline: String; let line: String }
+        static let symbol = "calendar.badge.clock"
         static let title = "A page where people can ask for a time"
-        static let paragraphs: [String] = [
-            "You offer a handful of times you are willing to be asked about. Someone opens your page, picks one, and tells you who they are.",
-            "Nothing lands in your calendar until you accept. Every request comes to this device and you answer it here — askwhen.me cannot write to your calendar, because you never give it access.",
-            "Turning this on means a server holds two things: the times you chose to offer, and requests from people who asked for one. It never sees your calendar, your events, your address, or your name beyond the label you pick.",
+        static let features: [Feature] = [
+            Feature(symbol: "calendar", headline: "You choose the times", line: "A handful of offers, from the calendars you pick."),
+            Feature(symbol: "lock.shield", headline: "The server never sees your calendar", line: "It holds the times you offer and the requests that come in. Nothing else."),
+            Feature(symbol: "checkmark.circle", headline: "Nothing lands until you accept", line: "Every request comes to this device, and you answer it here."),
         ]
-        static let costHeading = "What it costs"
-        static let cost = "Setting it up is free and happens entirely on this device. Publishing a page needs a subscription — free for the first 90 days — and that comes at the end, after you have seen the page you would be publishing."
-        static let primary = "Set up a request page"
-        static let footnote = "Nothing has been sent anywhere. Setting this up does not send anything either — the first time this app touches the network is the moment you ask to see the price."
+        static let footnote = "Setup is free and stays on this device. Publishing needs an AskWhen.me subscription, free for the first 90 days."
+        static let primary = "Continue"
+        static let secondary = "Not now"
     }
 
     enum Calendars {
         static let section = "Requests"
         static let blockTitle = "Block for requests"
-        static let blockCaption = "Events here make you unavailable, so no time that clashes with one is ever offered. Turn this on for every calendar that holds real commitments."
         static let useTitle = "Use for requests"
-        static let useCaption = "Requests you accept are written here as ordinary events. Exactly one calendar."
-        static let privacy = "Only the busy-or-free shape of these calendars is ever read. Titles, locations, attendees, notes and which calendar an event came from stop at this device and are never published."
-        static let noneBlocking = "No calendar is blocking yet, so every hour in your day would be offered. Pick at least one."
-        static let noRequestCalendar = "Pick one calendar for accepted requests to be written into."
+        static let noneBlocking = "Pick at least one calendar to block, or every hour is offered."
+        static let noRequestCalendar = "Pick one calendar for accepted requests."
         static let readOnly = "Read-only — accepted requests cannot be written here."
+        static let footer = "Events on a blocking calendar are never offered, and accepted requests are written to the one calendar you mark. Only busy or free is ever read."
     }
 
     enum Display {
         static let section = "Your page"
         static let nameTitle = "Display name"
         static let namePlaceholder = "Matt Baylor"
-        static let nameCaption = "Required, and the only thing on your page that identifies you — everything else a visitor sees is a list of times. Any label works: your name, your initials, or what you do. You decide how much that discloses."
         static let blurbTitle = "One line about it"
         static let blurbPlaceholder = "30 minutes, usually about refereeing or calendars."
-        static let blurbCaption = "Sits under your name. Anyone with the link reads it, so keep it to what the time is for."
         static let meetingSection = "When you accept"
         static let titleTitle = "Event title"
         static let titlePlaceholder = "Meeting"
-        static let titleCaption = "What the event is called in your calendar. You choose it, never the person asking — a stranger's words do not become a title in your calendar. What they write goes in the event's notes, where it is obviously theirs."
         static let locationTitle = "Location"
         static let locationPlaceholder = "Optional — a room, or a link"
-        static let locationCaption = "Goes into the event and into the calendar file the person receives, so whoever you accept will see it."
-        static let nameMissing = "A page needs a name. Without one it looks like a form asking a stranger for their email address, which is what a phishing page looks like too."
+        static let nameMissing = "A page needs a name."
+        static let pageFooter = "Your name is the only thing on the page that identifies you; any label works."
+        static let meetingFooter = "You title the event and the person’s note goes in it; the location goes into the event and the calendar file they receive."
     }
 
     enum Policy {
         static let section = "Your day"
-        static let sentence = "Answer it the way you would say it out loud. The preview underneath shows real dates, so a mistake is visible before anyone else sees it."
         static let dayStarts = "My day starts at"
         static let dayEnds = "and ends at"
         static let zoneTitle = "Time zone"
-        static let zoneCaption = "Stated, not guessed from this device. A laptop that travels must not quietly re-read “my day starts at 9” as 9am somewhere else."
         static let lunchTitle = "Keep a gap clear"
-        static let lunchCaption = "One mid-day gap. A list of arbitrary exclusions would be a second calendar wearing a disguise — put those in a blocking calendar instead."
         static let weekdaysTitle = "Offer on"
         static let horizonTitle = "How far ahead"
-        static let horizonCaption = "How far out someone can ask. A longer horizon puts more of your future shape on one screen, so this is a privacy control as much as an accuracy one. Between 2 and 45 days; beyond that the times are fiction, because calendars fill."
         static let noticeTitle = "Notice I need"
-        static let noticeCaption = "Nothing inside this window is offered. It guards against a request landing with less warning than your device needs to collect it."
         static let maxPerDayTitle = "Most requests a day"
-        static let maxPerDayCaption = "This matters more than it looks. Publishing every free half-hour tells a stranger your week is empty; offering four says nothing about the other twelve."
         static let slotTitle = "How long an offer is"
-        static let slotCaption = "The same number becomes the meeting length on your page and in the calendar file you send."
         static let alignTitle = "Start times land on"
-        static let alignCaption = "Offers begin on a multiple of this past the hour, so people see :00 and :30 rather than :07. Only values that divide into 60 are offered, because the others walk through the hour."
         static let bufferTitle = "Keep clear either side"
-        static let bufferCaption = "Held free around anything real in your calendar, so nothing lands wheel-to-wheel against a meeting the person asking cannot see."
+        static let dayFooter = "Times are in the zone you state, wherever this device travels. The next screen shows what this offers on real dates."
+        static let shapeFooter = "Both are privacy controls: a shorter horizon and a lower cap show less of your week’s shape."
+        static let noticeFooter = "Nothing inside this window is offered, so a request never lands with less warning than this device needs."
+        static let offerFooter = "Each offer is this long, starts on this grid, and keeps this much clear of anything real in your calendar."
     }
 
     enum Notification {
@@ -106,14 +101,13 @@ enum RequestCopy {
         static let declinedBody = "%@ has been told, and the time is free again."
         static let conflictTitle = "Could not accept — that time is taken"
         static let conflictBody = "Something landed on %@ since it was offered. Nothing was written. Open Calendar Mirror to see the alternatives."
-        static let failedTitle = "Accepted, but askwhen.me was not told"
+        static let failedTitle = "Accepted, but AskWhen.me was not told"
         static let failedBody = "The event is in your calendar. The person who asked has not been sent it yet — open the app to finish."
-        static let permissionHeading = "Let it tell you"
-        static let permissionBody = "Requests arrive on your device, not in an inbox. A notification is how you find out one is waiting, and it carries Accept and Decline so you can answer without opening anything."
-        static let permissionNote = "Whoever asked gave their name and a note, and both appear in the notification. If you would rather they did not show on a locked screen, iOS controls that under Notifications → Show Previews."
+        static let permissionHeading = "Notifications"
         static let permissionAsk = "Allow notifications"
         static let permissionSkip = "Not now"
-        static let permissionDenied = "Notifications are off for Calendar Mirror. Requests still arrive and still wait for you in the app — you just will not be told. Settings → Notifications turns them back on."
+        static let permissionDenied = "Off for Calendar Mirror. Requests still wait in the app; Settings › Notifications turns them back on."
+        static let permissionFooter = "A notification is how you find out a request is waiting, and it carries Accept and Decline. The person’s name and note appear in it."
     }
 
     enum Conflict {
@@ -144,7 +138,7 @@ enum RequestCopy {
         static let revokedHeading = "Your subscription was refunded"
         static let revokedBody = "Apple has reversed the purchase, so there is no grace period — the page has stopped taking requests now. Subscribing again creates a new page at a new address."
         static let goneHeading = "Your page has been deleted"
-        static let goneBody = "The grace period ended and askwhen.me removed the page. Links to the old address no longer work, and there is nothing left to restore — a new subscription starts a new page with a new address."
+        static let goneBody = "The grace period ended and AskWhen.me removed the page. Links to the old address no longer work, and there is nothing left to restore — a new subscription starts a new page with a new address."
         static let goneCalendar = "Everything you accepted is still in your calendar. Nothing that was already agreed depended on the page staying up."
         static let startAgain = "Start a new page"
         static let bannerGrace = "Not taking requests — deleted in %d days"
@@ -156,7 +150,7 @@ enum RequestCopy {
         static let section = "Address"
         static let current = "Your page is at"
         static let slugNote = "This address always works and is never taken away, whatever else you add."
-        static let subdomainHeading = "Your own name on askwhen.me"
+        static let subdomainHeading = "Your own name on AskWhen.me"
         static let subdomainBody = "Something like dana.askwhen.me. Nothing to set up — it works the moment you claim it."
         static let subdomainPlaceholder = "dana"
         static let subdomainSuffix = ".askwhen.me"
@@ -180,70 +174,68 @@ enum RequestCopy {
         static let upgrade = "Upgrade"
         static let upgradeNote = "An upgrade is charged straight away, with what is left of this year credited against it. Apple handles the arithmetic and shows you the number before you agree."
         static let taken = "That address is already claimed."
-        static let failed = "askwhen.me did not answer. Nothing was claimed — try again."
+        static let failed = "AskWhen.me did not answer. Nothing was claimed — try again."
     }
 
     enum Live {
         static let section = "Your page"
         static let heading = "Your page is live"
-        static let lede = "Send this link to anyone you want to be able to ask you for a time. There is nothing for them to install and no account for them to make."
-        static let copy = "Copy link"
-        static let copied = "Copied"
+        static let lede = "Send this link to anyone who should be able to ask you for a time."
+        static let linkFooter = "Nothing for them to install and no account for them to make."
+        static let share = "Share link"
         static let openTitle = "Open it"
-        static let openNote = "Worth looking at once, the way the people you send it to will see it."
-        static let tokenHeading = "This device holds the only key"
-        static let tokenBody = "Your page is kept alive by a key stored in this device's keychain. There is no account and no password, so nobody — including us — can email it to you or recover it. If you lose this device you make a new page and send out a new link."
-        static let publisherHeading = "This device publishes"
-        static let publisherBody = "It derives the times and uploads them whenever your calendar changes. Your other devices can still collect requests and answer them; only this one publishes, so two devices can never disagree about when you are free."
-        static let offHeading = "Turning it off"
-        static let offBody = "Switching the request page off stops publishing immediately and the page goes dark. Your subscription is Apple's to cancel, in Settings."
-        static let turnOff = "Turn off the request page"
+        static let deviceSection = "This device"
+        static let publishes = "Publishes your page"
+        static let holdsKey = "Holds the only key"
+        static let deviceFooter = "Other devices can answer requests; only this one publishes, and it holds the key that keeps the page yours. Switching off stops publishing at once."
+        static let turnOff = "Request page"
         static let notPublished = "Nothing has been published yet — the first upload happens on the next sync."
     }
 
     enum Offer {
         static let section = "Publishing"
         static let heading = "Publish your page"
-        static let lede = "Everything so far has stayed on this device. Publishing puts the times you just previewed on askwhen.me, where the people you send the link to can ask for one."
-        static let network = "Loading the price is the first time this app has contacted anyone. It asks Apple what a subscription costs in your currency — nothing about you, your calendar or your page is sent, and askwhen.me is still not involved."
+        static let lede = "Everything so far has stayed on this device. Publishing puts the times you previewed on AskWhen.me."
+        static let network = "Loading the price is this app’s first contact with anyone — Apple, for the price in your currency. AskWhen.me is not involved yet."
         static let loading = "Asking Apple for the price…"
         static let purchasing = "Waiting for Apple…"
         static let failedTitle = "Could not reach the App Store"
-        static let failedBody = "Apple did not answer, so there is no price to show. Nothing is wrong with your page — it is still here, still on this device. Try again when you have a connection."
+        static let failedBody = "Apple did not answer, so there is no price to show. Your page is still here, on this device."
         static let retry = "Try again"
         static let trialLine = "%@, then %@ a year."
         static let noTrialLine = "%@ a year."
         static let noTrialNote = "Apple gives one free trial per person, and you have used yours. The price below is what it costs from today."
         static let buyWithTrial = "Start the free trial"
         static let buyWithoutTrial = "Subscribe"
-        static let renews = "Renews yearly until you cancel. Cancel any time in Settings — during the free trial nothing is charged at all."
+        static let renews = "Renews yearly until you cancel in Settings. Nothing is charged during the trial."
         static let upgradesHeading = "If you need more later"
-        static let upgradesNote = "Both of these are upgrades you can take whenever you want one. Neither carries a free trial, and neither is worth buying before you have a page — a nicer address is not much use without something at it."
+        static let upgradesNote = "Upgrades, whenever you want one. Neither carries a trial."
         static let restore = "Restore Purchases"
         static let restoring = "Checking with Apple…"
         static let restoredNone = "Apple has no subscription on file for this Apple Account."
-        static let cancelled = "No problem — nothing was bought and nothing changed. Your page is still here whenever you want it."
+        static let cancelled = "Nothing was bought and nothing changed."
         static let pendingTitle = "Waiting for approval"
-        static let pendingBody = "Apple is holding this until someone approves it — Ask to Buy, or a payment method that needs confirming. The moment it clears, your page publishes itself. You can close the app."
+        static let pendingBody = "Apple is holding this for approval. The moment it clears, your page publishes itself."
         static let alreadyTitle = "You already subscribe"
-        static let alreadyBody = "This Apple Account has an active AskWhen.me subscription, so there is nothing to buy. Publishing your page is the only step left."
+        static let alreadyBody = "This Apple Account already has an AskWhen.me subscription. Publishing is the only step left."
         static let publish = "Publish my page"
         static let creating = "Creating your page…"
-        static let createFailedTitle = "Apple said yes, askwhen.me did not answer"
-        static let createFailedBody = "Your subscription went through — you have not been charged twice and you will not be. The page itself could not be created just now. Try again; nothing is lost and nothing is duplicated."
-        static let tokenWarning = "Your page is kept alive by a key held only on this device, in its keychain. There is no account and no password, so it cannot be emailed to you or recovered — if you lose this device, you make a new page."
+        static let createFailedTitle = "Apple said yes, AskWhen.me did not answer"
+        static let createFailedBody = "Your subscription went through and you will not be charged twice. Try again; nothing is lost."
+        static let tokenWarning = "The page’s key lives only in this device’s keychain; there is no account to recover it from."
     }
 
     enum Preview {
         static let section = "What people see"
-        static let headingOne = "You are offering %d time across %d days"
-        static let headingMany = "You are offering %d times across %d days"
-        static let emptyPage = "Your page would be empty. Nobody can ask you for anything until something is offered — the reasons are on each day below."
-        static let privacy = "A gap on your page could be a meeting, your lunch, a day you blacked out, or simply your daily cap. Nothing on the page says which, and that is the point."
+        static let countOne = "%d time"
+        static let countMany = "%d times"
+        static let across = "across %d days"
+        static let emptyPage = "Your page would be empty — the reasons are on each day below."
+        static let privacy = "A gap could be a meeting, your lunch or your daily cap; the page never says which."
         static let emptyDayHeading = "Days offering nothing"
         static let whyHeading = "Why"
-        static let cappedNote = "Times you could have offered and chose not to. That is a different answer to “why is nothing showing” than being busy."
-        static let stale = "Calculated just now from the calendars on this device. Nothing here has been published."
+        static let cappedNote = "Times you could have offered and chose not to."
+        static let stale = "Calculated just now from this device. Nothing has been published."
 
         /// Why individual candidates were dropped. Lower-case
         /// fragments — they are joined into a sentence.
