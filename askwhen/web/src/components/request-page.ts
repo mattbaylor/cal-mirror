@@ -10,9 +10,11 @@ import type { RequestDetail } from './request-form.ts';
 import type { RequestStateName } from './request-state.ts';
 
 const STEPS = ['Pick a time', 'Say who you are', 'Confirm your email', 'They answer'];
+/** Through a personal link there is no email step: the link was the proof. */
+const STEPS_PERSONAL = ['Pick a time', 'Say who you are', 'It lands, or they answer'];
 // Which step a state panel sits under. Held sends you back to the times; a
 // failed send is still "say who you are"; everything else is the answer.
-const STEP_FOR: Partial<Record<RequestStateName, number>> = { held: 0, failed: 1, 'confirm-your-email': 2 };
+const STEP_FOR: Partial<Record<RequestStateName, number>> = { held: 0, failed: 1, 'confirm-your-email': 2, 'sent-personal': 2 };
 
 /** The picker's states plus every end state. */
 export type PageState = 'picking' | 'form' | RequestStateName;
@@ -39,6 +41,10 @@ export class RequestPage extends LitElement {
   now?: Date;
   state: PageState = 'picking';
   submit?: Submit;
+  /** The personal link's code, when the page was opened through one. */
+  code?: string;
+  /** The personal link was used or has expired: no dump, one sentence. */
+  linkGone = false;
   _chosen: Entry | null = null;
   _email = '';
   _sending = false;
@@ -51,6 +57,8 @@ export class RequestPage extends LitElement {
     state: { type: String, reflect: true },
     /** Injectable for tests and the gallery; defaults to the real call. */
     submit: { attribute: false },
+    code: { type: String },
+    linkGone: { type: Boolean },
     _chosen: { state: true },
     _email: { state: true },
     _sending: { state: true },
@@ -239,6 +247,7 @@ export class RequestPage extends LitElement {
   }
 
   override render() {
+    if (this.linkGone) return this.#renderLinkGone();
     if (!this.dump) return this.#renderMissing();
 
     const dump = this.dump;
@@ -259,6 +268,7 @@ export class RequestPage extends LitElement {
       case 'form':
         return this.#shell(dump, this.#renderForm(name), 1);
       case 'confirm-your-email':
+      case 'sent-personal':
       case 'submitted':
       case 'accepted':
       case 'declined':
@@ -291,7 +301,12 @@ export class RequestPage extends LitElement {
             : nothing}
           <p class="fresh">
             <span class="dot ${fresh.level}" aria-hidden="true"></span>
-            <span>${fresh.text} Times here are an offer, not a reservation — ${name} confirms every one.</span>
+            <span
+              >${fresh.text}
+              ${dump.personal
+                ? `${name} sent you this link. Pick a time and it lands in their calendar if it is still clear.`
+                : `Times here are an offer, not a reservation — ${name} confirms every one.`}</span
+            >
           </p>
         </header>
 
@@ -310,8 +325,8 @@ export class RequestPage extends LitElement {
   }
 
   #renderPath(current: number, name: string) {
-    const labels = [...STEPS];
-    labels[3] = `${name} answers`;
+    const labels = [...(this.dump?.personal ? STEPS_PERSONAL : STEPS)];
+    if (!this.dump?.personal) labels[3] = `${name} answers`;
     return html`
       <ol class="path">
         ${labels.map(
@@ -369,6 +384,7 @@ export class RequestPage extends LitElement {
       </div>
       <request-form
         .ownerName=${name}
+        .personal=${Boolean(this.dump?.personal)}
         .busy=${this._sending}
         @request-submitted=${this.#submit}
         @request-cancelled=${this.#restart}
@@ -388,6 +404,14 @@ export class RequestPage extends LitElement {
         ?canRetry=${['declined', 'expired', 'held', 'failed'].includes(this.state)}
         @request-restart=${this.#restart}
       ></request-state>
+    `;
+  }
+
+  #renderLinkGone() {
+    return html`
+      <div class="wrap missing">
+        <request-state state="link-gone"></request-state>
+      </div>
     `;
   }
 
@@ -422,12 +446,17 @@ export class RequestPage extends LitElement {
     // so the page looks identical to a bot either way.
     this._email = event.detail.email;
     // The service takes the slot's start; it looks the end up in the dump.
+    // Through a personal link the code goes with it, and the service spends
+    // the link in the same transaction that records the request.
     const body: Submission = { ...event.detail, slot: chosen.slot.s };
+    if (dump.personal && this.code) body.personal = this.code;
     this._sending = true;
     const result = await (this.submit ?? submitRequest)(dump.slug, body);
     this._sending = false;
     if (result.ok) {
-      this.state = 'confirm-your-email';
+      this.state = result.personal ? 'sent-personal' : 'confirm-your-email';
+    } else if (result.reason === 'link') {
+      this.linkGone = true;
     } else {
       // held and slot both mean "not that time"; the rest mean "not right now".
       if (result.reason === 'held') {

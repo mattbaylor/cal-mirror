@@ -698,3 +698,34 @@ func TestFourteenDaysOfSilenceExpiresAndTellsTheRequester(t *testing.T) {
 		t.Fatalf("an expired request is still in the queue: %s", w.Body.String())
 	}
 }
+
+func TestMintingAPersonalLinkReturnsACodeAUrlAndAnExpiry(t *testing.T) {
+	// decisions.md, "Personal links": minted by the owner at share time,
+	// seven days, one use. The URL is the code on the page's origin, so a
+	// link the owner sent looks like any page.
+	o := setupOwner(t)
+	o.Origin = "https://askwhen.me"
+	slug, token := createPage(t, o)
+	path := map[string]string{"slug": slug}
+
+	w := do(o.Links, http.MethodPost, "/v1/pages/"+slug+"/links", nil, token, path, nil)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("mint: %d %s", w.Code, w.Body.String())
+	}
+	var got linkReply
+	json.Unmarshal(w.Body.Bytes(), &got)
+	if !validLinkCode(got.Code) {
+		t.Fatalf("code %q is not twelve base-36 characters", got.Code)
+	}
+	if got.URL != "https://askwhen.me/"+got.Code {
+		t.Fatalf("url = %q", got.URL)
+	}
+	exp, err := time.Parse(time.RFC3339, got.ExpiresAt)
+	if err != nil || time.Until(exp) < 6*24*time.Hour || time.Until(exp) > 7*24*time.Hour+time.Minute {
+		t.Fatalf("expires_at = %q; want seven days out", got.ExpiresAt)
+	}
+	// The wrong token mints nothing, and says so as a missing page.
+	if w := do(o.Links, http.MethodPost, "/v1/pages/"+slug+"/links", nil, "wrong", path, nil); w.Code != http.StatusNotFound {
+		t.Fatalf("wrong token: %d", w.Code)
+	}
+}

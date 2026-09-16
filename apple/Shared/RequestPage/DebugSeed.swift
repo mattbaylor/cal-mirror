@@ -58,6 +58,12 @@ enum DebugSeed {
         }
     }
 
+    private static func value(after flag: String) -> String? {
+        let args = ProcessInfo.processInfo.arguments
+        guard isSimulator, let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }
+
     /// `-AskWhenConflict` — present the conflict sheet over whatever is on
     /// screen, built from the same synthetic requester the review uses.
     static var wantsConflict: Bool {
@@ -107,7 +113,10 @@ enum DebugSeed {
             store.requestPage.enabled = true
             store.save()
         }
-        try? KeychainTokenStore().store("seed-token", for: store.requestPage.slug)
+        // The invented token, unless the run names one: against a local
+        // service (`-AskWhenService`) the token has to be the one whose hash
+        // the seeded page carries, and it has to be a real-shaped one.
+        try? KeychainTokenStore().store(value(after: "-AskWhenToken") ?? "seed-token", for: store.requestPage.slug)
         let request = sampleRequest(store.zone)
         if !store.pendingRequests.contains(where: { $0.id == request.id }) {
             store.pendingRequests.append(request)

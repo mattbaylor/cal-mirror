@@ -640,6 +640,49 @@ It lands in your calendar if the time is still clear."* — is the part that
 stops the first automatic event reading as the app acting alone; it is copy,
 and it is his.
 
+**Personal links, as built.** *(16 September 2026 — the shape is Matt's
+decision; these are the choices inside it, an agent's, built as written
+unless he says otherwise.)*
+
+- **A personal link looks like any page.** `askwhen.me/{code}`, twelve
+  base-36 characters where a slug is six to eight, resolved on the way in:
+  a code that is not a page is looked up as a link. So the address after
+  the times in "Send times" is the same shape whether it is public or
+  personal, and on a custom domain it is `ask.example.com/{code}` with
+  nothing else to explain. The web app never learns the difference until
+  the dump says `personal: true`.
+- **Spent and expired say so.** A missing page never says why (§4c); a
+  spent or expired personal link answers 410 with one line — *used, or
+  expired; ask whoever sent it for a fresh one* — because the holder is
+  somebody the owner chose to tell, and "ask again" is the useful answer.
+  Never minted still looks like a missing page.
+- **The link is minted when the row is prepared, not at the tap.** The
+  iOS share sheet has to be handed a `String` to offer *Copy* and paste as
+  text; anything composed on demand is a file attachment. So the app mints
+  on open and after each foreground sync, and the Mac menu item and the
+  intent mint per use. A link that is never sent expires in seven days and
+  the sweep removes it two days later. Each mint publishes first, which is
+  the *fresh publish at share time* the proposal asked for.
+- **A link the owner has not turned on mints nothing.** `isReady` gates
+  the mint as it gates every other call; "Send times" for an owner without
+  a page is the times alone, and touches nothing.
+- **Accept-without-a-tap is the same accept.** The re-check, the write and
+  the resolve are the public path's; the device runs them on collect for a
+  request the queue flags `personal`, and posts *Accepted* the way a
+  lock-screen Accept does. A conflict gets the sheet, not a silent decline —
+  the consent was to a clear time.
+- **The page's three steps.** *Pick a time · Say who you are · It lands, or
+  they answer*, and the freshness line says *"{owner} sent you this link"*.
+  The email hint stops mentioning a confirmation.
+
+Proven end to end against a local service with nothing mocked (16 Sept):
+the app published then minted; a stranger asked through the link with no
+email step; the app's next poll wrote *Intro call* into the simulator's
+calendar with the note in the body and resolved it; the service marked it
+accepted and went to send the `.ics`. The `-AskWhenService` and
+`-AskWhenToken` launch arguments that made that possible are debug- and
+simulator-only.
+
 **Inside zero-decision setup: every calendar blocks except subscribed and
 read-only ones.** *(16 September 2026.)* *Every calendar blocks* is the wrong
 default for the owner with a spouse's shared calendar or a sports feed, and

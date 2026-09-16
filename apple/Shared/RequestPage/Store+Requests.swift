@@ -23,7 +23,18 @@ extension Store {
             // changed for another reason — one request answered, three still
             // waiting — must not re-notify the three.
             let known = Set(pendingRequests.map(\.id))
+            var remaining = collected
             for request in collected where !known.contains(request.id) {
+                // Through a personal link, the owner already said yes when
+                // they sent it: accept now if the slot is still clear, and
+                // say so. A conflict stays in the queue and gets the sheet,
+                // as a public request would — the consent was to a clear
+                // time, not to a double booking.
+                if request.personal, let outcome = await acceptIfClear(request) {
+                    RequestNotifications.postOutcome(outcome, for: request, zone: zone)
+                    if case .accepted = outcome { remaining.removeAll { $0.id == request.id }; continue }
+                    if case .conflict = outcome { continue }   // the sheet is up; no second notification
+                }
                 RequestNotifications.post(request, zone: zone)
             }
             // Anything that left the queue was answered elsewhere; its
@@ -31,7 +42,7 @@ extension Store {
             for gone in known.subtracting(Set(collected.map(\.id))) {
                 RequestNotifications.clear(gone)
             }
-            pendingRequests = collected
+            pendingRequests = remaining
         } catch {
             // A failed poll is polled again. Nothing is shown for it: the
             // owner did not ask for this to happen now, and an error about
@@ -63,6 +74,25 @@ extension Store {
                 // The event is real; only the service does not know. Keep it
                 // in the queue so accepting again retries just the resolve.
                 break
+            }
+            return outcome
+        } catch {
+            return nil
+        }
+    }
+
+    /// The accept-at-send-time path for a request through a personal link.
+    /// Nil when the attempt itself failed (no token, no calendar), in which
+    /// case the request is treated as an ordinary one and notified.
+    private func acceptIfClear(_ request: IncomingRequest) async -> AcceptOutcome? {
+        var page = requestPage
+        do {
+            let outcome = try await requestCoordinator().acceptIfClear(request, page: &page)
+            requestPage = page
+            save()
+            if case .conflict(let alternatives) = outcome {
+                conflict = RequestConflict(request: request, alternatives: alternatives,
+                                           landed: landed(on: request.slot), zone: zone)
             }
             return outcome
         } catch {

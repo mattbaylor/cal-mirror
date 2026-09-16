@@ -35,7 +35,7 @@ struct MenuContent: View {
         Divider()
         // The daily-use one: the next three free times onto the clipboard,
         // ready to paste into whatever asked. Local; no service.
-        Button(RequestCopy.SendTimes.menu) { copyTimes() }
+        Button(RequestCopy.SendTimes.menu) { Task { await copyTimes() } }
             .disabled(!model.access)
         Divider()
         Button(model.config.paused ? "Resume Syncing" : "Sync Now") {
@@ -54,10 +54,10 @@ struct MenuContent: View {
         Button("Quit Calendar Mirror") { NSApp.terminate(nil) }
     }
 
-    private func copyTimes() {
-        // The synthetic Mac never asks EventKit, and this would.
-        guard !model.fixture else { return }
-        guard let line = SendTimesSource.text(config: model.config, engine: model.engine, calendars: model.calendars) else { return }
+    private func copyTimes() async {
+        // Mints a personal link for this send when there is a live page;
+        // the synthetic Mac never asks EventKit and sendTimesLine knows it.
+        guard let line = await model.sendTimesLine() else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(line, forType: .string)
     }

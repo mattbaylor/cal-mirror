@@ -1566,7 +1566,49 @@ do {
     check(RequestPageCoordinator.normalize("ask.example.com") == "ask.example.com",
           "and an already-clean hostname is left alone")
 
+    // Personal links (decisions.md, "Personal links, accepted at send time").
+    // Minting publishes first — the link carries a fresh publish of the
+    // moment it was sent — then POSTs, and the answer is the URL that goes
+    // after the times in "Send times".
     try! tokens.store("tok_123", for: "x7f2k9")
+    busy = [BusyInterval(start: mtn(2026, 9, 2, 13), end: mtn(2026, 9, 2, 14))]   // offers changed → a publish
+    t.answers = [(204, ["ETag": "\"c\""], ""),
+                 (201, [:], #"{"code":"abcdefghij12","url":"https://askwhen.me/abcdefghij12","expires_at":"2026-09-09T12:00:00Z"}"#)]
+    let minted = try! run { try await coord.mintLink(page: &page, now: wed.addingTimeInterval(900)) }.get()
+    check(minted.code == "abcdefghij12" && minted.display == "askwhen.me/abcdefghij12",
+          "mintLink returns the code and the address without its scheme")
+    check(t.calls[t.calls.count - 2].method == "PUT" && t.calls.last?.method == "POST"
+          && t.calls.last?.path == "/v1/pages/x7f2k9/links",
+          "mintLink publishes first, then POSTs /v1/pages/{slug}/links")
+
+    // A personal request collected: flagged by the service, accepted without
+    // a tap when the slot is clear — same re-check, same write, same resolve.
+    t.answers = [(200, ["ETag": "W/\"2\""],
+                  #"{"requests":[{"id":"r2","slot_start":"2026-09-02T20:00:00Z","slot_end":"2026-09-02T21:00:00Z","name":"Ben","email":"ben@example.com","hold_until":"2026-09-03T00:00:00Z","personal":true}]}"#)]
+    let pq = try! run { try await coord.collect(page: &page) }.get()
+    check(pq?.first?.personal == true, "a request through a personal link is flagged in the queue")
+    let plain = IncomingRequest(id: "r3", slot: pq![0].slot, name: "C", email: "c@example.com", note: nil, holdUntil: Date())
+    check(plain.personal == false, "and a request without the flag is not")
+    let writtenBefore = calendar.written.count
+    t.answers = [(204, [:], "")]
+    let auto = try! run { try await coord.acceptIfClear(pq![0], page: &page, now: mtn(2026, 9, 2, 6)) }.get()
+    if case .accepted = auto { check(true, "a clear slot is accepted with nobody tapping") }
+    else { check(false, "expected accepted, got \(auto)") }
+    check(calendar.written.count == writtenBefore + 1 && t.calls.last?.path == "/v1/requests/r2/resolve",
+          "the event is written and the service told, so the .ics goes")
+
+    // 16:00Z is 10:00 Denver, where the seeded meeting is: a personal request
+    // on a taken slot is a conflict for the sheet, exactly like a public one.
+    let clash = IncomingRequest(id: "r4", slot: Slot(start: mtn(2026, 9, 2, 10), end: mtn(2026, 9, 2, 11)),
+                                name: "D", email: "d@example.com", note: nil, holdUntil: Date(), personal: true)
+    busy = [BusyInterval(start: mtn(2026, 9, 2, 10), end: mtn(2026, 9, 2, 11))]
+    let callsBefore = t.calls.count
+    let held = try! run { try await coord.acceptIfClear(clash, page: &page, now: mtn(2026, 9, 2, 6)) }.get()
+    if case .conflict = held { check(true, "a personal request on a taken slot falls back to the conflict sheet") }
+    else { check(false, "expected conflict, got \(held)") }
+    check(t.calls.count == callsBefore && calendar.written.count == writtenBefore + 1,
+          "and neither writes nor tells the service")
+
     t.answers = [(404, [:], "")]
     _ = try! run { try await coord.delete(page: &page) }.get()
     check(page.slug.isEmpty && (try? tokens.token(for: "x7f2k9")) == nil, "delete forgets slug and token, even on a 404")

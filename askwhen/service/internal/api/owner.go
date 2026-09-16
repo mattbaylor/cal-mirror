@@ -24,6 +24,8 @@ import (
 type Owner struct {
 	Store  *store.Store
 	Pepper []byte
+	// Origin is the public base URL, for the personal links this mints.
+	Origin string
 	// DumpTTL is how long a published dump is served before it is considered
 	// stale. A publisher that goes quiet takes its own page down (§4a).
 	DumpTTL time.Duration
@@ -317,6 +319,10 @@ type queueItem struct {
 	Email     string `json:"email"`
 	Note      string `json:"note,omitempty"`
 	HoldUntil string `json:"hold_until"`
+	// Personal: came through a link the owner minted and sent, so the device
+	// accepts it without a tap if the slot is still clear. Omitted when false,
+	// so a device built before personal links reads the queue unchanged.
+	Personal bool `json:"personal,omitempty"`
 }
 
 // Queue is the poll. The cheap path is the whole point: read the version,
@@ -358,7 +364,7 @@ func (o *Owner) Queue(w http.ResponseWriter, r *http.Request) {
 	items := make([]queueItem, 0, len(reqs))
 	for _, q := range reqs {
 		items = append(items, queueItem{ID: q.ID, SlotStart: q.SlotStart, SlotEnd: q.SlotEnd,
-			Name: q.Name, Email: q.Email, Note: q.Note, HoldUntil: q.HoldUntil})
+			Name: q.Name, Email: q.Email, Note: q.Note, HoldUntil: q.HoldUntil, Personal: q.Personal})
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(map[string]any{"requests": items})
