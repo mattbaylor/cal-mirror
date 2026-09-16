@@ -85,6 +85,7 @@ Judgment, not access. Roughly in the order it starts costing.
 | **A support address requesters can reach.** Mail comes from `no-reply@`; the page footer says `askwhen.me` and nothing else. Someone who gets a wrong `.ics` has nowhere to write. | Support, and Apple asks for one. |
 | **Small Business Program** enrollment, if not already — 15% instead of 30%. | Money. |
 | **`askwhen.me` registration renewal** — expires **1 September 2027** (whois, 16 Sept). Put it somewhere a reminder fires. | The whole product is one lapsed domain from gone. |
+| **Hurdles C and D are done** *(16 Sept)* — the native pass ([#105](https://github.com/mattbaylor/cal-mirror/pull/105), approved on the frames) and the Mac store app's sidebar, toolbar and Settings scene with every Mac capture re-shot from the store app by `apple/tools/shoot-mac.sh`. Next: E (iCloud Keychain), then Send times. | — |
 | **An outside review found nine defects and four capture problems** *(16 Sept)* — `REVIEW.md`. The ones nobody had listed: the delete sweep has no automated test; calendar matching is by title string; banner writes swallow errors; the write token should sync via iCloud Keychain; the listing and privacy page become false in 2.0; the Mac store screenshots are of the standalone app; two Mac captures are of an inactive window; `askwhen.me` is lowercase in the explainer. | Each is a task or a decision; `REVIEW.md` says which. |
 
 ## Defects from the outside review, not in 2.0 unless Matt says

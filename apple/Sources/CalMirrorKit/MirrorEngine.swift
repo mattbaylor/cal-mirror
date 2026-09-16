@@ -9,6 +9,14 @@ public struct CalendarInfo: Identifiable, Hashable, Sendable {
     public let writable: Bool
     public var id: String { identifier }
     public var label: String { "\(title) — \(account)" }
+
+    /// Public so a fixture outside the Kit can describe a calendar that does
+    /// not exist — the synthetic Mac in `MacFixture` builds its list this way
+    /// rather than asking EventKit.
+    public init(title: String, account: String, identifier: String, writable: Bool) {
+        self.title = title; self.account = account
+        self.identifier = identifier; self.writable = writable
+    }
 }
 
 /// The result of syncing one mirror.
@@ -28,6 +36,12 @@ public struct MirrorResult: Identifiable, Sendable {
     public var note: String?
     public var created = 0, updated = 0, unchanged = 0, deleted = 0
     public var total: Int { created + updated + unchanged }
+
+    public init(id: String, name: String, ok: Bool, error: String? = nil, note: String? = nil,
+                created: Int = 0, updated: Int = 0, unchanged: Int = 0, deleted: Int = 0) {
+        self.id = id; self.name = name; self.ok = ok; self.error = error; self.note = note
+        self.created = created; self.updated = updated; self.unchanged = unchanged; self.deleted = deleted
+    }
 }
 
 /// Cross-platform EventKit sync engine. Identical on macOS and iOS/iPadOS —

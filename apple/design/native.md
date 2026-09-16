@@ -207,8 +207,12 @@ Three things about the screenshots make the app look worse than it is:
 
 ## What to do first
 
-The order that changes the most for the least. **Items 1–4 landed 16
-September** (`decisions.md`, *The native pass, as built*); 5 and 6 are next.
+The order that changes the most for the least. **All six landed 16
+September** — 1–4 in the native pass (`decisions.md`, *The native pass, as
+built*), 5 and 6 as the Mac store app's sidebar, toolbar and Settings scene.
+The Mac captures are re-shot by `apple/tools/shoot-mac.sh` from the store
+app, from the key window, from a synthetic Mac that never asks EventKit
+(`Shared/MacFixture.swift`).
 
 1. Captions to footers, cut to one line, first-section headers dropped
    (§2, §3). Mechanical; touches every step; no new components.
