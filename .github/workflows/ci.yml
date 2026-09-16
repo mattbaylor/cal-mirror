@@ -83,6 +83,24 @@ jobs:
             -configuration Debug -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO -quiet build
 
+  claims:
+    # The listing and the site are held to the same accuracy rules: what the
+    # App Store build can do on each platform, the glossary, and the 2.0
+    # network claim with its qualifier. genmeta.py regenerates the metadata
+    # and fails on a banned phrase or an overlong field; checksite.py scans
+    # every page under docs/. REVIEW.md D5 is why the second exists.
+    name: listing and site claims
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The listing is what genmeta.py generates, and within Apple's limits
+        working-directory: appstore/tools
+        run: |
+          python3 genmeta.py
+          git diff --exit-code -- ../metadata
+      - name: The site makes no claim the listing may not
+        run: python3 appstore/tools/checksite.py
+
   askwhen-web:
     # The request page. Linux, because nothing here is Apple — and because the
     # timezone tests want a full-ICU Node, which the setup-node runners have.

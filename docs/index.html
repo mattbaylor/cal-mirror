@@ -6,10 +6,10 @@
 <script type="module" src="nav.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendar Mirror — keep a copy of one calendar inside another</title>
-<meta name="description" content="A small app that keeps a one-way copy of one calendar inside another, on iPhone, iPad & Mac. Your original is never touched, and nothing leaves your device. On the App Store, or free from source.">
+<meta name="description" content="A small app that keeps a one-way copy of one calendar inside another, on iPhone, iPad & Mac. Your original is never touched, and nothing leaves your device — unless you turn on AskWhen.me, a request page whose server never sees your calendar. On the App Store, or free from source.">
 <link rel="icon" href="icon.png">
 <meta property="og:title" content="Calendar Mirror">
-<meta property="og:description" content="Keep a copy of one calendar inside another — one direction, nothing leaves your device. On iPhone, iPad & Mac.">
+<meta property="og:description" content="Keep a copy of one calendar inside another — one direction, nothing leaves your device. Send your free times as a message. Turn on a request page whose server never sees your calendar. On iPhone, iPad & Mac.">
 <meta property="og:image" content="https://calendarmirror.com/icon.png">
 <meta property="og:type" content="website">
 <style>
@@ -284,13 +284,13 @@
     <div class="eyebrow">Timing</div>
     <h2>It notices when your calendar changes<span class="new">New in 1.4.0</span></h2>
     <p class="muted">Instead of waiting for the next scheduled run, Calendar Mirror can watch for
-      calendar changes and update the copy <b>within seconds</b> of one. A five-minute pass still
+      calendar changes and update the copy <b>soon after</b> one. A five-minute pass still
       runs underneath as a backstop — change notifications are best-effort, and it also repairs
       anything that got deleted by hand.</p>
 
     <div class="grid">
-      <div class="card"><div class="ic">⚡</div><h3>Seconds, not a schedule</h3><p>Move a meeting and the copy follows almost immediately, rather than at the top of the next quarter hour.</p></div>
-      <div class="card"><div class="ic">🖥️</div><h3>Mac only</h3><p>Realtime is a macOS feature. iPhone and iPad keep to their background schedules, because iOS decides when an app may run.<!--UNRELEASED:1.4.2--> On the Mac App Store app it arrives in 1.4.2; the build-from-source version has it today.<!--/UNRELEASED--></p></div>
+      <div class="card"><div class="ic">⚡</div><h3>Soon after, not on a schedule</h3><p>Move a meeting and the copy follows, rather than waiting for the top of the next quarter hour.</p></div>
+      <div class="card"><div class="ic">🖥️</div><h3>Mac only</h3><p>Realtime is a macOS feature. iPhone and iPad keep to their background schedules, because iOS decides when an app may run.<!--UNRELEASED:2.0--> On the Mac App Store app it arrives in 2.0; the build-from-source version has it today.<!--/UNRELEASED--></p></div>
       <div class="card"><div class="ic">🌐</div><h3>Then it&rsquo;s up to iCloud</h3><p>Calendar Mirror writes the copy fast. How quickly that copy reaches your other devices is iCloud&rsquo;s business, on iCloud&rsquo;s schedule.</p></div>
     </div>
 
@@ -314,6 +314,43 @@
              alt="One mirror's settings on iPhone: source and destination calendars, an Enabled switch, and collapsed rows summarizing what crosses over and which events are copied.">
       </picture>
     </div>
+  </section>
+
+  <section id="send">
+    <div class="eyebrow">When are you free?</div>
+    <h2>Answer it from the app<span class="new">New in 2.0</span></h2>
+    <p class="muted">One tap gives you your next three free times as a line of text —
+      <em>Tue 2–2:30pm, Wed 10–10:30am or Thu 3–3:30pm MDT</em> — worked out on your device from
+      the calendars you chose, ready to paste into Messages, Mail or Slack. Also a Shortcuts
+      action, a Siri phrase, and a menu-bar item on the Mac. Nothing leaves your device to do it.</p>
+    <!--UNRELEASED:2.0--><p class="newnote"><b>Coming in 2.0.</b> Send times is on its way through App Store review.</p><!--/UNRELEASED-->
+  </section>
+
+  <section id="askwhen">
+    <div class="eyebrow">A separate product you can turn on</div>
+    <h2>AskWhen.me — a request page whose server never sees your calendar<span class="new">New in 2.0</span></h2>
+    <p class="muted">Your phone already knows when you&rsquo;re free. Let it answer — without
+      handing your calendar to anyone. AskWhen.me is a subscription with its own server, turned
+      on from inside Calendar Mirror: a page at <b>askwhen.me/yourpage</b> where people can ask
+      you for a time. Off by default, and until you turn it on the app makes no network request
+      of any kind.</p>
+
+    <div class="grid">
+      <div class="card"><div class="ic">🔒</div><h3>The server is never given your calendar</h3><p>Your device works out which times to offer and sends only those — never your events, your address, or your name beyond the label you choose. Everyone else can offer instant booking because their server has been reading your calendar since the day you connected it. We can&rsquo;t, because it hasn&rsquo;t.</p></div>
+      <div class="card"><div class="ic">✅</div><h3>A request, not a reservation</h3><p>Someone picks a time and says who they are. The request comes to your device, which re-checks your real calendar before anything is written. Nothing lands until you accept.</p></div>
+      <div class="card"><div class="ic">🔗</div><h3>A link for one person</h3><p>Send times can carry a personal link: it opens your page once, for a week, and because you sent it there is no email confirmation — if the time is still clear, your device accepts it for you.</p></div>
+    </div>
+
+    <div class="grid">
+      <div class="card"><h3>Request Page</h3><p><b>Free for 90 days, then $19.99 a year.</b> One page at askwhen.me/yourpage.</p></div>
+      <div class="card"><h3>Custom Subdomain</h3><p><b>$34.99 a year.</b> Your own name — you.askwhen.me — and more than one page.</p></div>
+      <div class="card"><h3>Custom Domain</h3><p><b>$69.99 a year.</b> Your page on a domain you own, one DNS record away.</p></div>
+    </div>
+    <p class="muted" style="margin-top:22px;font-size:14px">Bought through the App Store; payment is Apple&rsquo;s.
+      What the server holds, and for how long, is on the <a href="privacy.html">privacy page</a> —
+      it is short. The <a href="terms.html">terms</a> say what happens to your page and your address
+      when a subscription ends.</p>
+    <!--UNRELEASED:2.0--><p class="newnote"><b>Coming in 2.0.</b> AskWhen.me turns on from Calendar Mirror 2.0, which is on its way through App Store review.</p><!--/UNRELEASED-->
   </section>
 
   <section id="how">
@@ -385,6 +422,7 @@
       <a href="changelog.html">Release notes</a> ·
       <a href="coming.html">What’s coming</a> ·
       <a href="privacy.html">Privacy</a> ·
+      <a href="terms.html">Terms</a> ·
       <a href="https://github.com/mattbaylor/cal-mirror/issues">Issues</a>
     </div>
   </footer>

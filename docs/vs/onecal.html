@@ -110,7 +110,7 @@
       <tr><td>Where your calendar goes</td><td>Nowhere. It never leaves the device.</td><td>To OneCal's servers, which hold the connection</td></tr>
       <tr><td>Platforms</td><td>iPhone, iPad, Mac</td><td>Web, plus iOS and Android apps</td></tr>
       <tr><td>Calendar sources</td><td>Anything the device can see &mdash; iCloud, Google, Exchange, CalDAV, subscribed ICS feeds</td><td>Google, Outlook and iCloud</td></tr>
-      <tr><td>Sync speed, Apple calendars</td><td>Detects changes within seconds on macOS <span class='src'>(from 1.4.2 on the Mac App Store app too)</span></td><td>&ldquo;about every 10 minutes&rdquo; for iCloud, per their docs</td></tr>
+      <tr><td>Sync speed, Apple calendars</td><td>Follows a calendar change soon after it, on macOS <span class='src'>(from 1.4.2 on the Mac App Store app too)</span></td><td>&ldquo;about every 10 minutes&rdquo; for iCloud, per their docs</td></tr>
       <tr><td>Sync speed, Google / Outlook</td><td>Whatever the device's own account refresh is</td><td>Real-time, per their docs</td></tr>
       <tr><td>Booking / scheduling links</td><td>No. Calendar Mirror 2.0 offers a <a href="../coming.html">request page</a> through AskWhen.me instead: people ask, you accept</td><td>Yes &mdash; unlimited one-on-one and collective links</td></tr>
       <tr><td>Unified calendar view</td><td>No</td><td>Yes</td></tr>
@@ -150,7 +150,7 @@
   <h2>Use them together</h2>
   <div class="verdict">
     <h3 style="margin-top:0">Put iCloud on OneCal's fast path</h3>
-    <p>OneCal reads iCloud, but its own documentation puts detection at about ten minutes, because Apple gives third parties no push API. Google and Outlook, by contrast, are real-time for them.</p><p><b>You can move iCloud onto the fast path.</b> Mirror the iCloud calendar into a Google calendar on your Mac &mdash; Calendar Mirror notices the change within seconds &mdash; and let OneCal watch the Google copy in real time. It also means iCloud events can feed OneCal&rsquo;s booking links.</p>
+    <p>OneCal reads iCloud, but its own documentation puts detection at about ten minutes, because Apple gives third parties no push API. Google and Outlook, by contrast, are real-time for them.</p><p><b>You can move iCloud onto the fast path.</b> Mirror the iCloud calendar into a Google calendar on your Mac &mdash; Calendar Mirror follows the change soon after &mdash; and let OneCal watch the Google copy in real time. It also means iCloud events can feed OneCal&rsquo;s booking links.</p>
     <p class="src">Bridging adds a hop: Calendar Mirror writes the copy on your device, and the other
       service then reads that copy on its own schedule. It needs the destination account set up on
       your Mac or iPhone, and the copy is one-way, like every Calendar Mirror mirror.</p>

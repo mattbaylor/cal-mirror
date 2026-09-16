@@ -6,7 +6,7 @@
 <script type="module" src="nav.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendar Mirror — Privacy</title>
-<meta name="description" content="Your calendar data is yours. Calendar Mirror collects nothing, has no server, and makes no network requests. Everything happens on your device.">
+<meta name="description" content="Your calendar data is yours. Calendar Mirror collects nothing and makes no network request until you turn on AskWhen.me — a separate product whose server never sees your calendar. Here is exactly what it holds, and for how long.">
 <link rel="icon" href="icon.png">
 <style>
   :root{ --bg:#0b0e14; --card:#151b28; --line:#232c3d; --tx:#e6edf3; --mut:#93a1b5;
@@ -31,43 +31,45 @@
 <body>
 <cm-nav current="privacy"></cm-nav>
 <div class="wrap">
+<div class="wrap">
   <h1>Privacy</h1>
-  <p class="sub">Last updated: September 2026</p>
+  <p class="sub">Last updated: September 2026, for Calendar Mirror 2.0</p>
 
-  <p class="lead"><strong>Your calendar belongs to you — not to me, and not to a
-    server.</strong> Calendar Mirror has no account, no backend, and makes no network
-    requests of its own. It never sends your calendar anywhere. There is nothing
-    for me to collect, because I collect nothing.</p>
+  <p class="lead"><strong>Your calendar belongs to you — not to us, and not to a
+    server.</strong> Calendar Mirror has no account and, until you turn on AskWhen.me,
+    makes no network request of any kind. It never sends your calendar anywhere.
+    AskWhen.me is a separate product you can turn on from inside the app; it does use a
+    server — one built so it cannot see your calendar either. This page says exactly what
+    that server holds instead, and for how long.</p>
 
   <h2>What the app does</h2>
   <p>You tell Calendar Mirror which calendar to copy and where to copy it. It reads
      events from the source and writes copies into the destination, using Apple's
      Calendar framework on your device. That's the whole job. The list of pairs you
      set up is stored only on your device.</p>
+  <p><strong>Send times</strong> — the app's line of your next free times, for pasting
+     into a message — is worked out on your device from the calendars you chose, and
+     nothing about it leaves the device. If you have an AskWhen.me page, a link to it
+     is added after the times; that is the only part that touches a server, and only
+     because you turned the page on.</p>
 
   <h2>No collection, no tracking</h2>
   <p>No analytics. No advertising or tracking SDKs. No behavioral data. No crash or
-     usage telemetry sent to me. Calendar Mirror ships with none of that and never will —
-     surveillance isn't a feature I'm interested in building.</p>
+     usage telemetry sent to us. Calendar Mirror ships with none of that and never will —
+     surveillance isn't a feature we're interested in building.</p>
 
   <h2>No credentials, ever</h2>
   <p>Calendar Mirror works through calendars that are already set up on your device, so
      it never asks for, sees, or stores any account passwords or tokens.</p>
 
-  <h2>This website</h2>
-  <p>The app collects nothing. This website counts visits with
-     <a href="https://plausible.io/privacy-focused-web-analytics">Plausible</a>, running on
-     my own servers — no third party sees it. It sets no cookies, stores no IP addresses, and
-     can't recognize you between visits or across sites. I see how many people read which page
-     and roughly where they came from; I don't see who.</p>
   <h2>You choose how much crosses over</h2>
-  <p>Because of that, Calendar Mirror lets each pair decide what a copy actually contains. A copy can
-    carry the full event, or the title and location only, or nothing but a block reading
-    &ldquo;Busy&rdquo; — and individual events can be skipped, hidden, or shared in full with a tag
-    in their notes. If you would rather a provider never hold the details, don&rsquo;t send them.</p>
+  <p>Because of that, Calendar Mirror lets each pair decide what a copy actually contains.
+     A copy can carry the full event, or the title and location only, or nothing but a
+     block reading &ldquo;Busy&rdquo; — and individual events can be skipped, hidden, or
+     shared in full with a tag in their notes. If you would rather a provider never hold
+     the details, don&rsquo;t send them.</p>
 
-
-  <h2>The one thing I can't control — and won't pretend to</h2>
+  <h2>What we can't control</h2>
   <p>If your destination calendar lives in an account like iCloud, Google, or
      Exchange, then once a copy lands there, <em>that provider</em> syncs and retains
      it under <em>their</em> policies — exactly as it would for any event you added
@@ -76,15 +78,129 @@
      provider's terms apply. If that matters to you, point Calendar Mirror at a
      local or self-hosted calendar as the destination.</p>
 
+  <h2>AskWhen.me — a separate product you can turn on</h2>
+  <p class="lead"><strong>Until you turn AskWhen.me on, nothing in this section applies
+     to you.</strong> AskWhen.me is its own product, with its own server; Calendar Mirror
+     is the app you turn it on from. It is off by default. Until you choose it, Calendar
+     Mirror 2.0 behaves exactly as every version before it: no account, no server, no
+     network request of any kind — not a version check, not a price. The first time the
+     app contacts anyone is when you ask what AskWhen.me costs, and that contact is with
+     Apple. Everything below describes AskWhen.me only, and only after you opt in.</p>
+  <p>AskWhen.me gives you a page at <code>askwhen.me/yourpage</code> where someone can
+     ask you for a time. That page needs a server, and this section is the whole of
+     what that server does with data. The design is called a <em>dead drop</em>: your
+     device works out which times to offer and sends only those; the server holds
+     requests until your device collects them. At no point does the server have your
+     calendar, your email address, or a way to contact you.</p>
+
+  <h3>What your device sends about you</h3>
+  <ul>
+    <li>A list of <strong>times you are willing to be asked for</strong> — start and end,
+        nothing else. Not your busy times, not what fills the gaps between them. A gap
+        on the page might be a meeting or might be a rule you set, and the server cannot
+        tell which.</li>
+    <li>The <strong>display name</strong> you chose for the page, and an optional line of
+        text. This is the only identifying thing in the document, and you wrote it
+        knowing it is public.</li>
+    <li>A <strong>meeting title</strong> and length, and your time zone.</li>
+    <li>An anonymous <strong>subscription identifier</strong> from Apple — a number,
+        which Apple does not tie to your name or email in anything they give us. It is
+        stored hashed. There is no account, because there is nothing to put in one.</li>
+  </ul>
+  <p>Your device replaces that list whenever your offers change and at least daily. If
+     it stops, the page goes dark within a day rather than serving stale times. Delete
+     the page in the app and everything above is deleted at once, along with every
+     request on it.</p>
+
+  <h3>The key to your page</h3>
+  <p>Your page is yours because your device holds a key to it — there is no account, no
+     password, and nothing we could reset. The key is kept in your device's Keychain and,
+     if you use iCloud Keychain, travels with it to your other devices and to a new
+     phone, end-to-end encrypted by Apple. We never hold it in a form we could use: the
+     server keeps only a hash, enough to recognise the key when your device presents it.</p>
+
+  <h3>What a requester gives, and how long it stays</h3>
+  <p>Someone asking for a time gives their <strong>name, email address, and an optional
+     note</strong>, and picks a slot. The server holds those only as long as it takes to
+     get an answer to them:</p>
+  <ul>
+    <li><strong>Until they confirm their email — one hour.</strong> Nothing reaches you
+        until they click the link. If they never do, the request is deleted.</li>
+    <li><strong>Until you answer — up to 14 days.</strong> Then they are told nobody
+        answered, and it is deleted.</li>
+    <li><strong>After you answer — until the email reaches them, 48 hours at most.</strong>
+        An accepted request needs their address once more, to send them the calendar
+        file; the moment our mail server reports it delivered, the request is deleted.
+        A declined one is deleted the same way after the reply is sent.</li>
+  </ul>
+  <p>These limits are enforced by the database itself, not by a schedule somebody
+     could forget to run. There is no requester account, no history, and nothing
+     that links one request to another.</p>
+
+  <h3>Links you send to one person</h3>
+  <p>When you send someone your times from the app, the link after them is a
+     <strong>personal link</strong>: it opens your page once, for seven days, and then
+     it is spent. Because you sent it, a request through it skips the email confirmation
+     — the link is the proof of who they are — and if the time is still clear in your
+     calendar, your device accepts it without you tapping anything, and they receive the
+     calendar file. If the time has been taken since, it waits for you like any other
+     request. The server stores the link's code, the page it belongs to, when it
+     expires, and — once used — which request spent it. Nothing about who you sent it
+     to. A spent or expired link is removed within two days of expiring.</p>
+
+  <h3>What the AskWhen.me page does not do</h3>
+  <p>The page loads nothing from anyone else: no fonts, no analytics, no scripts from a
+     third party, no captcha service. It makes exactly two requests, both to
+     askwhen.me. That is checked by the build, which fails if a third appears.
+     Rate limiting exists to stop abuse, but it does not store IP addresses: it stores
+     a keyed hash that rotates daily, after which yesterday's entries cannot be linked
+     to an address even by us.</p>
+
+  <h3>Email</h3>
+  <p>The confirmation, the answer, and the calendar file are sent from
+     <code>no-reply@askwhen.me</code> through a mail server we run ourselves, on
+     infrastructure we own. Delivery reports come back from it so that "delivered"
+     can mean the request is deleted; nothing about what an email says is logged.
+     The person who asked gets your <strong>display name</strong> and the meeting
+     time. They never get your email address — the server does not have it to give.</p>
+
+  <h3>Custom addresses</h3>
+  <p>If you claim a subdomain, or point your own domain at your page, the server stores
+     that hostname and checks, from time to time, that it still points here. That is all
+     it holds about the domain. What happens to the address if your subscription ends is
+     in the <a href="terms.html">terms</a>.</p>
+
+  <h3>Payment</h3>
+  <p>AskWhen.me is a subscription bought through the App Store. Apple handles
+     payment; we never see a card, a name, or a billing address. Apple tells our
+     server when a subscription starts, renews, or ends, using the same anonymous
+     identifier as above, so a lapsed page can be taken down.</p>
+
+  <h3>Where it runs</h3>
+  <p>On a server we operate in Colorado, United States, behind a reverse proxy that
+     keeps ordinary access logs. <!-- TODO Matt: how long does caddy-dc keep its
+     access logs, and do they hold client IPs? Say so here either way. --></p>
+
+  <h2>This website</h2>
+  <p>calendarmirror.com uses a self-hosted, cookieless page counter on our own
+     infrastructure to see which pages are read. It sets no cookie, stores no IP
+     address, and is not shared with anyone. The request page at askwhen.me carries
+     nothing of the kind.</p>
+
   <h2>Changes</h2>
   <p>If this policy ever changes, the update will be here and in the source, which
-     is public. The bar it has to clear is simple: still collect nothing.</p>
+     is public. The bar it has to clear is simple: the app still collects nothing,
+     and AskWhen.me still holds nothing longer than it takes to get someone
+     an answer.</p>
 
   <h2>Contact</h2>
-  <p>Questions or concerns:
-     <a href="https://github.com/mattbaylor/cal-mirror/issues">github.com/mattbaylor/cal-mirror</a>.</p>
+  <p>Questions, concerns, or something that went wrong with a request:
+     <a href="mailto:support@askwhen.me">support@askwhen.me</a>, or
+     <a href="https://github.com/mattbaylor/cal-mirror/issues">github.com/mattbaylor/cal-mirror</a>.
+     <!-- TODO Matt: the support address. support@askwhen.me needs an inbound route
+     on Postal (or a forward) before this goes live; say which, or pick another. --></p>
 
-  <div class="foot"><a href="./">← Calendar Mirror</a> · <a href="changelog.html">Release notes</a> · <a href="coming.html">What’s coming</a> · MIT © Matt Baylor</div>
+  <div class="foot"><a href="./">← Calendar Mirror</a> · <a href="terms.html">Terms</a> · <a href="changelog.html">Release notes</a> · MIT © Matt Baylor</div>
 </div>
 </body>
 </html>

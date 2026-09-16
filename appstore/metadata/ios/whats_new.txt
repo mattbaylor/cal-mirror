@@ -1,7 +1,9 @@
-Shortcuts.
+Send times, and a request page you can turn on.
 
-Calendar Mirror now has a Sync Now action for the Shortcuts app, on iPhone, iPad and Mac.
+SEND TIMES — "When are you free?" One tap gives you your next three free times as a line of text, ready to paste into a message. Worked out on your device; nothing leaves it. Also a Shortcuts action and a Siri phrase.
 
-Put it in a Shortcut, on your Home Screen, or in an automation: sync when you arrive at the office, every weekday at eight, or when a Focus turns on. It runs in the background without opening the app.
+ASKWHEN.ME — a separate subscription you can turn on from inside the app: a page where people ask you for a time, served by a server that never sees your calendar. Your device chooses what to offer and answers every request; nothing lands in your calendar until it has looked. Off by default; no network request of any kind until you turn on AskWhen.me. Free for 90 days.
 
-It reports what actually changed rather than just "done" — "3 added, 1 updated", or which pair failed and why. Siri understands "Sync my calendars with Calendar Mirror" without you building anything first.
+Setup asks nothing: turn it on, and the first thing you see is your own week. Send times can carry a personal link — one use, one week, no email confirmation, accepted for you if the time is still clear.
+
+Also: the settings read the way Apple's do, and the key to your page follows your iCloud Keychain to a new device.

@@ -1,74 +1,51 @@
 Some calendars you can see but cannot reshare. A subscribed work schedule. A read-only team feed. An account that is not yours.
 
-Calendar Mirror makes an editable copy of one calendar inside another calendar you own — one direction only, so the original is never touched. And because the copy lives in your own account, it reaches your other devices on its own.
+Calendar Mirror makes an editable copy of one calendar inside another calendar you own — one direction only, so the original is never touched. Because the copy lives in your own account, it reaches your other devices on its own.
 
 PICK TWO CALENDARS
 
-Choose the calendar to copy from and the calendar to copy into. That is the setup. Add as many pairs as you like; two pairs can share one destination without disturbing each other, and anything you add to the destination by hand is left alone.
-
-Repeating events, all-day events and moved occurrences all come across correctly.
+Choose the calendar to copy from and the one to copy into. Add as many pairs as you like; two can share a destination, and anything you add by hand is left alone. Repeating and all-day events, and moved occurrences, all come across.
 
 CHOOSE HOW MUCH CROSSES OVER
 
-Each pair decides for itself:
-
-• Full copy — titles, locations and notes as written.
-• Just the basics — real titles and locations, nothing else.
-• Busy only — every event becomes a plain block reading "Busy". Your time is visible; nothing else is.
-
-Put a label in front of copied titles, too — "[Work] Standup", or even "[Work] Busy" on a pair that hides the details. A pair can also carry the source event's meeting link into the copy's notes, so a mirrored meeting is one you can actually join.
+Each pair decides: a full copy; titles and locations only; or "Busy" blocks that show your time and nothing else. Put a label in front of copied titles — "[Work] Standup", or "[Work] Busy" — and carry the meeting link into the copy's notes so a mirrored meeting is one you can join.
 
 CHOOSE WHICH EVENTS
 
-Not everything in a calendar is worth copying. A pair can skip:
-
-• Meetings you declined, or have not answered yet
-• Events the organizer canceled
-• All-day events, and anything marked free
-• Anything shorter or longer than a set number of minutes
-• Titles containing words you choose, such as "Lunch" or "Focus time"
-• Anything outside a window of the day, on the weekdays you pick
-
-This works on calendars you do not control, which is the point — tagging individual events is only possible on events you wrote yourself.
-
-OR DECIDE ONE EVENT AT A TIME
-
-Type a tag into a source event's notes and that event gets its own rule:
-
-• #nomirror — never copy this one
-• #private — copy it as a busy block with no details
-• #public — copy it in full, even on a pair that normally hides things
-
-You can also point a whole pair at a tag and copy only the events you have marked.
+A pair can skip meetings you declined or have not answered, events the organizer canceled, all-day events and anything marked free, anything shorter or longer than you like, titles containing words you choose, and anything outside a window of the day on the weekdays you pick. Or tag one event at a time: #nomirror, #private, #public in its notes.
 
 IT TELLS YOU WHEN SOMETHING BREAKS
 
-A healthy pair is silent. If one stops syncing, an all-day warning appears in the destination calendar itself — so you find out on your phone, without opening anything. It clears the moment the pair recovers.
+A healthy pair is silent. If one stops syncing, an all-day warning appears in the destination calendar itself, and clears the moment the pair recovers.
 
 ON IPHONE AND IPAD
 
-Every pair in one list, grouped by the calendar it copies into, with its health and how many events it manages. Pull down to sync immediately.
+Every pair in one list, with its health and event count. Pull down to sync now. Background refreshes run at the interval you choose, when iOS allows — treat it as the earliest a sync may start, not a guarantee.
 
-Background refreshes are scheduled at the interval you choose, but iOS decides when they actually run — treat the setting as the earliest a sync may start, not a guarantee. Pull to refresh whenever you want it now.
+SEND TIMES
 
-SHORTCUTS
+"When are you free?" One tap gives you your next three free times as a line of text — "Tue 2–2:30pm, Wed 10–10:30am or Thu 3–3:30pm MDT" — worked out on your device from the calendars you chose, ready to paste into Messages, Mail or Slack. Also a Shortcuts action and a Siri phrase. Nothing leaves your device.
 
-A Sync Now action for the Shortcuts app. Drop it into an automation and sync when you arrive somewhere, at a set time, or when a Focus turns on — it runs without opening the app and reports what changed.
+ASKWHEN.ME — A SEPARATE PRODUCT YOU CAN TURN ON
+
+Off by default; until you turn it on, the app makes no network request of any kind. AskWhen.me is a subscription with its own server: a page at askwhen.me/yourpage where people can ask you for a time.
+
+A request page, not a booking page. Your device works out which times to offer and sends only those — never your calendar, your events, your address, or your name beyond the label you choose. Someone picks a time and says who they are; the request comes to your device, and nothing lands in your calendar until you accept. Your device re-checks the time against your real calendar first.
+
+Send times can carry a personal link: it opens your page once, for a week, and because you sent it there is no email confirmation — if the time is still clear, your device accepts it for you and they get the calendar file.
+
+Free for 90 days, then $19.99 a year; your own name on askwhen.me, or your own domain, are upgrades. Payment is Apple's. The privacy page says what the server holds, and for how long.
 
 WHAT IT DOES NOT DO
 
-Being straight with you before you buy:
-
-• No booking or scheduling links.
+• No scheduling links unless you turn on AskWhen.me, a separate subscription.
 • No unified calendar view — it makes copies; your calendar app shows them.
 • No team, admin or SSO features. It is a single-person utility.
-• Attendees are never copied. Apple's calendar framework has no way to set guests on an event, so a copy carries the time and whatever else you allow, but never the guest list.
+• Attendees are never copied: Apple's calendar framework cannot set guests.
 • It cannot sync a calendar your device cannot already see.
 
 PRIVACY
 
-No account. No server. No analytics, no tracking, no telemetry, no ads. There is nothing to sign up for and no password to hand over, because it works through the calendars already configured on your device.
+No account. No analytics, no tracking, no telemetry, no ads. No server, and no network request of any kind, until you turn on AskWhen.me — and its server never sees your calendar either. Once a copy lands in iCloud, Google or Exchange, that provider stores it under their policies, as for any event you added yourself.
 
-Once a copy lands in an account like iCloud, Google or Exchange, that provider syncs and stores it under their policies, exactly as it would for any event you added yourself. That is the honest boundary.
-
-Open source under the MIT license. One purchase covers iPhone, iPad and Mac.
+Open source under the MIT licence. One purchase covers iPhone, iPad and Mac.
