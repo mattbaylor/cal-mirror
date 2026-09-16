@@ -19,8 +19,8 @@
     "off": "Off",
     "blurb": "Let people ask you for a time. Nothing leaves this Mac until you turn it on.",
     "blurbPhone": "Let people ask you for a time. Nothing leaves this iPhone until you turn it on.",
-    "inKeychain": "askwhen.me/%@ is in your iCloud Keychain. Pick the calendars and it carries on at the same address.",
-    "carryOn": "Carry on"
+    "inKeychain": "askwhen.me/%@ is yours — its key is in your iCloud Keychain. Reconnect this device and the page keeps that address.",
+    "carryOn": "Reconnect"
   },
   "explainer": {
     "symbol": "calendar.badge.clock",

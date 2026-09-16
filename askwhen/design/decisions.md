@@ -550,6 +550,15 @@ before any more code. **Against it:** *Not now* on the explainer is a second
 way out where the Mac sheet already has Done, so it is iOS-only; and the
 first-run sheet has no *Learn more*, so the long form is only on the web.
 
+**The row for a page the Keychain knows and the device does not says
+"Reconnect".** *(16 September 2026)* Matt. Not *Carry on* (promises the
+setup back, when only the address and the key survive), not *Set up* (reads
+as brand new, as if starting over), not *Restore* (Apple's word for
+purchases, and loaded). *Reconnect* is what actually happens — this device
+rejoins a page that never stopped existing — and the line under it says
+what is kept: *"askwhen.me/x7f2k9 is yours — its key is in your iCloud
+Keychain. Reconnect this device and the page keeps that address."*
+
 **The request-page UI is approved as built.** *(15 September 2026)* Matt,
 having walked the fifteen-step flow in `apple/tools/review.html`: *"it all
 looks good to me, proceed."*

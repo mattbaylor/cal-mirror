@@ -12,8 +12,8 @@ enum RequestCopy {
         static let off = "Off"
         static let blurb = "Let people ask you for a time. Nothing leaves this Mac until you turn it on."
         static let blurbPhone = "Let people ask you for a time. Nothing leaves this iPhone until you turn it on."
-        static let inKeychain = "askwhen.me/%@ is in your iCloud Keychain. Pick the calendars and it carries on at the same address."
-        static let carryOn = "Carry on"
+        static let inKeychain = "askwhen.me/%@ is yours — its key is in your iCloud Keychain. Reconnect this device and the page keeps that address."
+        static let carryOn = "Reconnect"
         /// The one-liner names the device it is running on, because
         /// "nothing leaves this device" is the promise and it reads as
         /// boilerplate when the device is abstract.
