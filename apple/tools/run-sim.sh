@@ -60,11 +60,13 @@ fi
 echo "==> Installing"
 xcrun simctl install "$UDID" "$APP"
 
-# Calendar access, so the pickers list something and the app does not open on a
-# permission prompt. Notifications too, so the request notification can be
-# exercised without hunting for the grant.
-xcrun simctl privacy "$UDID" grant calendar "$BUNDLE_ID" 2>/dev/null || true
-xcrun simctl privacy "$UDID" grant all "$BUNDLE_ID" 2>/dev/null || true
+# Full calendar access, so the pickers list something and the app does not
+# open on a permission prompt. Not `simctl privacy grant` on its own — that
+# grants write-only, and the app still asks; see grant-calendar.sh. Before the
+# first launch, because a launch killed mid-prompt is not recoverable by a
+# grant. (Notifications cannot be granted from simctl at all — "Operation not
+# permitted" — so that alert is answered by hand, once, on the live screen.)
+"$DIR/apple/tools/grant-calendar.sh" "$UDID" "$BUNDLE_ID"
 
 echo "==> Seeding the synthetic owner into the app container"
 # Written straight into Application Support, where ConfigStore.load reads it.

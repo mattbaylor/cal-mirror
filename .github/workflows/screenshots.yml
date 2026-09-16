@@ -78,9 +78,11 @@ jobs:
           UDID="${{ steps.sim.outputs.udid }}"
           BUNDLE=io.github.mattbaylor.cal-mirror
           xcrun simctl install "$UDID" "$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/CalMirror.app"
-          # Without these the first frame is a permission alert rather than the
-          # screen being photographed.
-          xcrun simctl privacy "$UDID" grant all "$BUNDLE" || true
+          # Full calendar access, before the first launch. `simctl privacy
+          # grant` alone is write-only on iOS 17+ and the app still asks — every
+          # frame of the first eleven runs had that alert in it. The helper
+          # patches the TCC row the way a real "Allow Full Access" does.
+          apple/tools/grant-calendar.sh "$UDID" "$BUNDLE"
 
       - name: Seed the synthetic owner
         run: |
@@ -129,6 +131,14 @@ jobs:
           shot live-dark -AskWhenSeed -AskWhenScreen live
 
           ls -la "$OUT"
+
+          # Proof the frames are not the permission alert: a sync ran, which
+          # only happens with calendar access, and it leaves lastRun in the
+          # app's defaults. Without this the job stayed green through eleven
+          # runs of alert-only frames.
+          PLIST="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data)/Library/Preferences/$BUNDLE.plist"
+          plutil -extract lastRun raw "$PLIST" >/dev/null \
+            || { echo "no sync ever ran — calendar access was not granted, so every frame is the OS alert"; exit 1; }
 
       - name: Upload
         if: always()
