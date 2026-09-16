@@ -112,6 +112,25 @@ public struct RequestPageConfig: Codable, Equatable, Sendable {
     }
 }
 
+extension RequestPageConfig {
+    /// Zero-decision setup's inference (`decisions.md`, *Setup with zero
+    /// decisions*): only what is empty is filled. Writable calendars block —
+    /// subscribed and read-only ones (holidays, a sports feed) do not — and
+    /// `receiver`, the calendar new events go to, receives accepted requests,
+    /// falling back to the first writable calendar. The display name is left
+    /// to the caller: the Mac has the account's name, the phone asks.
+    public mutating func infer(calendars: [CalendarInfo], receiver: CalendarInfo?) {
+        let writable = calendars.filter(\.writable)
+        if blocking.isEmpty {
+            blocking = writable.map { CalRef(title: $0.title, account: $0.account) }
+        }
+        if requestCalendar == nil {
+            let target = receiver.flatMap { $0.writable ? $0 : nil } ?? writable.first
+            if let target { requestCalendar = CalRef(title: target.title, account: target.account) }
+        }
+    }
+}
+
 /// Where the write token lives. The Keychain in the apps; memory in tests.
 public protocol TokenStore: Sendable {
     func token(for slug: String) throws -> String?

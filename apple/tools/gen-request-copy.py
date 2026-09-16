@@ -111,7 +111,9 @@ def gen_swift(c: dict) -> str:
     pv = c["preview"]
     out.append("\n    enum Preview {\n")
     for k in ("section", "countOne", "countMany", "across", "emptyPage", "privacy",
-              "emptyDayHeading", "whyHeading", "cappedNote", "stale"):
+              "emptyDayHeading", "whyHeading", "cappedNote", "stale",
+              "adjustHeader", "adjustCalendars", "adjustPage", "adjustDay", "adjustFooter",
+              "blocks", "blocksOne", "noReceiver"):
         out.append(f"        static let {k} = {swift_string(pv[k])}\n")
     # Switches rather than dictionaries: the Kit's enums are closed, so a
     # missing case is a compile error here instead of a blank line in the UI

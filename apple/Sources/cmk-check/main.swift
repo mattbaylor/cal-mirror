@@ -1426,6 +1426,33 @@ do {
           "a 200 that is not the contract → malformed")
 }
 
+print("Zero-decision setup:")
+do {
+    func cal(_ title: String, _ account: String, writable: Bool) -> CalendarInfo {
+        CalendarInfo(title: title, account: account, identifier: title, writable: writable)
+    }
+    let device = [cal("Work", "Exchange", writable: true), cal("Personal", "iCloud", writable: true),
+                  cal("Birthdays", "Other", writable: false), cal("US Holidays", "Subscribed", writable: false)]
+    var page = RequestPageConfig()
+    page.infer(calendars: device, receiver: cal("Personal", "iCloud", writable: true))
+    check(page.blocking.map(\.title) == ["Work", "Personal"], "writable calendars block; subscribed and read-only do not")
+    check(page.requestCalendar == CalRef(title: "Personal", account: "iCloud"), "the calendar new events go to receives")
+    check(!page.isReady && !page.enabled, "inference turns nothing on and publishes nothing — no name, no slug")
+
+    var chosen = RequestPageConfig(blocking: [CalRef(title: "Work", account: "Exchange")],
+                                   requestCalendar: CalRef(title: "Work", account: "Exchange"))
+    chosen.infer(calendars: device, receiver: cal("Personal", "iCloud", writable: true))
+    check(chosen.blocking.map(\.title) == ["Work"] && chosen.requestCalendar?.title == "Work",
+          "an owner who already chose keeps their choices")
+
+    var noDefault = RequestPageConfig()
+    noDefault.infer(calendars: device, receiver: cal("US Holidays", "Subscribed", writable: false))
+    check(noDefault.requestCalendar?.title == "Work", "a read-only default falls back to the first writable calendar")
+    var nothing = RequestPageConfig()
+    nothing.infer(calendars: [cal("US Holidays", "Subscribed", writable: false)], receiver: nil)
+    check(nothing.blocking.isEmpty && nothing.requestCalendar == nil, "a device with nothing writable infers nothing, and says so on the preview")
+}
+
 print("TokenStore:")
 do {
     // slugs() is how a fresh install learns which page its iCloud Keychain

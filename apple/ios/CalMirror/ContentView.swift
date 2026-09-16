@@ -74,7 +74,7 @@ struct ContentView: View {
 
     private var explainerSheet: some View {
         RequestPageExplainer(
-            onContinue: { showingExplainer = false; pushingSetup = true },
+            onContinue: { model.inferRequestPage(); showingExplainer = false; pushingSetup = true },
             onDismiss: { showingExplainer = false })
     }
 
@@ -167,7 +167,7 @@ struct ContentView: View {
                     } else if let slug = model.recoverableSlug {
                         // The key is here, the config is not: carry on at
                         // the same address, straight to the calendars.
-                        Button { model.reattachRequestPage(); pushingSetup = true } label: {
+                        Button { model.reattachRequestPage(); model.inferRequestPage(); pushingSetup = true } label: {
                             HStack {
                                 RequestPageRow(page: nil, recoverable: slug)
                                 Image(systemName: "chevron.forward")
@@ -229,7 +229,7 @@ struct ContentView: View {
                 sendTimes = await model.sendTimesLine()
             }
             .navigationDestination(isPresented: $pushingSetup) {
-                RequestPageSetupView(start: .calendars, page: model.config.requestPage)
+                RequestPageSetupView(start: .preview, page: model.config.requestPage)
             }
             .sheet(isPresented: $showingExplainer) { explainerSheet }
     }

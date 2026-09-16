@@ -115,6 +115,16 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
         }.sorted { ($0.account, $0.title) < ($1.account, $1.title) }
     }
 
+    /// The calendar the system would put a new event in — what zero-decision
+    /// setup infers as the one accepted requests are written to. Nil when
+    /// there is none, or it cannot be written to; the caller falls back to
+    /// the first writable calendar and says so.
+    public func defaultCalendar() -> CalendarInfo? {
+        guard let c = store.defaultCalendarForNewEvents, c.allowsContentModifications else { return nil }
+        return CalendarInfo(title: c.title, account: c.source.title,
+                            identifier: c.calendarIdentifier, writable: true)
+    }
+
     // MARK: Sync
 
     /// Sync every enabled mirror in `config`. `log` receives progress lines.

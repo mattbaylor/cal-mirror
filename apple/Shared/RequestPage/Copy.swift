@@ -34,7 +34,7 @@ enum RequestCopy {
         static let symbol = "calendar.badge.clock"
         static let title = "A page where people can ask for a time"
         static let features: [Feature] = [
-            Feature(symbol: "calendar", headline: "You choose the times", line: "A handful of offers, from the calendars you pick."),
+            Feature(symbol: "calendar", headline: "You choose the times", line: "A handful of offers, worked out from your calendars."),
             Feature(symbol: "lock.shield", headline: "The server never sees your calendar", line: "It holds the times you offer and the requests that come in. Nothing else."),
             Feature(symbol: "checkmark.circle", headline: "Nothing lands until you accept", line: "Every request comes to this device, and you answer it here."),
         ]
@@ -56,7 +56,7 @@ enum RequestCopy {
     enum Display {
         static let section = "Your page"
         static let nameTitle = "Display name"
-        static let namePlaceholder = "Matt Baylor"
+        static let namePlaceholder = "Your name, or any label"
         static let blurbTitle = "One line about it"
         static let blurbPlaceholder = "30 minutes, usually about refereeing or calendars."
         static let meetingSection = "When you accept"
@@ -247,6 +247,14 @@ enum RequestCopy {
         static let whyHeading = "Why"
         static let cappedNote = "Times you could have offered and chose not to."
         static let stale = "Calculated just now from this device. Nothing has been published."
+        static let adjustHeader = "Adjust"
+        static let adjustCalendars = "Which calendars"
+        static let adjustPage = "Your page"
+        static let adjustDay = "Your day"
+        static let adjustFooter = "Good defaults are already in — every writable calendar blocks, and accepted requests go where new events do. Change any of it here, now or later."
+        static let blocks = "%d calendars block · accepted requests go to %@"
+        static let blocksOne = "1 calendar blocks · accepted requests go to %@"
+        static let noReceiver = "No calendar can be written to, so nothing can be accepted yet."
 
         /// Why individual candidates were dropped. Lower-case
         /// fragments — they are joined into a sentence.
