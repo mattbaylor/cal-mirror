@@ -144,7 +144,8 @@ have; **mine** means it can be built and tested without you.
 | | What |
 |---|---|
 | 19 | **MCP** (`design/mcp.md`) — the whole tool configurable from a chat session, diagnosis included. You called it "a fantastic answer for the desktop". Scope for 2.0 is your call; the deriver already reports *why* it rejected each slot, which is the half the agent surface needs. |
-| 20 | **Siri / App Intents** (`design/siri.md`). |
+| 20 | **Siri / App Intents** (`design/siri.md`). Checked against the iOS 27.0 SDK on 16 Sept: the new Calendar domain is event CRUD only, no scheduling schema anywhere, so an unbranded "help me schedule this" cannot reach us in 27; branded phrases, indexed entities and long-running intents can. The multi-turn shape exists as SPI (`_ModelDelegationIntent`) — the door to watch, not to ship on. |
+| 20a | **Send times · personal links · zero-decision setup** — three proposals from the 16 Sept outside review, in `decisions.md` under *Proposed*. The first needs no service. |
 | 21 | **The overlay** for requesters who are Calendar Mirror users (`design/overlay.md`, zero-setup path decided). |
 | 22 | **Proof of work** on the request page — deferred until there is traffic to justify it (§8). |
 | 23 | **Timezone picker** on the page; browser decides today. |

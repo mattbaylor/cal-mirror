@@ -123,3 +123,46 @@ does not depend on which surface wins.
 4. **Whether App Intents on macOS is a serious surface or a checkbox.** If it is
    real, MCP becomes the developer path and App Intents the everyone-else path,
    which changes who each is built for.
+
+---
+
+## What the iOS 27.0 SDK actually contains *(16 September 2026)*
+
+Read off `AppIntents.swiftinterface` in the iOS 27.0 SDK shipped with Xcode
+27.0 (27A266a), not off a blog or a session transcript. This answers items 1
+and 3 of the list above.
+
+**The Calendar domain is new in 27** — every part of it is
+`@available(anyAppleOS 27.0, *)` — and it is CRUD on events and nothing else:
+
+| Kind | Identifiers |
+|---|---|
+| Intents | `CreateEventIntent`, `UpdateEventIntent`, `DeleteEventIntent` |
+| Entities | `EventEntity`, `CalendarEntity`, `AttendeeEntity` |
+| Enums | `AttendeeType`, `EventEntityStatus`, `EventSpan` |
+
+**No domain has a scheduling, availability or propose-times schema.** So an
+unbranded *"help me schedule this meeting"* has nothing that routes it to a
+third-party app; Siri takes it to Apple Calendar or nowhere. Adopting
+`createEvent` would make Siri route event creation to us — a calendar app's
+job, not ours. Do not adopt the Calendar domain.
+
+**Public and new in 27:** `LongRunningIntent` with `performBackgroundTask`
+(work without the app in front — publish and collect fit), `IntentResponseStream`
+(streaming results; the rumour above was half right), `SyncableEntity`,
+`IntentExecutionTargets`, `AppUnionValue`.
+
+**Present, hidden, new in 27:** `_ModelDelegationIntent`, with `IntentPrompt`,
+`conversationIdentifier` and `_ModelDelegationConfiguration` — underscored and
+`@_documentation(visibility: internal)`. It is the shape of the multi-turn
+claim: an intent hands a prompt and a conversation to the system model. It is
+SPI; nothing may ship on it. It is the door to watch at WWDC27.
+
+**What this settles for the build.** De facto by utterance is not available in
+27. What is: branded phrases through `AppShortcutsProvider` (the phrase must
+carry `\(.applicationName)`), entities in the index (`IndexedEntity` on
+offered slots, `AppEntity` on requests), on-screen text as an intent
+parameter, and long-running intents for publish and collect. Build those three
+intents — send times, accept/decline over a request entity, publish — in
+`CalMirrorKit` with adapters beside `SyncIntent.swift`, and the conversational
+layer becomes an adapter when Apple opens it.
