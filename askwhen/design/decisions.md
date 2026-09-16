@@ -640,6 +640,37 @@ It lands in your calendar if the time is still clear."* — is the part that
 stops the first automatic event reading as the app acting alone; it is copy,
 and it is his.
 
+**Zero-decision setup, as built.** *(16 September 2026 — the shape is
+Matt's decision; these are the choices inside it, an agent's, built as
+written unless he says otherwise.)*
+
+- **The explainer's Continue infers, and the next screen is the preview.**
+  Writable calendars block; subscribed and read-only ones do not; the
+  calendar new events go to receives, falling back to the first writable
+  one; the policy is its defaults. Only what is empty is filled, so an
+  owner who already chose keeps their choices, and a reconnected page gets
+  its local half back the same way. The rule is `RequestPageConfig.infer`
+  in the Kit, with six `cmk-check` cases.
+- **The display name is asked, not taken from the Me card — on the phone.**
+  The Me card needs Contacts permission, and a system prompt for Contacts
+  to guess a label is a worse first minute than one text field; the name
+  is also the one identifying field, which the display-name decision says
+  the owner should choose the disclosure of. So the preview opens with one
+  field and a one-line warning while it is empty. The Mac has the
+  account's full name without asking and fills it in, editable.
+- **Calendars, page and day are three rows under *Adjust*** at the foot of
+  the preview, each pushed with Back as the way out, each with a one-line
+  summary of what was inferred (*2 calendars block · accepted requests go
+  to Personal*; *9:00 AM–5:00 PM · Mon–Fri · 30 min*). The footer says the
+  defaults are in and can be changed now or later.
+- **The product load stays on the offer.** Continue infers from the
+  device and writes the local config; the first network request of any
+  kind is still *See what it costs*. Checked on a fresh install: zero
+  connection log lines between the row and the preview.
+- **The name placeholder is neutral.** It was "Matt Baylor"; it is now
+  *Your name, or any label*, so no frame of this screen can carry a real
+  name.
+
 **Personal links, as built.** *(16 September 2026 — the shape is Matt's
 decision; these are the choices inside it, an agent's, built as written
 unless he says otherwise.)*

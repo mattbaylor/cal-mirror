@@ -1,24 +1,6 @@
 import Foundation
 import EventKit
 
-/// A calendar available on this device, for pickers and matching.
-public struct CalendarInfo: Identifiable, Hashable, Sendable {
-    public let title: String
-    public let account: String
-    public let identifier: String
-    public let writable: Bool
-    public var id: String { identifier }
-    public var label: String { "\(title) — \(account)" }
-
-    /// Public so a fixture outside the Kit can describe a calendar that does
-    /// not exist — the synthetic Mac in `MacFixture` builds its list this way
-    /// rather than asking EventKit.
-    public init(title: String, account: String, identifier: String, writable: Bool) {
-        self.title = title; self.account = account
-        self.identifier = identifier; self.writable = writable
-    }
-}
-
 /// The result of syncing one mirror.
 public struct MirrorResult: Identifiable, Sendable {
     public let id: String
@@ -113,6 +95,16 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
             CalendarInfo(title: $0.title, account: $0.source.title,
                          identifier: $0.calendarIdentifier, writable: $0.allowsContentModifications)
         }.sorted { ($0.account, $0.title) < ($1.account, $1.title) }
+    }
+
+    /// The calendar the system would put a new event in — what zero-decision
+    /// setup infers as the one accepted requests are written to. Nil when
+    /// there is none, or it cannot be written to; the caller falls back to
+    /// the first writable calendar and says so.
+    public func defaultCalendar() -> CalendarInfo? {
+        guard let c = store.defaultCalendarForNewEvents, c.allowsContentModifications else { return nil }
+        return CalendarInfo(title: c.title, account: c.source.title,
+                            identifier: c.calendarIdentifier, writable: true)
     }
 
     // MARK: Sync

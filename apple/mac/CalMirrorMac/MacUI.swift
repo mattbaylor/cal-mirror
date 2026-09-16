@@ -114,7 +114,9 @@ struct ManageView: View {
                 Section("AskWhen.me") {
                     Button {
                         // A key with no config: carry on at the same address.
-                        if !model.hasRequestPage, model.recoverableSlug != nil { model.reattachRequestPage() }
+                        if !model.hasRequestPage, model.recoverableSlug != nil {
+                            model.reattachRequestPage(); model.inferRequestPage()
+                        }
                         showingSetup = true
                     } label: {
                         RequestPageRow(page: model.config.requestPage,

@@ -57,6 +57,30 @@ extension Store {
         save()
     }
 
+    /// Zero-decision setup (`decisions.md`, *Setup with zero decisions, and
+    /// the preview before the offer*): turning the row on infers the rest,
+    /// and the first thing shown is the preview. Writable calendars block;
+    /// subscribed and read-only ones (holidays, a sports feed) do not; the
+    /// calendar new events go to receives; the policy is its defaults. Only
+    /// what is empty is inferred, so an owner who already chose keeps their
+    /// choices, and every inference is a row away under *Adjust*.
+    ///
+    /// The display name is the one thing not inferred on iOS: the Me card
+    /// would need a Contacts prompt, and a system dialog asking for Contacts
+    /// to guess a label is a worse first minute than one text field. The
+    /// Mac has the account's full name without asking, and uses it.
+    func inferRequestPage() {
+        var page = requestPage
+        page.infer(calendars: calendars, receiver: fixture ? nil : engine.defaultCalendar())
+        #if os(macOS)
+        if page.displayName.trimmingCharacters(in: .whitespaces).isEmpty, !fixture {
+            page.displayName = NSFullUserName()
+        }
+        #endif
+        requestPage = page
+        save()
+    }
+
     /// Writable calendars, for the "use for requests" choice. Read-only ones
     /// are still listed — the row disables its own control and says why, which
     /// is more use than a calendar silently missing from the list.

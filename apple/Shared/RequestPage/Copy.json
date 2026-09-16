@@ -29,7 +29,7 @@
       {
         "symbol": "calendar",
         "headline": "You choose the times",
-        "line": "A handful of offers, from the calendars you pick."
+        "line": "A handful of offers, worked out from your calendars."
       },
       {
         "symbol": "lock.shield",
@@ -58,7 +58,7 @@
   "display": {
     "section": "Your page",
     "nameTitle": "Display name",
-    "namePlaceholder": "Matt Baylor",
+    "namePlaceholder": "Your name, or any label",
     "blurbTitle": "One line about it",
     "blurbPlaceholder": "30 minutes, usually about refereeing or calendars.",
     "meetingSection": "When you accept",
@@ -117,7 +117,15 @@
     "emptyPage": "Your page would be empty — the reasons are on each day below.",
     "countOne": "%d time",
     "countMany": "%d times",
-    "across": "across %d days"
+    "across": "across %d days",
+    "adjustHeader": "Adjust",
+    "adjustCalendars": "Which calendars",
+    "adjustPage": "Your page",
+    "adjustDay": "Your day",
+    "adjustFooter": "Good defaults are already in — every writable calendar blocks, and accepted requests go where new events do. Change any of it here, now or later.",
+    "blocks": "%d calendars block · accepted requests go to %@",
+    "blocksOne": "1 calendar blocks · accepted requests go to %@",
+    "noReceiver": "No calendar can be written to, so nothing can be accepted yet."
   },
   "offer": {
     "section": "Publishing",
