@@ -1,6 +1,6 @@
 # Where this is, and what is left
 
-**Written 11 September 2026; updated 15 September.** Read this first; then [`TASKS.md`](TASKS.md) for
+**Written 11 September 2026; updated 15 September (evening).** Read this first; then [`TASKS.md`](TASKS.md) for
 the live board. `HANDOFF.md` (1 September) is retired — everything in it that
 was still true is here, and everything else has been done.
 
@@ -43,12 +43,45 @@ verified against the live service, not only in tests.
 | `/internal/*` perimeter, `askwhen.me/` → `calendarmirror.com` | ✓ | live |
 | Entitlement: create by Apple-signed transaction, tiers, App Store Server Notifications, 7-day grace then delete | ✓ | tests; sandbox proof waits on a purchase from a build |
 
-### The device client — built, no UI
+### The device client — built, and now with a UI
 
 `apple/Sources/CalMirrorKit/Booking/`: config, publish planner, queue poller,
 the accept-time re-check against the real calendar, the API client, the
-coordinator, Keychain token storage. 391 `cmk-check` checks. **Nothing in the
-app targets calls it yet** — see "What is left".
+coordinator, Keychain token storage, and `SubscriptionStore` over StoreKit 2.
+
+**The UI landed 15 September** ([#99](https://github.com/mattbaylor/cal-mirror/pull/99)),
+in `apple/Shared/RequestPage/` — fifteen screens from the dormant row to a
+page that has lapsed and been deleted. Both app targets call it.
+
+| | |
+|---|---|
+| Opting in | A row that is off, an explainer that names the price before any work is asked for |
+| Calendars | The two checkboxes per calendar, *use for requests* enforced as exactly one at the control |
+| Settings | Display name, blurb, meeting title; the policy asked as a sentence with the zone on the line |
+| Preview | Real dates from the real calendar, with `SlotDeriver.explain`'s accounting on empty days |
+| The offer | The Request Page trial as the single live action; the paid tiers shown, sold on the address screen |
+| Requests | A notification per request carrying Accept and Decline, on both platforms, plus the outcome said back |
+| Conflicts | What landed (as a time — `BusyInterval` carries nothing else) and the nearest alternatives |
+| Addresses | Claim a subdomain or a domain you own, the CNAME walkthrough, the upgrade |
+| Lapse | Grace, revoked and deleted, as three states with different words |
+
+**Setup is local end to end.** StoreKit's product load is the app's first
+network request of any kind and happens on the offer screen, so an owner can
+walk the whole of setup, decide against it and close the app having sent
+nothing anywhere. `decisions.md`, *The product load happens on the offer
+screen*.
+
+**Copy lives once.** `apple/Shared/RequestPage/Copy.json` generates the app's
+strings, `apple/tools/contact-sheet.html` and `apple/tools/review.html`; CI
+diffs all three, so a review artifact cannot drift from what ships. Their
+example data comes from `apple/tools/review-fixture.json`, synthetic on
+purpose — the rule against using the live config is satisfied by where the
+data comes from rather than by whoever runs the script being careful.
+
+**Not yet seen running.** It compiles and `cmk-check` covers what is pure, but
+nothing in it has been exercised in a simulator or on a device. The
+notification actions and the StoreKit sheet are the two nothing tests
+end to end.
 
 ### The web app — built, TypeScript, live
 
@@ -82,15 +115,15 @@ have; **mine** means it can be built and tested without you.
 
 | | What | Whose | Size |
 |---|---|---|---|
-| 1 | **The request-page UI in the app.** The two checkboxes in Manage Mirrors (*block for requests* / *use for requests*), a settings sheet (display name, blurb, meeting title, the policy), the per-request notification with Accept/Decline, and the conflict sheet showing `RequestChecker`'s alternatives. The Kit exposes everything it needs (`askwhen/README.md` §4). | **Yours** — look-and-feel | days |
-| 2 | **The purchase UI.** Everything under it is done (15 Sept): App Store Connect, the `.storekit` file, and `SubscriptionStore` in the Kit — offers with Apple's prices, purchase, current entitlement, restore, updates — with `FakeSubscriptions` to build against. The UI calls five things and hands `SubscriptionState.active.transaction` to `create`. | **Yours** — look-and-feel | days |
+| 1 | ~~The request-page UI in the app~~ **done 15 Sept** ([#99](https://github.com/mattbaylor/cal-mirror/pull/99)). Fifteen screens, approved against `apple/tools/review.html`. **Run on 15 Sept, evening**, end to end in a simulator; seven bugs fixed on the spot, the rest in `decisions.md`, *From the first run of the UI on a Mac*. | done | — |
+| 2 | ~~The purchase UI~~ **done 15 Sept**, in the same PR. The offer screen sells the Request Page trial; subdomain and domain are sold on the address screen, where the want appears. Restore Purchases is there because Apple requires it. **Run against StoreKit on 15 Sept** — the trial buys with no network and no sandbox account; the create that follows is refused by the live service, as it should be for an Xcode-environment transaction. Sandbox proof (item 3 in `TASKS.md` "Next") is still the real one. | done | — |
 | 3 | ~~Entitlement verification on the service~~ **done 15 Sept.** `POST /v1/pages` takes Apple's signed transaction, verifies it offline against Apple's pinned root, derives the entitlement, enforces the tier on pages and hostnames. `AW_APPSTORE_SANDBOX=1` until launch, then `0`. | done | — |
 | 4 | ~~Lapse~~ **done 15 Sept.** `/hooks/appstore` and `/hooks/appstore-sandbox` take Server Notifications V2; `EXPIRED` starts the 7-day grace (page serves "not currently taking requests", publish refused), `DID_RENEW` ends it, `REFUND`/`REVOKE` skip it; the sweep deletes pages whose grace ran out, and lapses any subscription 17 days past expiry even if the notification never came. **Proof against the sandbox** waits on a purchase from a build. | done | — |
 | 5 | ~~Flip on-demand TLS~~ **done 15 Sept** — custom domains and subdomains are live. | done | — |
 | 6 | **Privacy policy and site.** `docs/privacy.html` describes an app that touches no server. AskWhen.me has a server that briefly holds a stranger's name, address and note; the policy has to say so, plainly and in the product's own voice. Pricing, tiers and the AskWhen.me story on the site. | mine to draft, **yours** to approve | a day |
 | 7 | **Rotate the five leaked credentials** (`cloudflare_apitoken`, the two R2 keys, the R2 endpoint, `gh_claude`) — printed into a transcript 4 Sept. You said at prod; this is prod. | **Yours** | an hour |
 | 8 | ~~Back up the pepper~~ **done** (Infisical). | done | — |
-| 9 | **App Store screenshots and review notes for Calendar Mirror 2.0**, from a synthetic config, never the live one. | mine to produce, **yours** to approve | a day |
+| 9 | **A simulator pass over the request-page UI, then App Store screenshots and review notes for Calendar Mirror 2.0** — from a synthetic config, never the live one. These are one job now: the first run of the UI is also where the screenshots come from, and `apple/tools/review-fixture.json` already holds a synthetic owner to drive it. | **Yours** to run, mine to fix what it finds | a day |
 | 10 | **Release Calendar Mirror 2.0 from CI** (`release.yml`). Never from this laptop. 1.4.2 folds in — it is on `main` unreleased. | **Yours** | hours |
 
 ### Should — ship-worthy without them, worse for it

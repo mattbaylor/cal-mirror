@@ -58,7 +58,9 @@ struct RequestOfferView: View {
             case .alreadySubscribed(let state):
                 already(state)
             case .purchasing:
-                progress(RequestCopy.Offer.loading)
+                // Apple's sheet is up, or has just gone: "asking for the
+                // price" is the wrong sentence under it.
+                progress(RequestCopy.Offer.purchasing)
             case .pending:
                 notice(RequestCopy.Offer.pendingTitle, RequestCopy.Offer.pendingBody, "clock.badge.checkmark")
             case .creating:
@@ -218,8 +220,25 @@ struct RequestOfferView: View {
         if state.isActive { phase = .alreadySubscribed(state); return }
 
         phase = .loading
-        do { phase = .offering(try await subscriptions.offers()) }
-        catch { phase = .failed }
+        // Two attempts, a second apart. The first product request after launch
+        // was seen to come back empty in the simulator and succeed on the very
+        // next tap of "Try again"; a transient like that should not be the
+        // owner's problem to notice. Anything that fails twice is the real
+        // failure screen, with its retry.
+        for attempt in 0..<2 {
+            if attempt > 0 { try? await Task.sleep(for: .seconds(1)) }
+            // StoreKit answers an unknown product id with silence, not an
+            // error — an empty list, or one without the page tier — and the
+            // screen that would render is a heading over nothing with no way
+            // forward. Seen first in a simulator with no .storekit file
+            // attached; on a device it is the App Store unreachable.
+            if let offers = try? await subscriptions.offers(),
+               offers.contains(where: { $0.tier == .page }) {
+                phase = .offering(offers)
+                return
+            }
+        }
+        phase = .failed
     }
 
     private func buy(_ tier: AskWhenTier) async {

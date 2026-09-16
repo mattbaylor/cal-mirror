@@ -26,6 +26,11 @@ struct RequestPolicyFields: View {
 
     var body: some View {
         Section {
+            // One sentence on the Mac, where it fits on a line. On a phone the
+            // same line wraps mid-phrase ("My day / starts at"), so it breaks
+            // at the clause instead: the two halves stay a sentence read top
+            // to bottom, and each picker sits beside the words it belongs to.
+            #if os(macOS)
             HStack(spacing: 6) {
                 Text(RequestCopy.Policy.dayStarts)
                 timeField(\.day.starts)
@@ -33,12 +38,30 @@ struct RequestPolicyFields: View {
                 timeField(\.day.ends)
             }
             .font(.body)
+            #else
+            HStack(spacing: 6) {
+                Text(RequestCopy.Policy.dayStarts)
+                Spacer()
+                timeField(\.day.starts)
+            }
+            HStack(spacing: 6) {
+                Text(RequestCopy.Policy.dayEnds)
+                Spacer()
+                timeField(\.day.ends)
+            }
+            #endif
 
             Picker(RequestCopy.Policy.zoneTitle, selection: Binding(
                 get: { policy.timeZone },
                 set: { policy.timeZone = $0; onChange() })) {
                 ForEach(Self.zones, id: \.self) { Text($0).tag($0) }
             }
+            // A Form's default picker on the phone is a pop-up menu, and 400
+            // zones in a menu is a wall that cannot be searched or scrolled
+            // to. Pushed as its own list it is at least a list.
+            #if !os(macOS)
+            .pickerStyle(.navigationLink)
+            #endif
             Text(RequestCopy.Policy.zoneCaption)
                 .font(.caption).foregroundStyle(.secondary)
 

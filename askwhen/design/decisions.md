@@ -436,6 +436,76 @@ of them is worth reopening on its own merits if it starts to bite:
 Everything here was arrived at by Claude and reads as settled in the docs it came
 from. It is not. Each needs Matt's yes, no, or something else.
 
+**From the first run of the UI on a Mac** *(15 September 2026, evening — the
+simulator pass `TASKS.md` "Next" 1 asked for.)* Everything below was seen
+moving on an iPhone 17 Pro simulator under Xcode 27, not read. The bugs it
+found are fixed in the same change and are not decisions; these are the
+things that are.
+
+- **The zone picker is a pushed list, not a menu.** On the phone a `Form`'s
+  default picker is a pop-up menu, and the full IANA list in one is a wall
+  400 rows deep that cannot be searched or jumped in; it is the *"worth
+  reopening if it bites"* case from the approval, and it bit on the first
+  tap. The list style is the platform's own answer for a long picker and
+  changes nothing about the content, so it went in. What would make it
+  better than adequate is search (`.searchable` on the pushed list) or the
+  common zones first — a design choice, so it is here rather than in the
+  code.
+- **The policy screen is two and a third phone screens.** Measured, not
+  felt: the first card (day, zone, gap, weekdays) fills one screen and the
+  six numbered settings with their captions fill the next one and a third.
+  The captions are the length, not the controls — each is a sentence or two
+  of consequence, and they are the part that earns the setting its place.
+  Nothing folded yet; the candidates from the approval (buffer, align, slot
+  length) are still the ones to fold behind a disclosure if this reads as
+  long to you. The *"My day starts at … and ends at …"* sentence did not fit
+  a phone's width and broke mid-phrase; on iOS it is now two rows, the
+  sentence read top to bottom. The Mac keeps the one line.
+- **"askwhen.me did not answer" is said when askwhen.me answered no.** Both
+  the create-failed screen and the domains section use the same words for a
+  timeout and for a refusal (a 401, a 402, a *"transaction did not
+  verify"*). They are different situations for the owner: one is *try again
+  later*, the other is *something is wrong*. Every refusal comes with the
+  service's own line, so the screen already knows which it has; a second
+  headline for the refusal would be a copy line, and copy is yours. The raw
+  `rejected("{\"error\":\"…\"}")` under the create-failed heading is the
+  same problem — honest, but a debugger's sentence.
+- **A decline the service does not take now stays in the queue.** It used
+  to be dropped and announced as declined, while the requester heard nothing
+  and the next poll brought it back. Now it stays under *Waiting for you*,
+  which is honest, but silent: nothing says why the tap did nothing. The
+  accept side has the same gap (`writtenButNotResolved` keeps the request
+  and says so only in a notification). One line for *"askwhen.me has not
+  been told yet"* would close both; the words are yours.
+- **The calendar screen's two captions sit as orphan rows.** *"Events here
+  make you unavailable…"* and *"Requests you accept are written here…"*
+  appear after the last calendar rather than beside the toggles they
+  explain, so on a phone with three calendars they are a screen away from
+  what they describe. A footer under the section, or a caption under each
+  toggle's first appearance, would fix it; left as built because it is
+  layout of approved copy.
+- **The preview's notice-window line reads as a bare number.** *"16 inside
+  your notice window"* against neighbours that are sentences (*"You do not
+  offer this weekday."*). Copy.
+- **The conflict sheet as a time, not a title, reads fine.** Seen with a
+  real clash (a seeded hour against a seeded request): *"Wednesday,
+  September 16 — 10:00 AM–11:00 AM"* under *What is on it now* says
+  enough, and the caption explaining why it is a time carries the weight.
+  Nothing to reopen.
+- **Publisher nomination folded into the live page reads fine.** As a
+  statement (*This device publishes*) it is a fact, not a question, which
+  is what the approval argued. Nothing to reopen.
+
+What the pass could not reach: the lapse states (grace, revoked, deleted) —
+they need an expired subscription, which the StoreKit configuration only
+produces from Xcode's transaction manager; the accept path with a *clear*
+slot end to end (the write was seen through *Accept anyway*, and the
+service's side of it needs a real page); and Accept from the notification
+itself, which needs a real press-and-hold. The routing behind that button
+was fixed by inspection — the delegate is now assigned before launch
+finishes, and the handler collects the queue before deciding the request
+is gone — and the same code path was walked from the in-app row.
+
 **Not offering a free tier, on deliverability grounds.** Mail is self-hosted on
 `dlvr.rehosted.us`, so sending reputation is ours alone with nobody to absorb a
 mistake. A free tier is an open relay for anyone wanting to send confirmation

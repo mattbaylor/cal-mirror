@@ -1,0 +1,139 @@
+name: screenshots
+
+# Boots a simulator on a macOS runner, drives the request-page UI to each
+# screen and uploads the frames as an artifact.
+#
+# This exists because the sessions that write this UI generally cannot run it:
+# they are Linux containers with no Apple toolchain, so "it compiles" has been
+# the strongest claim available. A screenshot is the weakest form of actually
+# looking at it, and it is a great deal stronger than that.
+#
+# Not on every PR. It boots a simulator and builds for it, which is minutes,
+# and the answer only changes when the UI or its copy does.
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: Simulator to use
+        default: iPhone 16 Pro
+        type: string
+  pull_request:
+    paths:
+      - 'apple/Shared/RequestPage/**'
+      - 'apple/ios/**'
+      - '.github/workflows/screenshots.yml'
+
+jobs:
+  shots:
+    name: request-page screenshots
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      # The seeding path must not exist outside a debug build. Checking it here
+      # rather than trusting the #if means a careless change to the gates fails
+      # the job that depends on them rather than shipping quietly.
+      - name: The seed is debug-only and simulator-only
+        run: |
+          set -euo pipefail
+          f=apple/Shared/RequestPage/DebugSeed.swift
+          head -1 "$f" | grep -qx '#if DEBUG' || { echo "DebugSeed.swift must open with #if DEBUG"; exit 1; }
+          tail -1 "$f" | grep -qx '#endif'    || { echo "DebugSeed.swift must close its #if DEBUG"; exit 1; }
+          grep -q 'targetEnvironment(simulator)' "$f" || { echo "DebugSeed must gate on the simulator"; exit 1; }
+          # Every caller outside the file has to be inside its own #if DEBUG.
+          while IFS= read -r caller; do
+            grep -q '#if DEBUG' "$caller" || { echo "$caller calls DebugSeed outside #if DEBUG"; exit 1; }
+          done < <(grep -rl 'DebugSeed' apple --include='*.swift' | grep -v 'DebugSeed.swift')
+          echo "gates intact"
+
+      - name: Generate the Xcode project
+        working-directory: apple/ios
+        run: xcodegen generate
+
+      - name: Boot the simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          UDID=$(python3 apple/tools/pick-sim.py "${{ inputs.device || 'iPhone 16 Pro' }}")
+          [ -n "$UDID" ] || { echo "no iOS simulator available on this runner"; exit 1; }
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID"
+
+      - name: Build for the simulator
+        working-directory: apple/ios
+        run: |
+          xcodebuild -project CalMirror.xcodeproj -scheme CalMirror \
+            -configuration Debug -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGN_IDENTITY=- -quiet build
+
+      - name: Install and grant access
+        run: |
+          set -euo pipefail
+          UDID="${{ steps.sim.outputs.udid }}"
+          BUNDLE=io.github.mattbaylor.cal-mirror
+          xcrun simctl install "$UDID" "$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/CalMirror.app"
+          # Without these the first frame is a permission alert rather than the
+          # screen being photographed.
+          xcrun simctl privacy "$UDID" grant all "$BUNDLE" || true
+
+      - name: Seed the synthetic owner
+        run: |
+          set -euo pipefail
+          UDID="${{ steps.sim.outputs.udid }}"
+          BUNDLE=io.github.mattbaylor.cal-mirror
+          # The container only exists once the app has run; a throwaway launch
+          # creates it, then the config goes in before the real ones.
+          xcrun simctl launch "$UDID" "$BUNDLE" >/dev/null || true
+          sleep 3
+          xcrun simctl terminate "$UDID" "$BUNDLE" || true
+          DIR=$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data)
+          mkdir -p "$DIR/Library/Application Support"
+          python3 apple/tools/seed-config.py > "$DIR/Library/Application Support/config.json"
+          echo "seeded $DIR/Library/Application Support/config.json"
+
+      - name: Photograph each screen
+        run: |
+          set -euo pipefail
+          UDID="${{ steps.sim.outputs.udid }}"
+          BUNDLE=io.github.mattbaylor.cal-mirror
+          OUT="$RUNNER_TEMP/shots"; mkdir -p "$OUT"
+
+          shot () {                       # shot <name> <launch args...>
+            local name="$1"; shift
+            xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
+            xcrun simctl launch "$UDID" "$BUNDLE" "$@" >/dev/null
+            sleep 4                       # let the seed write and the view settle
+            xcrun simctl io "$UDID" screenshot "$OUT/$name.png" >/dev/null
+            echo "  $name"
+          }
+
+          # 1 is the dormant row, which is the app's own root — no screen
+          # argument, and deliberately no seed either, since the point of it is
+          # what an owner sees before anything has happened.
+          shot 01-dormant-row
+          for s in explainer calendars display policy preview offer live; do
+            shot "$s" -AskWhenSeed -AskWhenScreen "$s"
+          done
+          shot conflict -AskWhenSeed -AskWhenScreen preview -AskWhenConflict
+
+          # Dark mode for the two that carry the most copy, since that is where
+          # a contrast mistake would actually cost something.
+          xcrun simctl ui "$UDID" appearance dark
+          shot explainer-dark -AskWhenSeed -AskWhenScreen explainer
+          shot live-dark -AskWhenSeed -AskWhenScreen live
+
+          ls -la "$OUT"
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: request-page-screenshots
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: error

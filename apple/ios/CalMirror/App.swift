@@ -47,25 +47,37 @@ enum BackgroundSync {
     }
 }
 
+/// Owns the store and the notification delegate, because both have to exist
+/// before launch finishes. Apple's rule for `UNUserNotificationCenter` is that
+/// its delegate is assigned before `didFinishLaunching` returns; a delegate
+/// set from a view's `onAppear` misses the one case that matters — Accept
+/// tapped on a lock screen, which launches the app in the background with no
+/// window and no view to appear. The store lives here for the same reason:
+/// the response needs somewhere to go the moment it arrives.
+@MainActor
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    let model = Store()
+    let notifications = RequestNotificationDelegate()
+
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        notifications.store = model
+        UNUserNotificationCenter.current().delegate = notifications
+        let model = model
+        BackgroundSync.collector = { Task { await model.collectRequests() } }
+        return true
+    }
+}
+
 @main
 struct CalMirrorApp: App {
-    @StateObject private var model = Store()
-    @StateObject private var notifications = RequestNotificationDelegate()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(model)
-                .environmentObject(notifications)
-                .onAppear {
-                    // Wired here rather than in Store: iOS can deliver a
-                    // notification response before any view exists, and an
-                    // Accept that only worked with a window open would fail
-                    // exactly when it was most useful.
-                    notifications.store = model
-                    UNUserNotificationCenter.current().delegate = notifications
-                    BackgroundSync.collector = { Task { await model.collectRequests() } }
-                }
+                .environmentObject(delegate.model)
+                .environmentObject(delegate.notifications)
         }
         // System-driven background refresh; reschedules itself after each run.
         .backgroundTask(.appRefresh(BackgroundSync.refreshID)) {
