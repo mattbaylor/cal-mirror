@@ -168,7 +168,14 @@ enum DebugSeed {
         page.blocking = [ref]
         page.requestCalendar = ref
         // Still not enabled and still no slug: the opt-in is the thing worth
-        // seeing from the start, and a seeded live page would hide it.
+        // seeing from the start, and a seeded live page would hide it. The
+        // one exception is opening *at* the live screen, which is after the
+        // opt-in by definition — a live page with no address is not a state
+        // the app can be in, and photographing one showed "askwhen.me/".
+        if startStep == .live, page.slug.isEmpty {
+            page.slug = "x7f2k9"
+            page.enabled = true
+        }
         store.requestPage = page
         store.save()
         seedRequest(into: store)

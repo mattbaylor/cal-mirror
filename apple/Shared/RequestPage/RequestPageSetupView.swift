@@ -47,40 +47,61 @@ struct RequestPageSetupView: View {
             #if !os(macOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            .toolbar {
+                // Sharing is the system's sheet, not a Copy button of our own:
+                // it covers copy, Messages, Mail and AirDrop, and it is where
+                // an owner on either platform expects to find it.
+                if step == .live, let url = liveURL {
+                    ToolbarItem(placement: .primaryAction) {
+                        ShareLink(item: url)
+                    }
+                }
+            }
+    }
+
+    private var liveURL: URL? {
+        let page = model.requestPage
+        guard !page.slug.isEmpty, !lapseIsTerminal else { return nil }
+        return URL(string: "https://askwhen.me/\(page.slug)")
     }
 
     @ViewBuilder private var content: some View {
         switch step {
         case .explainer:
-            RequestPageExplainer { step = .calendars }
+            // On the Mac the setup is already a sheet, so the explainer is its
+            // first page and Done in the toolbar is the way out. On iOS the
+            // row presents the explainer as its own sheet and pushes the
+            // setup at `.calendars`, so this case is only reached from the
+            // screenshot harness there.
+            RequestPageExplainer(onContinue: { step = .calendars })
         case .calendars:
             Form {
                 RequestCalendarFields(page: model.requestPageBinding,
                                       calendars: model.calendars,
                                       onChange: { model.save() })
-                next(.display)
             }
             .formStyle(.grouped)
+            .safeAreaInset(edge: .bottom) { next(.display) }
         case .display:
             Form {
                 RequestDisplayFields(page: model.requestPageBinding,
                                      onChange: { model.save() })
-                next(.policy)
             }
             .formStyle(.grouped)
+            .safeAreaInset(edge: .bottom) { next(.policy) }
         case .policy:
             Form {
                 RequestPolicyFields(policy: model.requestPageBinding.policy,
                                     onChange: { model.save() })
-                next(.preview)
             }
             .formStyle(.grouped)
+            .safeAreaInset(edge: .bottom) { next(.preview) }
         case .preview:
             Form {
                 RequestPreview(page: model.requestPage, busy: model.busySource)
-                next(.offer)
             }
             .formStyle(.grouped)
+            .safeAreaInset(edge: .bottom) { next(.offer) }
         case .offer:
             Form {
                 RequestOfferView(page: model.requestPageBinding,
@@ -135,9 +156,17 @@ struct RequestPageSetupView: View {
         model.lapse == .gone || model.lapse == .revoked
     }
 
+    /// The primary action, pinned to the bottom and the only prominent
+    /// control on the screen (`native.md`, section 4). A row in the list was
+    /// where Apple never puts it.
     private func next(_ to: Step) -> some View {
-        Section {
-            Button(to == .offer ? "See what it costs" : "Continue") { step = to }
+        Button { step = to } label: {
+            Text(to == .offer ? "See what it costs" : "Continue").frame(maxWidth: .infinity)
         }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(.bar)
     }
 }

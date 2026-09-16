@@ -4,6 +4,11 @@ import CalMirrorKit
 struct ContentView: View {
     @EnvironmentObject var model: Store
     @Environment(\.scenePhase) private var phase
+    /// The explainer is a first-run sheet presented from the row, not a
+    /// screen on the stack (native.md, §1); Continue on it dismisses the
+    /// sheet and pushes the setup at its first real step.
+    @State private var showingExplainer = false
+    @State private var pushingSetup = false
 
     var body: some View {
         #if DEBUG
@@ -13,7 +18,13 @@ struct ContentView: View {
         // and to an explicit launch argument inside DebugSeed.
         if let step = DebugSeed.startStep {
             NavigationStack {
-                RequestPageSetupView(start: step, page: model.config.requestPage)
+                if step == .explainer {
+                    // As the owner meets it: a sheet over the app's root.
+                    mainListBody
+                        .sheet(isPresented: .constant(true)) { explainerSheet }
+                } else {
+                    RequestPageSetupView(start: step, page: model.config.requestPage)
+                }
             }
             .environmentObject(model)
             .task { await DebugSeed.apply(to: model) }
@@ -39,7 +50,32 @@ struct ContentView: View {
     }
 
     private var mainList: some View {
-        NavigationStack {
+        NavigationStack { mainListBody }
+        .sheet(item: $model.conflict) { conflict in
+            RequestConflictSheet(
+                conflict: conflict,
+                onDecline: { Task { await model.decline(conflict.request) } },
+                onAcceptAnyway: { Task { await model.acceptAnyway(conflict.request) } },
+                onLater: { model.conflict = nil })
+        }
+        .onChange(of: phase) { _, newPhase in
+            if newPhase == .background {
+                BackgroundSync.schedule(after: TimeInterval(model.config.intervalSeconds))
+            }
+            // On open, alongside the sync — the reliable path on iOS, since
+            // background refresh is opportunistic and promising better would
+            // be promising something the platform will not keep.
+            if newPhase == .active { Task { await model.collectRequests() } }
+        }
+    }
+
+    private var explainerSheet: some View {
+        RequestPageExplainer(
+            onContinue: { showingExplainer = false; pushingSetup = true },
+            onDismiss: { showingExplainer = false })
+    }
+
+    private var mainListBody: some View {
             List {
                 Section {
                     if !model.access {
@@ -94,10 +130,27 @@ struct ContentView: View {
                     }
                 }
                 Section {
-                    NavigationLink {
-                        RequestPageSetupView(page: model.config.requestPage)
-                    } label: {
-                        RequestPageRow(page: model.config.requestPage)
+                    if model.hasRequestPage {
+                        // A page that exists, or a setup that was started:
+                        // straight to it. The pitch is over.
+                        NavigationLink {
+                            RequestPageSetupView(start: model.requestPage.slug.isEmpty ? .calendars : .live,
+                                                 page: model.config.requestPage)
+                        } label: {
+                            RequestPageRow(page: model.config.requestPage)
+                        }
+                    } else {
+                        // Nothing yet: the row presents the explainer as a
+                        // sheet, and Continue on it pushes the setup.
+                        Button { showingExplainer = true } label: {
+                            HStack {
+                                RequestPageRow(page: model.config.requestPage)
+                                Image(systemName: "chevron.forward")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 // iOS has no launchd; background refresh is the only unattended
@@ -119,31 +172,21 @@ struct ContentView: View {
             }
             .navigationTitle("Calendar Mirror")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Sync now") { Task { await model.syncNow() } }.disabled(model.syncing)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { model.addMirror() } label: { Image(systemName: "plus") }
+                // Both actions trailing, as symbols (native.md, §8). Pull to
+                // refresh already covers the common case for sync.
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { Task { await model.syncNow() } } label: {
+                        Label("Sync now", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(model.syncing)
+                    Button { model.addMirror() } label: { Label("Add mirror", systemImage: "plus") }
                 }
             }
             .refreshable { await model.syncNow(); await model.collectRequests() }
-        }
-        .sheet(item: $model.conflict) { conflict in
-            RequestConflictSheet(
-                conflict: conflict,
-                onDecline: { Task { await model.decline(conflict.request) } },
-                onAcceptAnyway: { Task { await model.acceptAnyway(conflict.request) } },
-                onLater: { model.conflict = nil })
-        }
-        .onChange(of: phase) { _, newPhase in
-            if newPhase == .background {
-                BackgroundSync.schedule(after: TimeInterval(model.config.intervalSeconds))
+            .navigationDestination(isPresented: $pushingSetup) {
+                RequestPageSetupView(start: .calendars, page: model.config.requestPage)
             }
-            // On open, alongside the sync — the reliable path on iOS, since
-            // background refresh is opportunistic and promising better would
-            // be promising something the platform will not keep.
-            if newPhase == .active { Task { await model.collectRequests() } }
-        }
+            .sheet(isPresented: $showingExplainer) { explainerSheet }
     }
 
     /// Mirrors bucketed by destination, in first-appearance order so the list
@@ -181,8 +224,10 @@ struct MirrorRow: View {
                 // Only what makes THIS mirror unusual. An ordinary
                 // copy-everything mirror shows nothing here, so the ones
                 // carrying a projection or a filter stand out in a long list.
+                // Secondary, not tinted: blue text in a row reads as a link,
+                // and this is not one.
                 if let delta = MirrorSummary.delta(mirror) {
-                    Text(delta).font(.caption).foregroundStyle(.tint).lineLimit(1)
+                    Text(delta).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
             Spacer()

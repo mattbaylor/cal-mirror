@@ -92,7 +92,7 @@ struct RequestOfferView: View {
     private func offerList(_ offers: [SubscriptionOffer], cancelled: Bool) -> some View {
         Group {
             Section {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(RequestCopy.Offer.heading).font(.title2.weight(.semibold))
                     Text(RequestCopy.Offer.lede).fixedSize(horizontal: false, vertical: true)
                 }
@@ -100,6 +100,10 @@ struct RequestOfferView: View {
                     Label(RequestCopy.Offer.cancelled, systemImage: "info.circle")
                         .font(.callout).foregroundStyle(.secondary)
                 }
+            } footer: {
+                // The privacy promise this screen is measured against, as the
+                // one footer on the first group.
+                Text(RequestCopy.Offer.network)
             }
 
             if let base = offers.first(where: { $0.tier == .page }) {
@@ -115,16 +119,15 @@ struct RequestOfferView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    Button(base.trial == nil ? RequestCopy.Offer.buyWithoutTrial
-                                             : RequestCopy.Offer.buyWithTrial) {
-                        Task { await buy(.page) }
+                    Button { Task { await buy(.page) } } label: {
+                        Text(base.trial == nil ? RequestCopy.Offer.buyWithoutTrial
+                                               : RequestCopy.Offer.buyWithTrial)
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    Text(RequestCopy.Offer.renews)
-                        .font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    .controlSize(.large)
                 } footer: {
-                    Text(RequestCopy.Offer.network)
+                    Text(RequestCopy.Offer.renews)
                 }
             }
 
@@ -132,7 +135,7 @@ struct RequestOfferView: View {
             // Request Page trial, and these two are upgrades the owner meets
             // when they want one — a nicer address is worth nothing before
             // there is a page at it.
-            Section(RequestCopy.Offer.upgradesHeading) {
+            Section {
                 ForEach(offers.filter { $0.tier != .page }, id: \.tier) { offer in
                     VStack(alignment: .leading, spacing: 3) {
                         HStack {
@@ -144,9 +147,10 @@ struct RequestOfferView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+            } header: {
+                Text(RequestCopy.Offer.upgradesHeading)
+            } footer: {
                 Text(RequestCopy.Offer.upgradesNote)
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
 
             // Apple's guidelines require this on any subscription screen, and
@@ -163,14 +167,16 @@ struct RequestOfferView: View {
                 Text(RequestCopy.Offer.alreadyTitle).font(.headline)
                 Text(RequestCopy.Offer.alreadyBody).fixedSize(horizontal: false, vertical: true)
             }
-            Button(RequestCopy.Offer.publish) {
+            Button {
                 guard case .active(_, _, let transaction) = state else { return }
                 Task { await publish(transaction) }
+            } label: {
+                Text(RequestCopy.Offer.publish).frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        } footer: {
             Text(RequestCopy.Offer.tokenWarning)
-                .font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

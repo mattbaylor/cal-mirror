@@ -54,53 +54,87 @@ struct RequestPageRow: View {
 
 // MARK: - Screen 2
 
-/// The explainer. Deliberately long: this is the only screen where the owner is
-/// deciding whether to have a server in their life at all, and the privacy
-/// consequence is the product. Density would be the wrong economy here.
+/// The explainer, as the standard first-run sheet: a symbol, a title, three
+/// feature rows, one footnote, and the primary action pinned to the bottom
+/// (`apple/design/native.md`, section 1). It is presented modally from the
+/// row on iOS and is the first content of the setup sheet on the Mac; either
+/// way it is not a screen on the navigation stack.
+///
+/// The four paragraphs it used to be are under `longForm` in `Copy.json`.
+/// Everything they said is still true; on a phone, reading is not the
+/// activity, and the price is still named before any work is asked for —
+/// `decisions.md`, "The trial opt-in comes after the preview".
 struct RequestPageExplainer: View {
     /// Moves to screen 3. Does not enable anything by itself — `enabled` is set
     /// when there is a page to enable, so backing out of setup leaves no trace.
     let onContinue: () -> Void
+    /// "Not now". Nil where the container already has its own way out (the
+    /// Mac sheet's Done button), so the sheet does not offer two.
+    var onDismiss: (() -> Void)? = nil
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text(RequestCopy.Explainer.title)
-                    .font(.largeTitle.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                ForEach(RequestCopy.Explainer.paragraphs, id: \.self) { p in
-                    Text(p).fixedSize(horizontal: false, vertical: true)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(RequestCopy.Explainer.costHeading)
-                        .font(.caption.weight(.semibold))
-                        .textCase(.uppercase)
-                        .foregroundStyle(.secondary)
-                    // Said here rather than at the offer screen, so that the
-                    // price at the end of setup is something the owner was
-                    // told about at the start rather than something they
-                    // walked into. See decisions.md, "The trial opt-in comes
-                    // after the preview" — the ordering only reads as honest
-                    // if the cost is disclosed before the work, not after it.
-                    Text(RequestCopy.Explainer.cost)
+            VStack(spacing: 28) {
+                VStack(spacing: 12) {
+                    Image(systemName: RequestCopy.Explainer.symbol)
+                        .font(.system(size: 56, weight: .medium))
+                        .foregroundStyle(.tint)
+                        .accessibilityHidden(true)
+                    Text(RequestCopy.Explainer.title)
+                        .font(.title.weight(.bold))
+                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.top, 4)
+                .padding(.top, 36)
 
-                Button(RequestCopy.Explainer.primary, action: onContinue)
+                VStack(alignment: .leading, spacing: 22) {
+                    ForEach(RequestCopy.Explainer.features, id: \.headline) { f in
+                        HStack(alignment: .top, spacing: 16) {
+                            Image(systemName: f.symbol)
+                                .font(.title2)
+                                .foregroundStyle(.tint)
+                                .frame(width: 36)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(f.headline).font(.headline)
+                                Text(f.line).font(.subheadline).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .padding(.horizontal, 8)
+            }
+            .padding(.horizontal, 24)
+            .frame(maxWidth: 520)
+            .frame(maxWidth: .infinity)
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 14) {
+                // The one line that keeps the ordering honest: the cost is
+                // said here, before any work, not sprung at screen 7.
+                Text(RequestCopy.Explainer.footnote)
+                    .font(.footnote).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(action: onContinue) {
+                    Text(RequestCopy.Explainer.primary).frame(maxWidth: .infinity)
+                }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
-
-                Text(RequestCopy.Explainer.footnote)
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let onDismiss {
+                    Button(RequestCopy.Explainer.secondary, action: onDismiss)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.tint)
+                }
             }
-            .padding(20)
-            .frame(maxWidth: 560, alignment: .leading)
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+            .frame(maxWidth: 520)
+            .frame(maxWidth: .infinity)
+            .background(.bar)
         }
     }
 }

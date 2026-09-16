@@ -62,20 +62,23 @@ def gen_swift(c: dict) -> str:
 
     e = c["explainer"]
     out.append("\n    enum Explainer {\n")
-    out.append(f"        static let title = {swift_string(e['title'])}\n")
-    out.append("        static let paragraphs: [String] = [\n")
-    for p in e["paragraphs"]:
-        out.append(f"            {swift_string(p)},\n")
+    out.append("        /// One feature row of the first-run sheet: a symbol, a headline,\n")
+    out.append("        /// one line. Three of them replace the four paragraphs the explainer\n")
+    out.append("        /// used to be (apple/design/native.md, section 1).\n")
+    out.append("        struct Feature { let symbol: String; let headline: String; let line: String }\n")
+    for k in ("symbol", "title"):
+        out.append(f"        static let {k} = {swift_string(e[k])}\n")
+    out.append("        static let features: [Feature] = [\n")
+    for f in e["features"]:
+        out.append(f"            Feature(symbol: {swift_string(f['symbol'])}, headline: {swift_string(f['headline'])}, line: {swift_string(f['line'])}),\n")
     out.append("        ]\n")
-    for k in ("costHeading", "cost", "primary", "footnote"):
+    for k in ("footnote", "primary", "secondary"):
         out.append(f"        static let {k} = {swift_string(e[k])}\n")
     out.append("    }\n")
 
-    cal = c["calendars"]
     out.append("\n    enum Calendars {\n")
-    for k in ("section", "blockTitle", "blockCaption", "useTitle", "useCaption",
-              "privacy", "noneBlocking", "noRequestCalendar", "readOnly"):
-        out.append(f"        static let {k} = {swift_string(cal[k])}\n")
+    for k, v in c["calendars"].items():
+        out.append(f"        static let {k} = {swift_string(v)}\n")
     out.append("    }\n")
 
     out.append("\n    enum Display {\n")
@@ -107,7 +110,7 @@ def gen_swift(c: dict) -> str:
 
     pv = c["preview"]
     out.append("\n    enum Preview {\n")
-    for k in ("section", "headingOne", "headingMany", "emptyPage", "privacy",
+    for k in ("section", "countOne", "countMany", "across", "emptyPage", "privacy",
               "emptyDayHeading", "whyHeading", "cappedNote", "stale"):
         out.append(f"        static let {k} = {swift_string(pv[k])}\n")
     # Switches rather than dictionaries: the Kit's enums are closed, so a
@@ -151,9 +154,9 @@ def row(title, caption=None, control="toggle", value=None):
 
 def field(title, value, caption, ghost=False):
     cls = "val ghost" if ghost else "val"
+    cap = f'<p class="cap">{esc(caption)}</p>' if caption else ""
     return (f'<div class="row"><div class="rowmain"><span class="t">{esc(title)}</span>'
-            f'<span class="{cls}">{esc(value)}</span></div>'
-            f'<p class="cap">{esc(caption)}</p></div>')
+            f'<span class="{cls}">{esc(value)}</span></div>{cap}</div>')
 
 
 def gen_sheet(c: dict) -> str:
@@ -166,13 +169,26 @@ def gen_sheet(c: dict) -> str:
           + row(d["title"], d["blurbPhone"], "chevron", d["off"])
           + "</div></div>")
 
-    paras = "".join(f'<p class="body">{esc(p)}</p>' for p in e["paragraphs"])
-    s2 = ('<div class="scr"><div class="nav"><span class="back">‹ Back</span></div>'
-          f'<div class="pad"><h3>{esc(e["title"])}</h3>{paras}'
-          f'<p class="sub">{esc(e["costHeading"])}</p>'
-          f'<p class="body">{esc(e["cost"])}</p>'
-          f'<div class="btn">{esc(e["primary"])}</div>'
-          f'<p class="foot">{esc(e["footnote"])}</p></div></div>')
+    # Native pass (apple/design/native.md): the sheet draws what the app draws
+    # now — a one-line footer under each group instead of a caption inside it,
+    # no header on a screen's first group, a primary button pinned at the
+    # bottom, and the explainer as a first-run sheet of three feature rows.
+    def ftr(text):
+        return f'<p class="ftr">{esc(text)}</p>'
+
+    def pinned(label):
+        return f'<div class="pin"><div class="btn">{esc(label)}</div></div>'
+
+    feats = "".join(
+        f'<div class="feat"><span class="sym" aria-hidden="true">◆</span>'
+        f'<div><b>{esc(f["headline"])}</b><br><span class="fl">{esc(f["line"])}</span></div></div>'
+        for f in e["features"])
+    s2 = ('<div class="scr sheet"><div class="pad center">'
+          f'<div class="bigsym" aria-hidden="true">◷</div><h3>{esc(e["title"])}</h3></div>'
+          f'<div class="pad">{feats}</div>'
+          f'<div class="pad"><p class="foot center">{esc(e["footnote"])}</p></div>'
+          + pinned(e["primary"])
+          + f'<p class="center link">{esc(e["secondary"])}</p></div>')
 
     cals = [("Home", True, False), ("Work", True, False),
             ("Referee assignments", True, True), ("US Holidays", False, False)]
@@ -181,23 +197,22 @@ def gen_sheet(c: dict) -> str:
         rows += (f'<div class="calrow"><span class="t">{esc(name)}</span>'
                  f'<span class="pill {"on" if blocking else ""}">{esc(cal["blockTitle"])}</span>'
                  f'<span class="pill {"on" if isreq else ""}">{esc(cal["useTitle"])}</span></div>')
-    s3 = ('<div class="scr"><div class="nav">Manage Mirrors</div>'
-          f'<div class="grp"><div class="hdr">{esc(cal["section"])}</div>{rows}'
-          f'<p class="cap pad8">{esc(cal["blockCaption"])}</p>'
-          f'<p class="cap pad8">{esc(cal["useCaption"])}</p>'
-          f'<p class="cap pad8 priv">{esc(cal["privacy"])}</p></div></div>')
+    s3 = ('<div class="scr"><div class="nav">Which calendars</div>'
+          f'<div class="grp">{rows}</div>' + ftr(cal["footer"])
+          + pinned("Continue") + "</div>")
 
     dsp, pol, pv = c["display"], c["policy"], c["preview"]
 
     s4 = ('<div class="scr"><div class="nav">' + esc(dsp["section"]) + "</div>"
-          + '<div class="grp"><div class="hdr">' + esc(dsp["section"]) + "</div>"
-          + field(dsp["nameTitle"], "Matt Baylor", dsp["nameCaption"])
-          + field(dsp["blurbTitle"], dsp["blurbPlaceholder"], dsp["blurbCaption"], ghost=True)
-          + "</div>"
+          + '<div class="grp">'
+          + field(dsp["nameTitle"], "Matt Baylor", None)
+          + field(dsp["blurbTitle"], dsp["blurbPlaceholder"], None, ghost=True)
+          + "</div>" + ftr(dsp["pageFooter"])
           + '<div class="grp"><div class="hdr">' + esc(dsp["meetingSection"]) + "</div>"
-          + field(dsp["titleTitle"], "Meeting", dsp["titleCaption"])
-          + field(dsp["locationTitle"], dsp["locationPlaceholder"], dsp["locationCaption"], ghost=True)
-          + "</div></div>")
+          + field(dsp["titleTitle"], "Meeting", None)
+          + field(dsp["locationTitle"], dsp["locationPlaceholder"], None, ghost=True)
+          + "</div>" + ftr(dsp["meetingFooter"])
+          + pinned("Continue") + "</div>")
 
     # The sentence, as architecture.md §3 phrases it — the whole point is that
     # it reads aloud, so the sheet has to show it reading aloud.
@@ -210,18 +225,24 @@ def gen_sheet(c: dict) -> str:
                           for d in ["S", "M", "T", "W", "T", "F", "S"][0:7])
                 + "</p>")
     s5 = ('<div class="scr"><div class="nav">' + esc(pol["section"]) + "</div>"
-          + '<div class="grp"><div class="pad14">' + sentence
-          + f'<p class="cap">{esc(pol["sentence"])}</p></div></div>'
+          + '<div class="grp"><div class="pad14">' + sentence + "</div></div>"
+          + ftr(pol["dayFooter"])
           + '<div class="grp">'
-          + row(pol["horizonTitle"], pol["horizonCaption"], "none", "14 days")
-          + row(pol["noticeTitle"], pol["noticeCaption"], "none", "12 hours")
-          + row(pol["maxPerDayTitle"], pol["maxPerDayCaption"], "none", "4")
-          + row(pol["slotTitle"], pol["slotCaption"], "none", "30 min")
-          + row(pol["alignTitle"], pol["alignCaption"], "none", ":00 and :30")
-          + row(pol["bufferTitle"], pol["bufferCaption"], "none", "15 min")
-          + "</div></div>")
+          + row(pol["horizonTitle"], None, "none", "14 days")
+          + row(pol["maxPerDayTitle"], None, "none", "4")
+          + "</div>" + ftr(pol["shapeFooter"])
+          + '<div class="grp">'
+          + row(pol["noticeTitle"], None, "none", "12 hours")
+          + "</div>" + ftr(pol["noticeFooter"])
+          + '<div class="grp">'
+          + row(pol["slotTitle"], None, "none", "30 min")
+          + row(pol["alignTitle"], None, "none", ":00 and :30")
+          + row(pol["bufferTitle"], None, "none", "15 min")
+          + "</div>" + ftr(pol["offerFooter"])
+          + pinned("Continue") + "</div>")
 
-    heading = pv["headingMany"].replace("%d", "{}").format(11, 14)
+    count = pv["countMany"].replace("%d", "{}").format(11)
+    across = pv["across"].replace("%d", "{}").format(14)
     days = [("Mon 21", ["9:00", "10:30", "2:00"]), ("Tue 22", ["9:30", "11:00"]),
             ("Wed 23", []), ("Thu 24", ["9:00", "1:30", "3:00"])]
     grid = ""
@@ -230,13 +251,15 @@ def gen_sheet(c: dict) -> str:
                  or '<span class="empty">nothing offered</span>')
         grid += f'<div class="dayrow"><span class="dl">{esc(label)}</span><span class="chips">{chips}</span></div>'
     s6 = ('<div class="scr"><div class="nav">' + esc(pv["section"]) + "</div>"
-          + f'<div class="grp"><div class="pad14"><h4>{esc(heading)}</h4>'
-          + f'<p class="cap">{esc(pv["stale"])}</p></div>{grid}</div>'
+          + f'<div class="grp"><div class="pad14"><span class="bignum">{esc(count)}</span> '
+          + f'<span class="val">{esc(across)}</span></div>{grid}</div>'
+          + ftr(pv["privacy"])
           + '<div class="grp"><div class="hdr">' + esc(pv["emptyDayHeading"]) + "</div>"
           + '<div class="pad14"><p class="body sm"><b>Wed 23</b> — 6 busy, 2 '
           + esc(pv["reasons"]["cappedPerDay"]) + ", 1 " + esc(pv["reasons"]["lunch"])
-          + f'</p><p class="cap">{esc(pv["cappedNote"])}</p></div></div>'
-          + f'<div class="grp"><p class="cap pad14 priv">{esc(pv["privacy"])}</p></div></div>')
+          + "</p></div></div>" + ftr(pv["cappedNote"])
+          + ftr(pv["stale"])
+          + pinned("See what it costs") + "</div>")
 
     off, lv = c["offer"], c["live"]
 
@@ -259,11 +282,10 @@ def gen_sheet(c: dict) -> str:
                 + '<p class="body"><b>AskWhen.me Request Page</b></p>'
                 + '<p class="cap">Anyone can ask you for a time. Your calendar stays put.</p>'
                 + f'<p class="body" style="margin-top:8px"><b>{esc(price)}</b></p>{note}'
-                + f'<div class="btn">{esc(btn)}</div>'
-                + f'<p class="foot">{esc(off["renews"])}</p></div>'
-                + f'<p class="cap pad8 priv">{esc(off["network"])}</p></div>'
+                + f'<div class="btn">{esc(btn)}</div></div></div>'
+                + ftr(off["renews"]) + ftr(off["network"])
                 + '<div class="grp"><div class="hdr">' + esc(off["upgradesHeading"]) + "</div>"
-                + ups + f'<p class="cap pad8">{esc(off["upgradesNote"])}</p></div>'
+                + ups + "</div>" + ftr(off["upgradesNote"])
                 + '<div class="grp">' + row(off["restore"], None, "none") + "</div></div>")
 
     s7 = offer_screen(True)
@@ -273,21 +295,19 @@ def gen_sheet(c: dict) -> str:
           + '<div class="grp"><div class="pad14">'
           + f'<h4>{esc(lv["heading"])}</h4>'
           + f'<p class="body sm">{esc(lv["lede"])}</p>'
-          + '<p class="mono">askwhen.me/x7f2k9</p>'
-          + f'<div class="btn">{esc(lv["copy"])}</div>'
-          + f'<p class="cap"><span class="link">{esc(lv["openTitle"])}</span> — {esc(lv["openNote"])}</p>'
-          + "</div></div>"
-          + '<div class="grp"><div class="hdr">' + esc(lv["tokenHeading"]) + "</div>"
-          + f'<p class="body sm pad8">{esc(lv["tokenBody"])}</p></div>'
-          + '<div class="grp"><div class="hdr">' + esc(lv["publisherHeading"]) + "</div>"
-          + f'<p class="body sm pad8">{esc(lv["publisherBody"])}</p></div>'
-          + '<div class="grp"><div class="hdr">' + esc(lv["offHeading"]) + "</div>"
-          + f'<p class="body sm pad8">{esc(lv["offBody"])}</p>'
-          + row(lv["turnOff"]) + "</div></div>")
+          + '<p class="mono">askwhen.me/x7f2k9</p></div>'
+          + row(lv["share"], None, "none") + row(lv["openTitle"], None, "none")
+          + "</div>" + ftr(lv["linkFooter"])
+          + '<div class="grp"><div class="hdr">' + esc(c["notification"]["permissionHeading"]) + "</div>"
+          + row(c["notification"]["permissionAsk"], None, "none") + "</div>"
+          + ftr(c["notification"]["permissionFooter"])
+          + '<div class="grp"><div class="hdr">' + esc(lv["deviceSection"]) + "</div>"
+          + row(lv["publishes"], None, "check") + row(lv["holdsKey"], None, "check")
+          + row(lv["turnOff"]) + "</div>" + ftr(lv["deviceFooter"]) + "</div>")
 
     cells = [
         ("1 · The dormant row", "Off by default. Drawing this costs no network.", s1),
-        ("2 · What this is", "The opt-in. Names the cost up front so screen 7 is not a surprise.", s2),
+        ("2 · What this is", "A first-run sheet: three feature rows and the cost, before any work is asked for.", s2),
         ("3 · Which calendars count", "Two checkboxes per calendar, where the owner already is.", s3),
         ("4 · Your page", "The one identifying field, and who titles the event.", s4),
         ("5 · Your day", "Asked as a sentence, not a form. Bounds are product decisions.", s5),
@@ -385,6 +405,17 @@ def gen_sheet(c: dict) -> str:
       .mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 18px;
         margin: 14px 0 0; word-break: break-all; }}
       .link {{ color: var(--tint); }}
+      /* Native pass: footers sit under the group, outside the card. */
+      .ftr {{ color: var(--note); font-size: 12.5px; margin: -8px 0 14px; padding: 0 16px; }}
+      .pin {{ padding: 8px 16px 6px; background: var(--grp); }}
+      .pin .btn {{ margin: 0; }}
+      .center {{ text-align: center; }}
+      .sheet {{ background: var(--card); }}
+      .bigsym {{ font-size: 44px; color: var(--tint); line-height: 1; margin: 18px 0 6px; }}
+      .feat {{ display: flex; gap: 14px; align-items: flex-start; margin: 0 0 16px; }}
+      .feat .sym {{ color: var(--tint); font-size: 22px; line-height: 1.2; width: 28px; text-align: center; }}
+      .fl {{ color: var(--note); font-size: 13.5px; }}
+      .bignum {{ font-size: 28px; font-weight: 700; letter-spacing: -.5px; }}
     </style>
   </head>
   <body>

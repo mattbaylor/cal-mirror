@@ -6,7 +6,13 @@
     "tools/gen-request-copy.py, commit all three. CI diffs the generated files,",
     "so the sheet cannot drift from the app the way a mockup does.",
     "Glossary rules: request, never book. Ask, accept, decline. Never reserve,",
-    "never schedule-at-the-owner, never confirmed-slot-before-acceptance."
+    "never schedule-at-the-owner, never confirmed-slot-before-acceptance.",
+    "Native pass, 16 Sept 2026 (apple/design/native.md): every caption is a one-line",
+    "Section footer stating a consequence; first-section headers are gone; the",
+    "explainer is a first-run sheet of three feature rows. The long forms are kept",
+    "under `longForm`, off the screen, for the site and the listing to draw on.",
+    "The product is AskWhen.me, styled so, in prose; an address (askwhen.me/…,",
+    "dana.askwhen.me) stays lowercase because it is an address."
   ],
   "dormantRow": {
     "title": "Request page",
@@ -15,73 +21,74 @@
     "blurbPhone": "Let people ask you for a time. Nothing leaves this iPhone until you turn it on."
   },
   "explainer": {
+    "symbol": "calendar.badge.clock",
     "title": "A page where people can ask for a time",
-    "paragraphs": [
-      "You offer a handful of times you are willing to be asked about. Someone opens your page, picks one, and tells you who they are.",
-      "Nothing lands in your calendar until you accept. Every request comes to this device and you answer it here — askwhen.me cannot write to your calendar, because you never give it access.",
-      "Turning this on means a server holds two things: the times you chose to offer, and requests from people who asked for one. It never sees your calendar, your events, your address, or your name beyond the label you pick."
+    "features": [
+      {
+        "symbol": "calendar",
+        "headline": "You choose the times",
+        "line": "A handful of offers, from the calendars you pick."
+      },
+      {
+        "symbol": "lock.shield",
+        "headline": "The server never sees your calendar",
+        "line": "It holds the times you offer and the requests that come in. Nothing else."
+      },
+      {
+        "symbol": "checkmark.circle",
+        "headline": "Nothing lands until you accept",
+        "line": "Every request comes to this device, and you answer it here."
+      }
     ],
-    "costHeading": "What it costs",
-    "cost": "Setting it up is free and happens entirely on this device. Publishing a page needs a subscription — free for the first 90 days — and that comes at the end, after you have seen the page you would be publishing.",
-    "primary": "Set up a request page",
-    "footnote": "Nothing has been sent anywhere. Setting this up does not send anything either — the first time this app touches the network is the moment you ask to see the price."
+    "footnote": "Setup is free and stays on this device. Publishing needs an AskWhen.me subscription, free for the first 90 days.",
+    "primary": "Continue",
+    "secondary": "Not now"
   },
   "calendars": {
     "section": "Requests",
     "blockTitle": "Block for requests",
-    "blockCaption": "Events here make you unavailable, so no time that clashes with one is ever offered. Turn this on for every calendar that holds real commitments.",
     "useTitle": "Use for requests",
-    "useCaption": "Requests you accept are written here as ordinary events. Exactly one calendar.",
-    "privacy": "Only the busy-or-free shape of these calendars is ever read. Titles, locations, attendees, notes and which calendar an event came from stop at this device and are never published.",
-    "noneBlocking": "No calendar is blocking yet, so every hour in your day would be offered. Pick at least one.",
-    "noRequestCalendar": "Pick one calendar for accepted requests to be written into.",
-    "readOnly": "Read-only — accepted requests cannot be written here."
+    "noneBlocking": "Pick at least one calendar to block, or every hour is offered.",
+    "noRequestCalendar": "Pick one calendar for accepted requests.",
+    "readOnly": "Read-only — accepted requests cannot be written here.",
+    "footer": "Events on a blocking calendar are never offered, and accepted requests are written to the one calendar you mark. Only busy or free is ever read."
   },
   "display": {
     "section": "Your page",
     "nameTitle": "Display name",
     "namePlaceholder": "Matt Baylor",
-    "nameCaption": "Required, and the only thing on your page that identifies you — everything else a visitor sees is a list of times. Any label works: your name, your initials, or what you do. You decide how much that discloses.",
     "blurbTitle": "One line about it",
     "blurbPlaceholder": "30 minutes, usually about refereeing or calendars.",
-    "blurbCaption": "Sits under your name. Anyone with the link reads it, so keep it to what the time is for.",
     "meetingSection": "When you accept",
     "titleTitle": "Event title",
     "titlePlaceholder": "Meeting",
-    "titleCaption": "What the event is called in your calendar. You choose it, never the person asking — a stranger's words do not become a title in your calendar. What they write goes in the event's notes, where it is obviously theirs.",
     "locationTitle": "Location",
     "locationPlaceholder": "Optional — a room, or a link",
-    "locationCaption": "Goes into the event and into the calendar file the person receives, so whoever you accept will see it.",
-    "nameMissing": "A page needs a name. Without one it looks like a form asking a stranger for their email address, which is what a phishing page looks like too."
+    "nameMissing": "A page needs a name.",
+    "pageFooter": "Your name is the only thing on the page that identifies you; any label works.",
+    "meetingFooter": "You title the event and the person’s note goes in it; the location goes into the event and the calendar file they receive."
   },
   "policy": {
     "section": "Your day",
-    "sentence": "Answer it the way you would say it out loud. The preview underneath shows real dates, so a mistake is visible before anyone else sees it.",
     "dayStarts": "My day starts at",
     "dayEnds": "and ends at",
     "zoneTitle": "Time zone",
-    "zoneCaption": "Stated, not guessed from this device. A laptop that travels must not quietly re-read “my day starts at 9” as 9am somewhere else.",
     "lunchTitle": "Keep a gap clear",
-    "lunchCaption": "One mid-day gap. A list of arbitrary exclusions would be a second calendar wearing a disguise — put those in a blocking calendar instead.",
     "weekdaysTitle": "Offer on",
     "horizonTitle": "How far ahead",
-    "horizonCaption": "How far out someone can ask. A longer horizon puts more of your future shape on one screen, so this is a privacy control as much as an accuracy one. Between 2 and 45 days; beyond that the times are fiction, because calendars fill.",
     "noticeTitle": "Notice I need",
-    "noticeCaption": "Nothing inside this window is offered. It guards against a request landing with less warning than your device needs to collect it.",
     "maxPerDayTitle": "Most requests a day",
-    "maxPerDayCaption": "This matters more than it looks. Publishing every free half-hour tells a stranger your week is empty; offering four says nothing about the other twelve.",
     "slotTitle": "How long an offer is",
-    "slotCaption": "The same number becomes the meeting length on your page and in the calendar file you send.",
     "alignTitle": "Start times land on",
-    "alignCaption": "Offers begin on a multiple of this past the hour, so people see :00 and :30 rather than :07. Only values that divide into 60 are offered, because the others walk through the hour.",
     "bufferTitle": "Keep clear either side",
-    "bufferCaption": "Held free around anything real in your calendar, so nothing lands wheel-to-wheel against a meeting the person asking cannot see."
+    "dayFooter": "Times are in the zone you state, wherever this device travels. The next screen shows what this offers on real dates.",
+    "shapeFooter": "Both are privacy controls: a shorter horizon and a lower cap show less of your week’s shape.",
+    "noticeFooter": "Nothing inside this window is offered, so a request never lands with less warning than this device needs.",
+    "offerFooter": "Each offer is this long, starts on this grid, and keeps this much clear of anything real in your calendar."
   },
   "preview": {
     "section": "What people see",
-    "headingOne": "You are offering %d time across %d days",
-    "headingMany": "You are offering %d times across %d days",
-    "privacy": "A gap on your page could be a meeting, your lunch, a day you blacked out, or simply your daily cap. Nothing on the page says which, and that is the point.",
+    "privacy": "A gap could be a meeting, your lunch or your daily cap; the page never says which.",
     "emptyDayHeading": "Days offering nothing",
     "whyHeading": "Why",
     "reasons": {
@@ -103,57 +110,57 @@
       "dayWindowInvalid": "The start and end of your day do not make a usable window.",
       "maxPerDayNotPositive": "Your daily cap is zero, so nothing can be offered."
     },
-    "cappedNote": "Times you could have offered and chose not to. That is a different answer to “why is nothing showing” than being busy.",
-    "stale": "Calculated just now from the calendars on this device. Nothing here has been published.",
-    "emptyPage": "Your page would be empty. Nobody can ask you for anything until something is offered — the reasons are on each day below."
+    "cappedNote": "Times you could have offered and chose not to.",
+    "stale": "Calculated just now from this device. Nothing has been published.",
+    "emptyPage": "Your page would be empty — the reasons are on each day below.",
+    "countOne": "%d time",
+    "countMany": "%d times",
+    "across": "across %d days"
   },
   "offer": {
     "section": "Publishing",
     "heading": "Publish your page",
-    "lede": "Everything so far has stayed on this device. Publishing puts the times you just previewed on askwhen.me, where the people you send the link to can ask for one.",
-    "network": "Loading the price is the first time this app has contacted anyone. It asks Apple what a subscription costs in your currency — nothing about you, your calendar or your page is sent, and askwhen.me is still not involved.",
+    "lede": "Everything so far has stayed on this device. Publishing puts the times you previewed on AskWhen.me.",
+    "network": "Loading the price is this app’s first contact with anyone — Apple, for the price in your currency. AskWhen.me is not involved yet.",
     "loading": "Asking Apple for the price…",
     "purchasing": "Waiting for Apple…",
     "failedTitle": "Could not reach the App Store",
-    "failedBody": "Apple did not answer, so there is no price to show. Nothing is wrong with your page — it is still here, still on this device. Try again when you have a connection.",
+    "failedBody": "Apple did not answer, so there is no price to show. Your page is still here, on this device.",
     "retry": "Try again",
     "trialLine": "%@, then %@ a year.",
     "noTrialLine": "%@ a year.",
     "noTrialNote": "Apple gives one free trial per person, and you have used yours. The price below is what it costs from today.",
     "buyWithTrial": "Start the free trial",
     "buyWithoutTrial": "Subscribe",
-    "renews": "Renews yearly until you cancel. Cancel any time in Settings — during the free trial nothing is charged at all.",
+    "renews": "Renews yearly until you cancel in Settings. Nothing is charged during the trial.",
     "upgradesHeading": "If you need more later",
-    "upgradesNote": "Both of these are upgrades you can take whenever you want one. Neither carries a free trial, and neither is worth buying before you have a page — a nicer address is not much use without something at it.",
+    "upgradesNote": "Upgrades, whenever you want one. Neither carries a trial.",
     "restore": "Restore Purchases",
     "restoring": "Checking with Apple…",
     "restoredNone": "Apple has no subscription on file for this Apple Account.",
-    "cancelled": "No problem — nothing was bought and nothing changed. Your page is still here whenever you want it.",
+    "cancelled": "Nothing was bought and nothing changed.",
     "pendingTitle": "Waiting for approval",
-    "pendingBody": "Apple is holding this until someone approves it — Ask to Buy, or a payment method that needs confirming. The moment it clears, your page publishes itself. You can close the app.",
+    "pendingBody": "Apple is holding this for approval. The moment it clears, your page publishes itself.",
     "alreadyTitle": "You already subscribe",
-    "alreadyBody": "This Apple Account has an active AskWhen.me subscription, so there is nothing to buy. Publishing your page is the only step left.",
+    "alreadyBody": "This Apple Account already has an AskWhen.me subscription. Publishing is the only step left.",
     "publish": "Publish my page",
     "creating": "Creating your page…",
-    "createFailedTitle": "Apple said yes, askwhen.me did not answer",
-    "createFailedBody": "Your subscription went through — you have not been charged twice and you will not be. The page itself could not be created just now. Try again; nothing is lost and nothing is duplicated.",
-    "tokenWarning": "Your page is kept alive by a key held only on this device, in its keychain. There is no account and no password, so it cannot be emailed to you or recovered — if you lose this device, you make a new page."
+    "createFailedTitle": "Apple said yes, AskWhen.me did not answer",
+    "createFailedBody": "Your subscription went through and you will not be charged twice. Try again; nothing is lost.",
+    "tokenWarning": "The page’s key lives only in this device’s keychain; there is no account to recover it from."
   },
   "live": {
     "section": "Your page",
     "heading": "Your page is live",
-    "lede": "Send this link to anyone you want to be able to ask you for a time. There is nothing for them to install and no account for them to make.",
-    "copy": "Copy link",
-    "copied": "Copied",
+    "lede": "Send this link to anyone who should be able to ask you for a time.",
+    "linkFooter": "Nothing for them to install and no account for them to make.",
+    "share": "Share link",
     "openTitle": "Open it",
-    "openNote": "Worth looking at once, the way the people you send it to will see it.",
-    "tokenHeading": "This device holds the only key",
-    "tokenBody": "Your page is kept alive by a key stored in this device's keychain. There is no account and no password, so nobody — including us — can email it to you or recover it. If you lose this device you make a new page and send out a new link.",
-    "publisherHeading": "This device publishes",
-    "publisherBody": "It derives the times and uploads them whenever your calendar changes. Your other devices can still collect requests and answer them; only this one publishes, so two devices can never disagree about when you are free.",
-    "offHeading": "Turning it off",
-    "offBody": "Switching the request page off stops publishing immediately and the page goes dark. Your subscription is Apple's to cancel, in Settings.",
-    "turnOff": "Turn off the request page",
+    "deviceSection": "This device",
+    "publishes": "Publishes your page",
+    "holdsKey": "Holds the only key",
+    "deviceFooter": "Other devices can answer requests; only this one publishes, and it holds the key that keeps the page yours. Switching off stops publishing at once.",
+    "turnOff": "Request page",
     "notPublished": "Nothing has been published yet — the first upload happens on the next sync."
   },
   "notification": {
@@ -171,14 +178,13 @@
     "declinedBody": "%@ has been told, and the time is free again.",
     "conflictTitle": "Could not accept — that time is taken",
     "conflictBody": "Something landed on %@ since it was offered. Nothing was written. Open Calendar Mirror to see the alternatives.",
-    "failedTitle": "Accepted, but askwhen.me was not told",
+    "failedTitle": "Accepted, but AskWhen.me was not told",
     "failedBody": "The event is in your calendar. The person who asked has not been sent it yet — open the app to finish.",
-    "permissionHeading": "Let it tell you",
-    "permissionBody": "Requests arrive on your device, not in an inbox. A notification is how you find out one is waiting, and it carries Accept and Decline so you can answer without opening anything.",
-    "permissionNote": "Whoever asked gave their name and a note, and both appear in the notification. If you would rather they did not show on a locked screen, iOS controls that under Notifications → Show Previews.",
+    "permissionHeading": "Notifications",
     "permissionAsk": "Allow notifications",
     "permissionSkip": "Not now",
-    "permissionDenied": "Notifications are off for Calendar Mirror. Requests still arrive and still wait for you in the app — you just will not be told. Settings → Notifications turns them back on."
+    "permissionDenied": "Off for Calendar Mirror. Requests still wait in the app; Settings › Notifications turns them back on.",
+    "permissionFooter": "A notification is how you find out a request is waiting, and it carries Accept and Decline. The person’s name and note appear in it."
   },
   "conflict": {
     "title": "That time is taken",
@@ -207,7 +213,7 @@
     "revokedHeading": "Your subscription was refunded",
     "revokedBody": "Apple has reversed the purchase, so there is no grace period — the page has stopped taking requests now. Subscribing again creates a new page at a new address.",
     "goneHeading": "Your page has been deleted",
-    "goneBody": "The grace period ended and askwhen.me removed the page. Links to the old address no longer work, and there is nothing left to restore — a new subscription starts a new page with a new address.",
+    "goneBody": "The grace period ended and AskWhen.me removed the page. Links to the old address no longer work, and there is nothing left to restore — a new subscription starts a new page with a new address.",
     "goneCalendar": "Everything you accepted is still in your calendar. Nothing that was already agreed depended on the page staying up.",
     "startAgain": "Start a new page",
     "bannerGrace": "Not taking requests — deleted in %d days",
@@ -218,7 +224,7 @@
     "section": "Address",
     "current": "Your page is at",
     "slugNote": "This address always works and is never taken away, whatever else you add.",
-    "subdomainHeading": "Your own name on askwhen.me",
+    "subdomainHeading": "Your own name on AskWhen.me",
     "subdomainBody": "Something like dana.askwhen.me. Nothing to set up — it works the moment you claim it.",
     "subdomainPlaceholder": "dana",
     "subdomainSuffix": ".askwhen.me",
@@ -242,6 +248,90 @@
     "upgrade": "Upgrade",
     "upgradeNote": "An upgrade is charged straight away, with what is left of this year credited against it. Apple handles the arithmetic and shows you the number before you agree.",
     "taken": "That address is already claimed.",
-    "failed": "askwhen.me did not answer. Nothing was claimed — try again."
+    "failed": "AskWhen.me did not answer. Nothing was claimed — try again."
+  },
+  "longForm": {
+    "_comment": "Not on any screen. The captions and paragraphs the native pass took off the screens, kept for the site and the App Store listing (hurdle F).",
+    "explainer": {
+      "paragraphs": [
+        "You offer a handful of times you are willing to be asked about. Someone opens your page, picks one, and tells you who they are.",
+        "Nothing lands in your calendar until you accept. Every request comes to this device and you answer it here — askwhen.me cannot write to your calendar, because you never give it access.",
+        "Turning this on means a server holds two things: the times you chose to offer, and requests from people who asked for one. It never sees your calendar, your events, your address, or your name beyond the label you pick."
+      ],
+      "cost": "Setting it up is free and happens entirely on this device. Publishing a page needs a subscription — free for the first 90 days — and that comes at the end, after you have seen the page you would be publishing.",
+      "footnote": "Nothing has been sent anywhere. Setting this up does not send anything either — the first time this app touches the network is the moment you ask to see the price.",
+      "costHeading": "What it costs"
+    },
+    "calendars": {
+      "blockCaption": "Events here make you unavailable, so no time that clashes with one is ever offered. Turn this on for every calendar that holds real commitments.",
+      "useCaption": "Requests you accept are written here as ordinary events. Exactly one calendar.",
+      "privacy": "Only the busy-or-free shape of these calendars is ever read. Titles, locations, attendees, notes and which calendar an event came from stop at this device and are never published.",
+      "noneBlocking": "No calendar is blocking yet, so every hour in your day would be offered. Pick at least one.",
+      "noRequestCalendar": "Pick one calendar for accepted requests to be written into."
+    },
+    "display": {
+      "nameCaption": "Required, and the only thing on your page that identifies you — everything else a visitor sees is a list of times. Any label works: your name, your initials, or what you do. You decide how much that discloses.",
+      "blurbCaption": "Sits under your name. Anyone with the link reads it, so keep it to what the time is for.",
+      "titleCaption": "What the event is called in your calendar. You choose it, never the person asking — a stranger's words do not become a title in your calendar. What they write goes in the event's notes, where it is obviously theirs.",
+      "locationCaption": "Goes into the event and into the calendar file the person receives, so whoever you accept will see it.",
+      "nameMissing": "A page needs a name. Without one it looks like a form asking a stranger for their email address, which is what a phishing page looks like too."
+    },
+    "policy": {
+      "sentence": "Answer it the way you would say it out loud. The preview underneath shows real dates, so a mistake is visible before anyone else sees it.",
+      "zoneCaption": "Stated, not guessed from this device. A laptop that travels must not quietly re-read “my day starts at 9” as 9am somewhere else.",
+      "lunchCaption": "One mid-day gap. A list of arbitrary exclusions would be a second calendar wearing a disguise — put those in a blocking calendar instead.",
+      "horizonCaption": "How far out someone can ask. A longer horizon puts more of your future shape on one screen, so this is a privacy control as much as an accuracy one. Between 2 and 45 days; beyond that the times are fiction, because calendars fill.",
+      "noticeCaption": "Nothing inside this window is offered. It guards against a request landing with less warning than your device needs to collect it.",
+      "maxPerDayCaption": "This matters more than it looks. Publishing every free half-hour tells a stranger your week is empty; offering four says nothing about the other twelve.",
+      "slotCaption": "The same number becomes the meeting length on your page and in the calendar file you send.",
+      "alignCaption": "Offers begin on a multiple of this past the hour, so people see :00 and :30 rather than :07. Only values that divide into 60 are offered, because the others walk through the hour.",
+      "bufferCaption": "Held free around anything real in your calendar, so nothing lands wheel-to-wheel against a meeting the person asking cannot see."
+    },
+    "preview": {
+      "privacy": "A gap on your page could be a meeting, your lunch, a day you blacked out, or simply your daily cap. Nothing on the page says which, and that is the point.",
+      "cappedNote": "Times you could have offered and chose not to. That is a different answer to “why is nothing showing” than being busy.",
+      "stale": "Calculated just now from the calendars on this device. Nothing here has been published.",
+      "emptyPage": "Your page would be empty. Nobody can ask you for anything until something is offered — the reasons are on each day below.",
+      "headingOne": "You are offering %d time across %d days",
+      "headingMany": "You are offering %d times across %d days"
+    },
+    "offer": {
+      "lede": "Everything so far has stayed on this device. Publishing puts the times you just previewed on askwhen.me, where the people you send the link to can ask for one.",
+      "network": "Loading the price is the first time this app has contacted anyone. It asks Apple what a subscription costs in your currency — nothing about you, your calendar or your page is sent, and askwhen.me is still not involved.",
+      "renews": "Renews yearly until you cancel. Cancel any time in Settings — during the free trial nothing is charged at all.",
+      "upgradesNote": "Both of these are upgrades you can take whenever you want one. Neither carries a free trial, and neither is worth buying before you have a page — a nicer address is not much use without something at it.",
+      "tokenWarning": "Your page is kept alive by a key held only on this device, in its keychain. There is no account and no password, so it cannot be emailed to you or recovered — if you lose this device, you make a new page.",
+      "createFailedTitle": "Apple said yes, askwhen.me did not answer",
+      "createFailedBody": "Your subscription went through — you have not been charged twice and you will not be. The page itself could not be created just now. Try again; nothing is lost and nothing is duplicated.",
+      "failedBody": "Apple did not answer, so there is no price to show. Nothing is wrong with your page — it is still here, still on this device. Try again when you have a connection.",
+      "cancelled": "No problem — nothing was bought and nothing changed. Your page is still here whenever you want it.",
+      "pendingBody": "Apple is holding this until someone approves it — Ask to Buy, or a payment method that needs confirming. The moment it clears, your page publishes itself. You can close the app.",
+      "alreadyBody": "This Apple Account has an active AskWhen.me subscription, so there is nothing to buy. Publishing your page is the only step left."
+    },
+    "live": {
+      "lede": "Send this link to anyone you want to be able to ask you for a time. There is nothing for them to install and no account for them to make.",
+      "openNote": "Worth looking at once, the way the people you send it to will see it.",
+      "tokenHeading": "This device holds the only key",
+      "tokenBody": "Your page is kept alive by a key stored in this device's keychain. There is no account and no password, so nobody — including us — can email it to you or recover it. If you lose this device you make a new page and send out a new link.",
+      "publisherHeading": "This device publishes",
+      "publisherBody": "It derives the times and uploads them whenever your calendar changes. Your other devices can still collect requests and answer them; only this one publishes, so two devices can never disagree about when you are free.",
+      "offHeading": "Turning it off",
+      "offBody": "Switching the request page off stops publishing immediately and the page goes dark. Your subscription is Apple's to cancel, in Settings.",
+      "copy": "Copy link",
+      "copied": "Copied"
+    },
+    "notification": {
+      "permissionBody": "Requests arrive on your device, not in an inbox. A notification is how you find out one is waiting, and it carries Accept and Decline so you can answer without opening anything.",
+      "permissionNote": "Whoever asked gave their name and a note, and both appear in the notification. If you would rather they did not show on a locked screen, iOS controls that under Notifications → Show Previews.",
+      "permissionDenied": "Notifications are off for Calendar Mirror. Requests still arrive and still wait for you in the app — you just will not be told. Settings → Notifications turns them back on.",
+      "failedTitle": "Accepted, but askwhen.me was not told"
+    },
+    "lapse": {
+      "goneBody": "The grace period ended and askwhen.me removed the page. Links to the old address no longer work, and there is nothing left to restore — a new subscription starts a new page with a new address."
+    },
+    "domains": {
+      "failed": "askwhen.me did not answer. Nothing was claimed — try again.",
+      "subdomainHeading": "Your own name on askwhen.me"
+    }
   }
 }

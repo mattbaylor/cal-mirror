@@ -16,13 +16,13 @@ struct RequestDisplayFields: View {
     let onChange: () -> Void
 
     var body: some View {
-        Section(RequestCopy.Display.section) {
+        // No header on the first group — the title is in the navigation bar —
+        // and one footer each, stating the consequence (native.md, §2, §3).
+        Section {
             TextField(RequestCopy.Display.nameTitle,
                       text: $page.displayName,
                       prompt: Text(RequestCopy.Display.namePlaceholder))
                 .onChange(of: page.displayName) { _, _ in onChange() }
-            Text(RequestCopy.Display.nameCaption)
-                .font(.caption).foregroundStyle(.secondary)
 
             // Shown only while it is true. `isReady` refuses to publish without
             // a name anyway; this says why before the owner reaches a screen
@@ -38,24 +38,24 @@ struct RequestDisplayFields: View {
                       axis: .vertical)
                 .lineLimit(1...3)
                 .onChange(of: page.blurb) { _, _ in onChange() }
-            Text(RequestCopy.Display.blurbCaption)
-                .font(.caption).foregroundStyle(.secondary)
+        } footer: {
+            Text(RequestCopy.Display.pageFooter)
         }
 
-        Section(RequestCopy.Display.meetingSection) {
+        Section {
             TextField(RequestCopy.Display.titleTitle,
                       text: $page.meetingTitle,
                       prompt: Text(RequestCopy.Display.titlePlaceholder))
                 .onChange(of: page.meetingTitle) { _, _ in onChange() }
-            Text(RequestCopy.Display.titleCaption)
-                .font(.caption).foregroundStyle(.secondary)
 
             TextField(RequestCopy.Display.locationTitle,
                       text: optional($page.meetingLocation),
                       prompt: Text(RequestCopy.Display.locationPlaceholder))
                 .onChange(of: page.meetingLocation) { _, _ in onChange() }
-            Text(RequestCopy.Display.locationCaption)
-                .font(.caption).foregroundStyle(.secondary)
+        } header: {
+            Text(RequestCopy.Display.meetingSection)
+        } footer: {
+            Text(RequestCopy.Display.meetingFooter)
         }
     }
 

@@ -81,6 +81,16 @@ def pad(inner):
     return f'<div class="pad">{inner}</div>'
 
 
+def ftr(text):
+    """A one-line footer under a group, outside the card — where Apple puts
+    the consequence of a control (apple/design/native.md, section 2)."""
+    return f'<p class="ftr">{esc(text)}</p>'
+
+
+def pinned(label):
+    return f'<div class="pin"><div class="btn">{esc(label)}</div></div>'
+
+
 def build(c, fx):
     o, pol, pv, rq, cf = fx["owner"], fx["policy"], fx["preview"], fx["request"], fx["conflict"]
     d, e, cal = c["dormantRow"], c["explainer"], c["calendars"]
@@ -97,15 +107,19 @@ def build(c, fx):
             f'<span class="val">{esc(d["off"])}</span><span class="chev">›</span></div>'
             f'<p class="cap">{esc(d["blurbPhone"])}</p></div>'))))
 
+    feats = "".join(
+        f'<div class="feat"><span class="sym" aria-hidden="true">◆</span>'
+        f'<div><b>{esc(f["headline"])}</b><br><span class="fl">{esc(f["line"])}</span></div></div>'
+        for f in e["features"])
     steps.append(step(2, "What this is", "local",
-        "The explainer, and the opt-in. Long on purpose — this is where someone decides whether to have a server in their life.",
-        "The cost is named here, before any work is asked of them, so the price at step 7 is disclosed rather than sprung.",
-        phone(nav("Request page") + pad(
-            f'<h4>{esc(e["title"])}</h4>'
-            + "".join(f'<p class="body">{esc(p)}</p>' for p in e["paragraphs"])
-            + f'<p class="sub">{esc(e["costHeading"])}</p><p class="body">{esc(e["cost"])}</p>'
-            + f'<div class="btn">{esc(e["primary"])}</div>'
-            + f'<p class="foot">{esc(e["footnote"])}</p>'))))
+        "A first-run sheet, presented from the row: a symbol, the title, three feature rows, and the cost in one line before any work is asked for.",
+        "The four paragraphs it used to be are under longForm in Copy.json for the site and the listing; on the phone, reading is not the activity.",
+        phone('<div class="pad center">'
+              f'<div class="bigsym" aria-hidden="true">◷</div><h4>{esc(e["title"])}</h4></div>'
+              f'<div class="pad">{feats}</div>'
+              f'<div class="pad"><p class="foot center">{esc(e["footnote"])}</p></div>'
+              + pinned(e["primary"])
+              + f'<p class="center link">{esc(e["secondary"])}</p>')))
 
     rows = "".join(
         f'<div class="calrow"><span class="t">{esc(x["name"])}</span>'
@@ -115,32 +129,34 @@ def build(c, fx):
     steps.append(step(3, "Which calendars count", "local",
         "Two checkboxes per calendar, in the window the owner already uses to look at their calendars.",
         "Use for requests is exactly one, enforced at the control rather than by a validation message — the Kit writes into a single CalRef.",
-        phone(nav("Manage Mirrors") + grp(
-            f'<div class="hdr">{esc(cal["section"])}</div>{rows}'
-            f'<p class="cap pad8 priv">{esc(cal["privacy"])}</p>'))))
+        phone(nav("Which calendars") + grp(rows) + ftr(cal["footer"]) + pinned("Continue"))))
 
     steps.append(step(4, "Your page", "local",
         "Display name, blurb, and the title the accepted event gets.",
         "The display name is the only identifying field in the dump. The event title is the owner's, because a stranger naming an event puts unreviewed text in a calendar.",
         phone(nav(esc(dsp["section"])) + grp(
             f'<div class="row"><div class="rowmain"><span class="t">{esc(dsp["nameTitle"])}</span>'
-            f'<span class="val">{esc(o["displayName"])}</span></div>'
-            f'<p class="cap">{esc(dsp["nameCaption"])}</p></div>'
+            f'<span class="val">{esc(o["displayName"])}</span></div></div>'
             f'<div class="row"><div class="rowmain"><span class="t">{esc(dsp["blurbTitle"])}</span></div>'
             f'<p class="body sm">{esc(o["blurb"])}</p></div>')
+            + ftr(dsp["pageFooter"])
             + grp(f'<div class="hdr">{esc(dsp["meetingSection"])}</div>'
                   f'<div class="row"><div class="rowmain"><span class="t">{esc(dsp["titleTitle"])}</span>'
-                  f'<span class="val">{esc(o["meetingTitle"])}</span></div>'
-                  f'<p class="cap">{esc(dsp["titleCaption"])}</p></div>'))))
+                  f'<span class="val">{esc(o["meetingTitle"])}</span></div></div>'
+                  f'<div class="row"><div class="rowmain"><span class="t">{esc(dsp["locationTitle"])}</span>'
+                  f'<span class="val">{esc(o["meetingLocation"])}</span></div></div>')
+            + ftr(dsp["meetingFooter"]) + pinned("Continue"))))
 
     days = "".join(f'<span class="day {"on" if x in "MTWTF" else ""}">{x}</span>'
                    for x in ["S", "M", "T", "W", "T", "F", "S"])
-    nums = "".join(
-        f'<div class="row"><div class="rowmain"><span class="t">{esc(t)}</span>'
-        f'<span class="val">{esc(v)}</span></div></div>'
-        for t, v in [(po["horizonTitle"], pol["horizon"]), (po["noticeTitle"], pol["notice"]),
-                     (po["maxPerDayTitle"], pol["maxPerDay"]), (po["slotTitle"], pol["slot"]),
-                     (po["alignTitle"], pol["align"]), (po["bufferTitle"], pol["buffer"])])
+    def num(t, v):
+        return (f'<div class="row"><div class="rowmain"><span class="t">{esc(t)}</span>'
+                f'<span class="val">{esc(v)}</span></div></div>')
+    nums = (grp(num(po["horizonTitle"], pol["horizon"]) + num(po["maxPerDayTitle"], pol["maxPerDay"]))
+            + ftr(po["shapeFooter"])
+            + grp(num(po["noticeTitle"], pol["notice"])) + ftr(po["noticeFooter"])
+            + grp(num(po["slotTitle"], pol["slot"]) + num(po["alignTitle"], pol["align"])
+                  + num(po["bufferTitle"], pol["buffer"])) + ftr(po["offerFooter"]))
     steps.append(step(5, "Your day", "local",
         "The policy, asked as a sentence that reads aloud, with the zone stated on the line rather than inferred from the device.",
         "maxPerDay and the horizon are privacy controls wearing the clothes of preferences — publishing every free half-hour tells a stranger your week is empty.",
@@ -149,8 +165,8 @@ def build(c, fx):
             f'<b>{esc(po["dayEnds"])}</b> <u>{esc(pol["dayEnds"])}</u><br>'
             f'<b>{esc(po["zoneTitle"])}</b> <u>{esc(o["timeZone"])}</u><br>'
             f'<b>{esc(po["lunchTitle"])}</b> <u>{esc(pol["lunch"])}</u><br>'
-            f'<b>{esc(po["weekdaysTitle"])}</b> {days}</p>')) + grp(nums)),
-        open_q="Six numbered settings under the sentence. decisions.md argues for few settings and good defaults — buffer, align and slot length could fold behind a disclosure."))
+            f'<b>{esc(po["weekdaysTitle"])}</b> {days}</p>')) + ftr(po["dayFooter"]) + nums + pinned("Continue")),
+        open_q="Six settings in three groups, each with a one-line footer. The two-and-a-third screens the first run measured came from the captions, not the controls."))
 
     gridrows = "".join(
         f'<div class="dayrow"><span class="dl">{esc(lbl)}</span><span class="chips">'
@@ -162,11 +178,12 @@ def build(c, fx):
         "The real offers this policy makes against this calendar, on real dates, before anyone else can see them.",
         "The only honest demonstration the product has — and the empty-day accounting is the one question a settings screen cannot answer.",
         phone(nav(esc(prv["section"])) + grp(
-            pad(f'<h4>{esc(fmt(prv["headingMany"], pv["offered"], pv["days"]))}</h4>'
-                f'<p class="cap">{esc(prv["stale"])}</p>') + gridrows)
+            pad(f'<span class="bignum">{esc(fmt(prv["countMany"], pv["offered"]))}</span> '
+                f'<span class="val">{esc(fmt(prv["across"], pv["days"]))}</span>') + gridrows)
+            + ftr(prv["privacy"])
             + grp(f'<div class="hdr">{esc(prv["emptyDayHeading"])}</div>'
                   f'<p class="body sm pad8"><b>{esc(pv["emptyDay"]["label"])}</b> — {esc(pv["emptyDay"]["reasons"])}</p>')
-            + grp(f'<p class="cap pad8 priv">{esc(prv["privacy"])}</p>'))))
+            + ftr(prv["cappedNote"]) + ftr(prv["stale"]) + pinned("See what it costs"))))
 
     steps.append(step(7, "Publishing", "apple",
         "The offer. The Request Page trial is the single live action; the two paid tiers are shown as upgrades, not sold here.",
@@ -175,12 +192,12 @@ def build(c, fx):
             f'<h4>{esc(off["heading"])}</h4><p class="body sm">{esc(off["lede"])}</p>'))
             + grp(pad('<p class="body"><b>AskWhen.me Request Page</b></p>'
                       f'<p class="body"><b>{esc(fmt(off["trialLine"], "3 months free", "$19.99"))}</b></p>'
-                      f'<div class="btn">{esc(off["buyWithTrial"])}</div>'
-                      f'<p class="foot">{esc(off["renews"])}</p>')
-                  + f'<p class="cap pad8 priv">{esc(off["network"])}</p>')
+                      f'<div class="btn">{esc(off["buyWithTrial"])}</div>'))
+            + ftr(off["renews"]) + ftr(off["network"])
             + grp(f'<div class="hdr">{esc(off["upgradesHeading"])}</div>'
                   '<div class="row"><div class="rowmain"><span class="t">Custom Subdomain</span><span class="val">$34.99</span></div></div>'
                   '<div class="row"><div class="rowmain"><span class="t">Custom Domain</span><span class="val">$69.99</span></div></div>')
+            + ftr(off["upgradesNote"])
             + grp(f'<div class="row"><div class="rowmain"><span class="t">{esc(off["restore"])}</span></div></div>')),
         open_q="A returning owner has no trial left, and sees the price plainly instead. That variant is 7b on the contact sheet."))
 
@@ -197,13 +214,18 @@ def build(c, fx):
         "The write token lives only in this keychain and cannot be recovered — there is no account to recover it to. Saying so here is the difference between a design property and a support ticket.",
         phone(nav(esc(lv["section"])) + grp(pad(
             f'<h4>{esc(lv["heading"])}</h4><p class="body sm">{esc(lv["lede"])}</p>'
-            f'<p class="mono">askwhen.me/{esc(o["slug"])}</p>'
-            f'<div class="btn">{esc(lv["copy"])}</div>'))
+            f'<p class="mono">askwhen.me/{esc(o["slug"])}</p>')
+            + f'<div class="row"><div class="rowmain"><span class="t link">{esc(lv["share"])}</span></div></div>'
+            + f'<div class="row"><div class="rowmain"><span class="t link">{esc(lv["openTitle"])}</span></div></div>')
+            + ftr(lv["linkFooter"])
             + grp(f'<div class="hdr">{esc(nt["permissionHeading"])}</div>'
-                  f'<p class="body sm pad8">{esc(nt["permissionBody"])}</p>'
-                  f'<p class="cap pad8">{esc(nt["permissionNote"])}</p>')
-            + grp(f'<div class="hdr">{esc(lv["tokenHeading"])}</div>'
-                  f'<p class="body sm pad8">{esc(lv["tokenBody"])}</p>')),
+                  f'<div class="row"><div class="rowmain"><span class="t link">{esc(nt["permissionAsk"])}</span></div></div>')
+            + ftr(nt["permissionFooter"])
+            + grp(f'<div class="hdr">{esc(lv["deviceSection"])}</div>'
+                  f'<div class="row"><div class="rowmain"><span class="t">{esc(lv["publishes"])}</span><span class="val">✓</span></div></div>'
+                  f'<div class="row"><div class="rowmain"><span class="t">{esc(lv["holdsKey"])}</span><span class="val">✓</span></div></div>'
+                  f'<div class="row"><div class="rowmain"><span class="t">{esc(lv["turnOff"])}</span><span class="ctl toggle on"></span></div></div>')
+            + ftr(lv["deviceFooter"])),
         open_q="Screen 10 (which device publishes) is folded in here — a nomination screen with one candidate asks a question with no second answer."))
 
     steps.append(step(10, "Someone asks", "service",
@@ -377,6 +399,19 @@ h1 { font-size:30px; margin:0 0 6px; letter-spacing:-.4px; }
 .t { flex:1; } .t.danger { color:#c0392b; }
 .val { color:var(--note); } .chev { color:var(--note); }
 .cap { color:var(--note); font-size:12.5px; margin:6px 0 0; }
+/* Native pass: footers under the group, a pinned primary button, feature rows. */
+.ftr { color:var(--note); font-size:12.5px; margin:-8px 0 14px; padding:0 16px; }
+.pin { padding:8px 16px 6px; }
+.pin .btn { margin:0; }
+.center { text-align:center; }
+.bigsym { font-size:44px; color:var(--tint); line-height:1; margin:18px 0 6px; }
+.feat { display:flex; gap:14px; align-items:flex-start; margin:0 0 16px; }
+.feat .sym { color:var(--tint); font-size:22px; line-height:1.2; width:28px; text-align:center; }
+.fl { color:var(--note); font-size:13.5px; }
+.bignum { font-size:28px; font-weight:700; letter-spacing:-.5px; }
+.t.link { color:var(--tint); }
+.ctl.toggle { width:42px; height:25px; border-radius:13px; background:var(--sep); display:inline-block; }
+.ctl.toggle.on { background:#34c759; }
 .pad8 { padding:0 16px 10px; } .priv { border-top:1px solid var(--sep); padding-top:10px; }
 .pad { padding:16px; background:var(--card); }
 h4 { font-size:18px; margin:0 0 6px; }
