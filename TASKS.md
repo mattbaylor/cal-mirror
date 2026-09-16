@@ -86,6 +86,7 @@ Judgment, not access. Roughly in the order it starts costing.
 | **A support address requesters can reach.** Mail comes from `no-reply@`; the page footer says `askwhen.me` and nothing else. Someone who gets a wrong `.ics` has nowhere to write. | Support, and Apple asks for one. |
 | **Small Business Program** enrollment, if not already — 15% instead of 30%. | Money. |
 | **`askwhen.me` registration renewal** date — put it somewhere a reminder fires. | The whole product is one lapsed domain from gone. |
+| **An outside review found nine defects and four capture problems** *(16 Sept)* — `REVIEW.md`. The ones nobody had listed: the delete sweep has no automated test; calendar matching is by title string; banner writes swallow errors; the write token should sync via iCloud Keychain; the listing and privacy page become false in 2.0; the Mac store screenshots are of the standalone app; two Mac captures are of an inactive window; `askwhen.me` is lowercase in the explainer. | Each is a task or a decision; `REVIEW.md` says which. |
 
 ## Also yours, but lower stakes
 

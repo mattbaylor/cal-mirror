@@ -1,7 +1,7 @@
 # Where this is, and what is left
 
-**Written 11 September 2026; updated 15 September (evening).** Read this first; then [`TASKS.md`](TASKS.md) for
-the live board. `HANDOFF.md` (1 September) is retired — everything in it that
+**Written 11 September 2026; updated 16 September.** Read this first; then [`TASKS.md`](TASKS.md) for
+the live board, and [`REVIEW.md`](REVIEW.md) for the outside review of 16 September and what it filed where. `HANDOFF.md` (1 September) is retired — everything in it that
 was still true is here, and everything else has been done.
 
 Two products in one repository:
