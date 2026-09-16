@@ -158,14 +158,19 @@ enum DebugSeed {
         guard let calendar = calendar(in: events) else { return }
         seedEvents(in: calendar, using: events)
 
+        store.calendars = store.engine.calendars()
+        // The same CalRef the calendars screen builds — title *and* account —
+        // or the row's toggle compares unequal and shows the seeded calendar
+        // as not blocking while the deriver treats it as blocking.
+        let info = store.calendars.first { $0.title == calendarTitle }
+        let ref = CalRef(title: calendarTitle, account: info?.account)
         var page = store.requestPage
-        page.blocking = [CalRef(title: calendarTitle)]
-        page.requestCalendar = CalRef(title: calendarTitle)
+        page.blocking = [ref]
+        page.requestCalendar = ref
         // Still not enabled and still no slug: the opt-in is the thing worth
         // seeing from the start, and a seeded live page would hide it.
         store.requestPage = page
         store.save()
-        store.calendars = store.engine.calendars()
         seedRequest(into: store)
     }
 
