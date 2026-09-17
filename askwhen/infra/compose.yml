@@ -57,15 +57,15 @@ services:
       AW_ZONE: "askwhen.me"
       # The proxy whose X-Forwarded-For is believed and whose bare requests
       # may reach /internal/: the caddy container, at the fixed address the
-      # `edge` network gives it. The DC edge (172.16.1.4) is listed too
-      # while it still proxies askwhen.me; it comes off the day it stops.
-      AW_TRUSTED_PROXY: "172.28.0.2, 172.16.1.4"
+      # `edge` network gives it. A list is accepted (comma or space) for the
+      # window when two edges overlap, as on 16 Sept 2026; it should be one
+      # address at every other time.
+      AW_TRUSTED_PROXY: "172.28.0.2"
       # Where a custom domain is supposed to point (§7): the CNAME target a
       # customer is told, and the edge's public address for an apex that
       # cannot carry a CNAME. Both are checked before the gate will issue.
-      # 64.111.22.170 stays listed while edge.askwhen.me still resolves there.
       AW_EDGE_TARGET: "edge.askwhen.me"
-      AW_EDGE_IPS: "64.111.27.242 64.111.22.170"
+      AW_EDGE_IPS: "64.111.27.242"
 
       # Apple. Transactions must be for this bundle. AW_APPSTORE_SANDBOX=1
       # lets Sandbox transactions create pages, which is how the purchase
@@ -105,14 +105,11 @@ services:
         # (it starts first: caddy depends on it being healthy).
         ipv4_address: 172.28.0.3
 
-    # Reachable from the caddy container over the `edge` network. Still
-    # published on the internal address as well, for the DC edge, until that
-    # proxy stops carrying askwhen.me; then this block goes and :8080 is not
-    # reachable from anywhere but the caddy container. The gate on
-    # /internal/tls-authorize does not rely on either — it refuses without
-    # the secret regardless of who is asking (tlsauth).
-    ports:
-      - "8080:8080"
+    # No published port. :8080 is reachable from the caddy container over the
+    # `edge` network and from nowhere else — not the DC network, not this
+    # host's other containers. The gate on /internal/tls-authorize does not
+    # rely on that: it refuses without the secret regardless of who asks
+    # (tlsauth), and refuses anything carrying an X-Forwarded-* header.
 
     read_only: true
     tmpfs:
@@ -206,8 +203,7 @@ secrets:
     file: ./secrets/pepper
   # openssl rand -hex 32 > infra/secrets/tls_auth_secret
   # Shared by the app (as a file) and the caddy container (as an environment
-  # variable, via its command). Until the DC edge stops carrying askwhen.me,
-  # the same value is also in its Caddyfile — see edge.md.
+  # variable, via its command). Nothing outside this compose project has it.
   tls_auth_secret:
     file: ./secrets/tls_auth_secret
 

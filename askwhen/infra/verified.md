@@ -218,7 +218,15 @@ Giving askwhen its own address isolates the blast radius, keeps on-demand
 issuance away from the business site, and makes the wildcard and `edge` records
 honest. That is the change I would make to `dns.md`, and it is Matt's call.
 
-### 2. Use the edge that already exists — DECIDED
+### 2. Use the edge that already exists — DECIDED, then UNDONE
+
+**Matt, 16 Sept 2026: a dedicated address and our own Caddy on CT 112.**
+`64.111.27.242`, port-forwarded to `172.16.1.41`; the caddy container in
+`compose.yml`; `edge.md` has what happened and why. The "grow to a second
+edge only if we need to" below lasted two weeks, and what made it necessary
+was not askwhen's traffic but the shared proxy's other names: a pruned site
+block left a stale CNAME falling through to askwhen's on-demand catch-all,
+served with a certificate the business's ACME account paid for.
 
 **Matt, 2 Sept 2026: go behind `caddy-dc`. Grow to a second edge only if we
 need to.** So the branch's own `Caddyfile` and `Dockerfile.caddy` become an

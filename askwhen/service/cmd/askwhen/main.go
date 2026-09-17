@@ -95,11 +95,12 @@ func loadConfig() (config, error) {
 		// we run and nowhere else, or the per-IP limit either counts the proxy
 		// or lets a requester pick their own bucket. A comma- or space-separated
 		// list is accepted so that two edges can overlap during a move; it
-		// should be back to one address the day the move is done.
-		trustedProxy: envOr("AW_TRUSTED_PROXY", "172.16.1.4"),
+		// should be back to one address the day the move is done. The default
+		// is the caddy container's fixed address on the compose `edge` network.
+		trustedProxy: envOr("AW_TRUSTED_PROXY", "172.28.0.2"),
 		webDir:       envOr("AW_WEB", "/web"),
 		edgeTarget:   envOr("AW_EDGE_TARGET", "edge.askwhen.me"),
-		edgeIPs:      strings.Fields(strings.ReplaceAll(envOr("AW_EDGE_IPS", "64.111.22.170"), ",", " ")),
+		edgeIPs:      strings.Fields(strings.ReplaceAll(envOr("AW_EDGE_IPS", "64.111.27.242"), ",", " ")),
 		bundleID:     envOr("AW_BUNDLE_ID", "io.github.mattbaylor.cal-mirror"),
 		// Default on: the sandbox is how the flow is proven before launch.
 		// compose.yml flips it to "0" at launch (TASKS.md).
@@ -574,7 +575,7 @@ func withPersonal(body []byte) ([]byte, error) {
 // own address and was not forwarded on somebody's behalf.
 //
 // Two checks, because one is not enough: a public request for /internal/…
-// that the edge proxies through arrives from the same 172.16.1.4 as Caddy's
+// that the edge proxies through arrives from the same address as Caddy's
 // own `ask`. What tells them apart is that Caddy's ask sets no headers at all
 // (verified against ondemand.go), while a proxied request always carries
 // X-Forwarded-For. Refuses with the same 404 as an unknown page, so the
