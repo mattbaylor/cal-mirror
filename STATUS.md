@@ -129,8 +129,8 @@ have; **mine** means it can be built and tested without you.
 | 4 | ~~Lapse~~ **done 15 Sept.** `/hooks/appstore` and `/hooks/appstore-sandbox` take Server Notifications V2; `EXPIRED` starts the 7-day grace (page serves "not currently taking requests", publish refused), `DID_RENEW` ends it, `REFUND`/`REVOKE` skip it; the sweep deletes pages whose grace ran out, and lapses any subscription 17 days past expiry even if the notification never came. **Proof against the sandbox** waits on a purchase from a build. | done | — |
 | 5 | ~~Flip on-demand TLS~~ **done 15 Sept** — custom domains and subdomains are live. | done | — |
 | 6 | **Privacy policy, terms, listing and site** — **drafted 16 Sept** in the F PR: privacy.html says what the server holds and for how long, terms.html is new, the listing is rewritten for 2.0 within Apple's limits, the site has the AskWhen.me story and the pricing, and `checksite.py` polices the site's claims in CI. Three lines are yours: log retention, the support address, the operator's name. | drafted, **yours** to approve | an hour |
-| 7 | **Rotate the five leaked credentials** (`cloudflare_apitoken`, the two R2 keys, the R2 endpoint, `gh_claude`) — printed into a transcript 4 Sept. You said at prod; this is prod. | **Yours** | an hour |
-| 8 | ~~Back up the pepper~~ **done** (Infisical). | done | — |
+| 7 | ~~Rotate the five leaked credentials~~ **done 17 Sept**, verified by `askwhen/infra/verify-secrets.sh`. | done | — |
+| 8 | ~~Back up the pepper~~ **done** (Infisical, as `askwhen_pepper`). | done | — |
 | 9 | **A simulator pass over the request-page UI, then App Store screenshots and review notes for Calendar Mirror 2.0** — from a synthetic config, never the live one. These are one job now: the first run of the UI is also where the screenshots come from, and `apple/tools/review-fixture.json` already holds a synthetic owner to drive it. | **Yours** to run, mine to fix what it finds | a day |
 | 10 | **Release Calendar Mirror 2.0 from CI** (`release.yml`). Never from this laptop. 1.4.2 folds in — it is on `main` unreleased. | **Yours** | hours |
 

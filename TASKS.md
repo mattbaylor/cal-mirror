@@ -22,7 +22,7 @@ The order that unblocks the most. Each line names whose it is.
 | 1 | ~~App Store Connect~~ **done 15 Sept** — agreement active, group 22387296, three products, trial on Page only, notifications URLs set, sandbox tester exists | Matt | — |
 | 2 | ~~The `.storekit` file~~ **done 15 Sept** [#90](https://github.com/mattbaylor/cal-mirror/pull/90) — group 22387296, three annual products, trial on Page only, attached to both run schemes | Matt | — |
 | 3 | ~~Review draft #84~~ — folded into the F PR (16 Sept) with its TODO still open: `caddy-dc` access-log retention, and now the support address | Matt | the privacy page ships |
-| 4 | ~~Back up the pepper~~ **done** (Infisical) | Matt | — |
+| 4 | ~~Back up the pepper~~ **done** (Infisical, as `askwhen_pepper`) | Matt | — |
 | 5 | ~~Entitlement verification on the service~~ **done 15 Sept** [#91](https://github.com/mattbaylor/cal-mirror/pull/91) | | — |
 | 6 | ~~`POST /hooks/appstore`~~ **done 15 Sept** — sandbox proof still waits on a purchase from a real build | | — |
 | 7 | ~~`CalMirrorKit` StoreKit wrapper~~ **done 15 Sept** [#93](https://github.com/mattbaylor/cal-mirror/pull/93) — `SubscriptionStore` behind five calls, with `FakeSubscriptions` for previews and `cmk-check` | | — |
@@ -43,7 +43,7 @@ left behind is below, under *Next*.
 | 2 | **Screenshots and review notes for 2.0** — produced 16 Sept: three new iPhone captures from the seed (Send times, the preview, a request waiting), frames 6, 8 and 10 of the composites rewritten for 2.0, and `review_notes.txt` generated per platform with one placeholder, the sandbox tester. `python3 appstore/tools/genstore.py && python3 appstore/tools/genmeta.py` regenerates all of it. | produced, **Matt** to approve and paste |
 | 3 | **Sandbox proof of the lapse path** — a real purchase from a build, then `EXPIRED` → grace → delete against `/hooks/appstore-sandbox`. Waits on 1. | mine, once 1 happens |
 | 4 | **Privacy policy, terms, listing and site** — drafted in the F PR (16 Sept), waiting on Matt's read plus three TODOs: log retention, the support address, the operator's name on the terms. | **Matt** to review |
-| 5 | **Rotate the five leaked credentials.** Said at prod; this is prod. | **Matt** |
+| 5 | ~~Rotate the five leaked credentials~~ **done 17 Sept**, verified. | done |
 | 6 | **Release 2.0 from CI** (`release.yml`), never from the laptop. 1.4.2 folds in. | **Matt** |
 
 ## Asks — none open
@@ -60,7 +60,7 @@ Judgment, not access. Roughly in the order it starts costing.
 | | What | The call |
 |---|---|---|
 | ⚪ | **Apple agreements renew 14 Dec 2026** — both Paid Apps and Free Apps. Until you accept the renewed version, new products and price changes are refused; existing sales continue. Calendar a reminder for early December. | |
-| 🔴 | **Rotate five credentials before prod** | Guided: [`askwhen/infra/rotation.md`](askwhen/infra/rotation.md) — provider UI → Infisical web UI, nothing through a terminal; then an agent runs `askwhen/infra/verify-secrets.sh`, which prints only pass/fail. Found 16 Sept: the `cloudflare_apitoken` in Infisical is already invalid (401), so that one is half rotated. `~/.claude/settings.json` denies `infisical secrets` outright. |
+| ⚪ | ~~**Rotate five credentials before prod**~~ | **Done 17 Sept.** `verify-secrets.sh` prints ok on every line: the Cloudflare token is account-owned and scoped to the two zones; `gh_claude` answers as `mattbaylor`; Postal and the pepper (now `askwhen_pepper`) are fine. The R2 line stays `skipped` on this laptop (no `aws` CLI). The runbook stays as the procedure for next time. |
 | 🔴 | **Edge Caddy: 2.6.2 → 2.11.4, and drop the wildcard** | Now a submission blocker, since AskWhen.me launches paid (decided 16 Sept). Plan and argument in `infra/edge/upgrade-plan.md` (repo root). Only apex + `www` are staged today because 2.6.2 has no DNS modules. Recommendation: upgrade for the security fixes, and do **not** add the wildcard — every `*.askwhen.me` name we would ever serve is a custom-domain CNAME, which on-demand TLS already covers. |
 | 🟡 | **Disable Universal SSL on `askwhen.me`** | Cloudflare keeps injecting CAA records for its own CAs into the zone. Harmless while the records also permit Let's Encrypt, but it is a foreign hand in a zone we otherwise control. Cloudflare → SSL/TLS → Edge Certificates → Disable Universal SSL. |
 | 🟡 | **Reserve `172.16.1.41` in pfSense** and **add CT 112 to PBS** | The guest has a static address nothing else knows about, and no backup. Both are yours because both are DC-wide config. |
