@@ -230,8 +230,9 @@ me.askwhen.domain.annual ($69.99/yr); the offer screen sells the first, the
 other two are upgrades on the address screen. "Restore Purchases" is on the
 offer screen.
 
-SANDBOX TESTER: [PLACEHOLDER — Matt: the sandbox Apple Account and password
-from App Store Connect › Users and Access › Sandbox]
+SANDBOX TESTER: in the demo-account fields of this submission. Sign into it
+under Settings › App Store › Sandbox Account on the test device before
+purchasing.
 
 What happens after a purchase: the app sends Apple's signed transaction to
 our server, which verifies it offline against Apple's root and creates the
