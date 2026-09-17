@@ -143,7 +143,7 @@ have; **mine** means it can be built and tested without you.
 | 13 | **The app offer on the request page** — decided: Apple visitors are pushed to the app, not dismissable during the trial. Not built; needs the App Store link and a platform check. | mine |
 | 14 | **Indexing opt-in.** `noindex` is the default everywhere; the per-page opt-in to be listed is not built. Small. | mine |
 | 15 | **Conversion counted, never attributed.** Decided; not built. A counter, no join. | mine |
-| 16 | **Observability.** Logs on the container and nothing else. Minimum: an uptime check on `/healthz` from outside, and the logs somewhere a restart does not eat. | mine, you pick where |
+| 16 | **Observability.** Logs on the container and nothing else. Minimum: an uptime check on `/healthz` from outside, and the logs somewhere a restart does not eat. The nightly `VACUUM INTO` half of B is **done 16 Sept** (the `backup` sidecar). | mine, you pick where |
 | 17 | **Edge Caddy 2.6.2 → 2.11.4** — plan in `infra/edge/upgrade-plan.md` (repo root, not under `askwhen/`); three years of TLS fixes. Confirmed `v2.6.2` by SSH on 16 Sept. | **Yours** |
 | 18 | **CT 112 in PBS; `.41` reserved in pfSense; Universal SSL off for `askwhen.me`; an Infisical machine identity.** | **Yours** — DC-wide config |
 

@@ -135,6 +135,42 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  backup:
+    # A nightly `VACUUM INTO` of the database, to its own volume, keeping 14
+    # days. PBS snapshots the guest; a WAL-mode SQLite file mid-write is not
+    # guaranteed consistent in a snapshot, and this copy is. Same uid as the
+    # app, the database opened read-only, no network.
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.backup
+    restart: unless-stopped
+    environment:
+      AW_DB: "/data/askwhen.db"
+      AW_BACKUP_DIR: "/backups"
+      AW_BACKUP_KEEP_DAYS: "14"
+      AW_BACKUP_AT: "03:10"
+    volumes:
+      # Read-write mount, read-only open: a WAL reader has to touch the -shm
+      # file, and the script opens the database with mode=ro regardless.
+      - aw-data:/data
+      - aw-backups:/backups
+    network_mode: none
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      app:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "2"
+
   caddy:
     # Pinned. An unpinned tag on a TLS terminator is how the DC edge spent
     # three years on 2.6.2 without anyone deciding to (infra/edge/upgrade-plan.md).
@@ -209,5 +245,9 @@ secrets:
 
 volumes:
   aw-data:
+  # The nightly copies. Under /var/lib/docker/volumes on the guest, which is
+  # what PBS carries; the copies are the database's equal in every policy
+  # sense and never leave this host.
+  aw-backups:
   caddy-data:
   caddy-config:
