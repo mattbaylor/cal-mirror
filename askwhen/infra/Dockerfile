@@ -41,11 +41,14 @@ RUN npm run build
 # that nobody added one, because the whole product argument dies quietly if they
 # did — and a bundler will happily inline a Google Fonts @import for you.
 #
-# The one permitted hit is the SVG namespace, which is an identifier and not a
-# fetch. If you find yourself widening this list, that is the moment to argue
-# about it, which is the point of putting it in the build rather than in a
-# review checklist.
-RUN if grep -rIn -E 'https?://' dist/ | grep -v 'www\.w3\.org'; then \
+# The permitted hits are the SVG namespace, which is an identifier and not a
+# fetch, and og:image, which Open Graph requires to be absolute and which is
+# this host's own mark — the browser never fetches it, a link preview does
+# (askwhen/web/test/no-network.mjs makes the same two exceptions). If you find
+# yourself widening this list further, that is the moment to argue about it,
+# which is the point of putting it in the build rather than in a review
+# checklist.
+RUN if grep -rIn -E 'https?://' dist/ | grep -v 'www\.w3\.org' | grep -v 'https://askwhen\.me/og\.png'; then \
       echo "FAIL: the built request page references an external URL"; exit 1; \
     fi
 
