@@ -321,7 +321,14 @@ def ensure_screenshots(lid, folder, display):
         st = r["data"]
 
     for fn in stale + extra:
-        call("DELETE", f"/v1/appScreenshots/{remote[fn][0]}")
+        # A version in review refuses the delete (409, "Can't Delete
+        # Screenshot After Submit"). Say so and leave the remote entry in
+        # place, so the upload loop below does not try to add an eleventh.
+        # A successful DELETE has no body, so call() returns {} — falsy —
+        # and only None means it failed.
+        if call("DELETE", f"/v1/appScreenshots/{remote[fn][0]}") is None:
+            print(f"      kept {folder}/{fn} — App Store Connect refused the change")
+            continue
         print(f"      removed {folder}/{fn}")
         remote.pop(fn, None)
 
