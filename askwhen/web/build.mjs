@@ -37,4 +37,7 @@ await build({
 });
 
 await cp(here('index.html'), here('dist/index.html'));
+// The mark, rasterised by assets/askwhen-markgen.swift. Served by the shell
+// at the root beside app.js; nothing here is fetched from anywhere else.
+await cp(here('static'), here('dist'), { recursive: true });
 await cp(here('gallery.html'), here('dist/gallery.html'));

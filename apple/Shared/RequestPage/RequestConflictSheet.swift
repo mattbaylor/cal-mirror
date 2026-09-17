@@ -96,6 +96,7 @@ struct RequestConflictSheet: View {
             }
         }
         .formStyle(.grouped)
+        .askWhenLook()
     }
 
     private func describe(_ i: BusyInterval) -> String {
@@ -137,12 +138,14 @@ struct RequestRow: View {
             }
             HStack {
                 Button(RequestCopy.Notification.accept, action: accept)
-                    .buttonStyle(.borderedProminent)
+                    .askWhenProminent(.regular)
                 Button(RequestCopy.Notification.decline, role: .destructive, action: decline)
                     .buttonStyle(.bordered)
             }
             .padding(.top, 2)
         }
         .padding(.vertical, 4)
+        // A request is AskWhen.me's, wherever the row is shown.
+        .askWhenLook()
     }
 }

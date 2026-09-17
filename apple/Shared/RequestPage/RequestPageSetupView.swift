@@ -59,6 +59,7 @@ struct RequestPageSetupView: View {
 
     var body: some View {
         content
+            .askWhenLook()
             .navigationTitle(step.title)
             #if !os(macOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -252,8 +253,7 @@ struct RequestPageSetupView: View {
         Button { step = to } label: {
             Text(to == .offer ? "See what it costs" : "Continue").frame(maxWidth: .infinity)
         }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .askWhenProminent()
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .background(.bar)

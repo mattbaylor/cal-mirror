@@ -222,7 +222,9 @@ struct WeekdayPicker: View {
                     Text(label)
                         .font(.caption)
                         .frame(width: 30, height: 30)
-                        .background(on ? Color.accentColor : Color.secondary.opacity(0.15))
+                        // AskWhen.me's colour, explicitly: Color.accentColor is
+                        // the app's global accent and does not follow .tint.
+                        .background(on ? AskWhenLook.accent : Color.secondary.opacity(0.15))
                         .foregroundStyle(on ? Color.white : Color.primary)
                         .clipShape(Circle())
                         // The circle is 30pt; the tap target is the 44pt Apple

@@ -112,6 +112,13 @@ scale, overlay, MCP, Siri, and `decisions.md` — which keeps **Settled** (you
 decided) apart from **Proposed** (an agent's reasoning). That line matters;
 keep it real.
 
+**The look (17 Sept 2026):** the mark and the palette are Settled in
+`decisions.md`. The master is `assets/askwhen-mark.svg`; never redraw it —
+regenerate every raster with `swiftc assets/askwhen-markgen.swift -o /tmp/markgen
+&& /tmp/markgen .`. The rule that matters most when touching any of it: ink
+`#06121F` is the only text on the gradient, and a submit is amber, never the
+accent (it reads as cancel).
+
 ---
 
 ## What is left to ship Calendar Mirror 2.0 and launch AskWhen.me
@@ -139,7 +146,7 @@ have; **mine** means it can be built and tested without you.
 | | What | Whose |
 |---|---|---|
 | 11 | **Design the emails.** All four are deliberately plain (`<p>` after `<p>`, nothing fetched, nothing to click on the confirm mail but a URL whose GET does nothing). Keep both properties. | **Yours** |
-| 12 | **The page's look-and-feel sit-down** you said you were not sold on. Gallery is ready. | **Yours** |
+| 12 | ~~The page's look-and-feel sit-down~~ **Decided 17 Sept**: AskWhen.me has its own mark (`assets/askwhen-mark.svg`, master; rasters from `assets/askwhen-markgen.swift`) and a warm palette, applied to the web request page, the request-page screens in both apps, the site's AskWhen.me section and its own page `docs/askwhen.html`, and store frame 9. Submits are amber with ink, never red, never white-on-gradient. Contrast numbers in the PR; entry in `decisions.md`. Emails and the Calendar Mirror icon unchanged. | done |
 | 13 | **The app offer on the request page** — decided: Apple visitors are pushed to the app, not dismissable during the trial. Not built; needs the App Store link and a platform check. | mine |
 | 14 | **Indexing opt-in.** `noindex` is the default everywhere; the per-page opt-in to be listed is not built. Small. | mine |
 | 15 | **Conversion counted, never attributed.** Decided; not built. A counter, no join. | mine |

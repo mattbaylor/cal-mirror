@@ -331,6 +331,10 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 	// a dot anyway.
 	mux.HandleFunc("GET /{slug}", shell.Page)
 	mux.HandleFunc("GET /app.js", shell.Script)
+	// The mark: favicon, touch icon, og:image. Literal routes, like /app.js.
+	for _, name := range api.AssetNames {
+		mux.HandleFunc("GET /"+name, shell.Asset(name))
+	}
 
 	// The gate is reachable from the edge and nothing else (edge.md, "three
 	// things that are not optional", 1). The secret in the query string is

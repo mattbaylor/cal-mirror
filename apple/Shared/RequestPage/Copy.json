@@ -23,7 +23,7 @@
     "carryOn": "Reconnect"
   },
   "explainer": {
-    "symbol": "calendar.badge.clock",
+    "symbol": "AskWhenMark",
     "title": "A page where people can ask for a time",
     "features": [
       {

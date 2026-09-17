@@ -57,9 +57,9 @@ export class SlotButton extends LitElement {
       }
 
       button[aria-pressed='true'] {
-        border-color: var(--accent);
-        background: var(--accent);
-        color: #06121f;
+        border-color: var(--fill-edge);
+        background: var(--accent-fill);
+        color: var(--on-fill);
         font-weight: 600;
       }
 

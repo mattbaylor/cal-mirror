@@ -47,6 +47,13 @@ enum MacFixture {
         isRequested && ProcessInfo.processInfo.arguments.contains("-CalMirrorFixtureWarning")
     }
 
+    /// `-CalMirrorFixtureSheet` — open the request-page sheet over the
+    /// window, at the explainer, for the capture of AskWhen.me's look on the
+    /// Mac. The fixture has no page, so that is where the sheet starts.
+    static var wantsSheet: Bool {
+        isRequested && ProcessInfo.processInfo.arguments.contains("-CalMirrorFixtureSheet")
+    }
+
     private static func value(after flag: String) -> String? {
         guard isRequested else { return nil }
         let args = ProcessInfo.processInfo.arguments

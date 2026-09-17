@@ -13,8 +13,20 @@ export const tokens = css`
     --tx: #0d1220;
     --mut: #4a5568;
     --dim: #78889d;
-    --accent: #3aa0ff;
-    --accent2: #28c8b6;
+    /* AskWhen.me's own accent, warm (decisions.md, 17 Sept 2026). --accent
+       is for text, borders and focus: 4.8:1 on --bg, 5.1:1 on --card.
+       --accent-fill is the primary control: the gradient's amber, so a
+       submit is never the red that reads as cancel, with --on-fill (ink,
+       8.9:1) as its label since white on it is 2.1:1. Amber alone is 2:1
+       against a light surface, short of a control edge's 3:1, so in light
+       mode fills carry --fill-edge in the accent; in dark mode amber is 9:1
+       against the page and the edge is transparent. The gradient itself is
+       decoration and appears in the mark alone; never under text. */
+    --accent: #c7355f;
+    --accent2: #ee4380;
+    --accent-fill: #ff9a3c;
+    --on-fill: #06121f;
+    --fill-edge: #c7355f;
     --good: #2ecc71;
     --warn: #d99a20;
     --bad: #c0392b;
@@ -35,6 +47,8 @@ export const tokens = css`
       --dim: #6b7a90;
       --warn: #e0a93a;
       --bad: #ff6b5a;
+      --accent: #f0689a;   /* 5.9:1 on --card, 6.6:1 on --bg */
+      --fill-edge: transparent;
       --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
     }
   }

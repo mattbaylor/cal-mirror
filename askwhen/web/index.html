@@ -8,6 +8,15 @@
          opt-in the owner makes deliberately. See design/decisions.md. -->
     <meta name="robots" content="noindex,nofollow" />
     <title>Ask for a time</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- Absolute on purpose: Open Graph requires it, and a relative one is how
+         the marketing site's previews broke unnoticed (design/decisions.md).
+         Nothing on the page fetches it; a link preview does. -->
+    <meta property="og:title" content="Ask for a time" />
+    <meta property="og:image" content="https://askwhen.me/og.png" />
+    <meta name="theme-color" content="#ff9a3c" />
     <!-- Everything this page can do, it does from its own origin: two fetches,
          both to this host, and nothing else. Stated here so it is enforced,
          not merely intended; the service sends the same policy as a header. -->

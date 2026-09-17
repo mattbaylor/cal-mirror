@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="nav.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AskWhen.me — a request page whose server never sees your calendar</title>
+<meta name="description" content="AskWhen.me is a page where people can ask you for a time. Your device chooses which times to offer, the server never sees your calendar, and nothing lands until you accept. A subscription you turn on from inside Calendar Mirror.">
+<link rel="icon" href="img/askwhen-mark.png">
+<meta property="og:title" content="AskWhen.me">
+<meta property="og:description" content="A page where people can ask you for a time. Your device chooses the times, the server never sees your calendar, and nothing lands until you accept.">
+<meta property="og:image" content="https://calendarmirror.com/img/askwhen-mark.png">
+<meta property="og:type" content="website">
+<style>
+  /* AskWhen.me's own page, in its own look (askwhen/design/decisions.md,
+     17 Sept 2026): the mark's gradient and accent, ink on the gradient and
+     never white, and the accent for text, borders and focus. The surfaces
+     are the site's, so the page still reads as part of calendarmirror.com. */
+  :root{
+    --bg:#0b0e14; --bg2:#0f1420; --card:#151b28; --card2:#1b2333;
+    --line:#232c3d; --tx:#e6edf3; --mut:#93a1b5; --dim:#6b7a90;
+    --accent:#f0689a; --amber:#ff9a3c; --pink:#ee4380; --ink:#06121f; --good:#2ecc71;
+    --radius:16px; --shadow:0 12px 40px rgba(0,0,0,.35);
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f6f8fc; --bg2:#eef2f9; --card:#ffffff; --card2:#f3f6fb;
+      --line:#e2e8f2; --tx:#0d1220; --mut:#4a5568; --dim:#78889d; --accent:#c7355f;
+      --shadow:0 12px 40px rgba(30,50,90,.10); }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--tx);background:
+      radial-gradient(1200px 600px at 78% -8%, rgba(255,154,60,.16), transparent 60%),
+      radial-gradient(900px 500px at 8% 4%, rgba(238,67,128,.12), transparent 55%),
+      var(--bg);-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+
+  header.hero{text-align:center;padding:56px 0 26px}
+  .mark{display:block;width:96px;height:96px;margin:0 auto 22px;border-radius:21px;box-shadow:var(--shadow)}
+  .pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
+  .pill{font-size:12px;color:var(--mut);border:1px solid var(--line);background:var(--card);
+    padding:5px 11px;border-radius:999px}
+  h1{font-size:clamp(36px,5.6vw,60px);line-height:1.06;margin:.1em 0 .2em;letter-spacing:-1.2px;font-weight:800}
+  .grad{background:linear-gradient(120deg,var(--amber),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{font-size:clamp(17px,2.4vw,20px);color:var(--mut);max-width:660px;margin:0 auto 30px}
+  .cta{display:flex;gap:13px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:12px;
+    font-weight:650;text-decoration:none;font-size:15px;border:1px solid transparent;transition:.15s transform,.15s box-shadow}
+  .btn:hover{transform:translateY(-2px)}
+  /* The primary is the gradient's amber with ink, never white, on it — and a
+     light-mode edge in the accent, since amber alone is 2:1 against the page. */
+  .btn.primary{background:var(--amber);color:var(--ink);border-color:var(--accent);box-shadow:0 10px 30px rgba(255,154,60,.32)}
+  @media (prefers-color-scheme: dark){ .btn.primary{border-color:transparent} }
+  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--tx)}
+  .sub{font-size:12.5px;color:var(--dim);margin-top:12px}
+
+  section{padding:52px 0}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent);text-align:center}
+  h2{font-size:clamp(26px,3.6vw,34px);text-align:center;margin:.25em 0 .1em;letter-spacing:-.5px}
+  .muted{color:var(--mut);text-align:center;max-width:660px;margin:0 auto}
+  .muted a, .card a, .price a{color:var(--accent)}
+
+  .new{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--ink);background:linear-gradient(135deg,var(--amber),var(--pink));
+    border-radius:999px;padding:3px 10px;vertical-align:middle;margin-left:8px}
+  .newnote{max-width:660px;margin:14px auto 0;text-align:center;font-size:13.5px;color:var(--dim);
+    border:1px dashed var(--line);border-radius:12px;padding:10px 16px}
+  .newnote b{color:var(--mut)}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+  .card .ic{font-size:22px}
+  .card h3{margin:.5em 0 .3em;font-size:17px}
+  .card p{margin:0;color:var(--mut);font-size:14.5px}
+  .card.price b{color:var(--accent)}
+
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:34px}
+  @media(max-width:820px){.steps{grid-template-columns:1fr}}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+  .step .n{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:700;
+    background:linear-gradient(135deg,var(--amber),var(--pink));color:var(--ink);margin-bottom:10px}
+  .step h3{margin:.1em 0 .3em;font-size:16px}.step p{margin:0;color:var(--mut);font-size:14px}
+
+  .phones{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+  .phones figure{margin:0;text-align:center;max-width:260px}
+  .phones img{width:260px;max-width:44vw;height:auto;border-radius:22px;border:1px solid var(--line);box-shadow:var(--shadow)}
+  .phones figcaption{color:var(--dim);font-size:13px;margin-top:12px}
+
+  /* The two columns of the dead drop: what the server holds and what it never sees. */
+  .holds{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:34px}
+  @media(max-width:820px){.holds{grid-template-columns:1fr}}
+  .holds .card h3{margin-top:0}
+  .holds ul{margin:0;padding-left:20px;color:var(--mut);font-size:14.5px}
+  .holds li{margin:.35em 0}
+  .holds .never h3{color:var(--accent)}
+
+  footer{border-top:1px solid var(--line);margin-top:30px;padding:28px 0 46px;color:var(--dim);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13.5px}
+  footer a{color:var(--dim)}
+</style>
+</head>
+<body>
+<cm-nav current="askwhen"></cm-nav>
+<div class="wrap">
+
+  <header class="hero">
+    <img class="mark" src="img/askwhen-mark.png" width="96" height="96" alt="">
+    <div class="pills">
+      <span class="pill">Turned on from Calendar Mirror</span>
+      <span class="pill">Free for 90 days</span>
+      <span class="pill">Nothing lands until you accept</span>
+    </div>
+    <h1>A page where people can<br><span class="grad">ask you for a time</span>.</h1>
+    <p class="lede">Your phone already knows when you&rsquo;re free. AskWhen.me lets it answer
+      &mdash; without handing your calendar to anyone. A page at <b>askwhen.me/yourpage</b>,
+      served from a server that is never given your calendar, where someone picks a time and
+      <em>asks</em>. Your device decides.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get Calendar Mirror</a>
+      <a class="btn ghost" href="#how">How it works</a>
+    </div>
+    <p class="sub">A separate subscription, bought through the App Store, turned on from inside
+      Calendar Mirror 2.0. Off by default.</p>
+    <!--UNRELEASED:2.0--><p class="newnote"><b>Coming in 2.0.</b> AskWhen.me turns on from Calendar Mirror 2.0, which is on its way through App Store review.</p><!--/UNRELEASED-->
+  </header>
+
+  <section id="why">
+    <div class="eyebrow">Why it is different</div>
+    <h2>Everyone else&rsquo;s server reads your calendar. Ours can&rsquo;t.</h2>
+    <p class="muted">A booking page works by holding your calendar: you connect it once, and from
+      that day on their server reads every event you have so it can promise a slot on the spot.
+      That is the deal, and it is why they can say <em>book</em>. AskWhen.me is not a booking
+      page. Its server is never connected to your calendar, so it cannot promise anything &mdash;
+      it can only carry the question to the one thing that knows the answer: your device.</p>
+    <div class="grid">
+      <div class="card"><div class="ic">🔒</div><h3>The server is never given your calendar</h3><p>Your device works out which times to offer and sends only those. Not your events, not their titles, not your address, not your name beyond the label you choose.</p></div>
+      <div class="card"><div class="ic">✅</div><h3>A request, not a reservation</h3><p>Someone picks a time and says who they are. The request comes to your device, which re-checks your real calendar before anything is written. If something landed in the meantime, it says so.</p></div>
+      <div class="card"><div class="ic">📵</div><h3>Off until you say</h3><p>Setup is free and stays on your device. Calendar Mirror makes no network request of any kind until you turn on AskWhen.me &mdash; and the first one it makes is to Apple, for the price.</p></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="eyebrow">How it works</div>
+    <h2>Your device offers. They ask. You answer.</h2>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><h3>Your device chooses the times</h3><p>From the calendars you pick, it works out a handful of times you are willing to be asked about &mdash; a few a day, inside the hours you say, with room around what is already there.</p></div>
+      <div class="step"><div class="n">2</div><h3>You publish those, and only those</h3><p>The times go up to askwhen.me/yourpage under the name you chose. The page shows a list of times and nothing else about you.</p></div>
+      <div class="step"><div class="n">3</div><h3>Someone asks</h3><p>They pick a time, say who they are, and confirm their email address. The request waits for your device &mdash; the server holds it, and no more.</p></div>
+      <div class="step"><div class="n">4</div><h3>You accept, on your device</h3><p>It re-checks your calendar first. Accept, and the event is written by your device; they get a calendar file by email. Decline, and they are told the time is gone.</p></div>
+    </div>
+    <div class="phones">
+      <figure>
+        <picture>
+          <source srcset="img/askwhen-explainer-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="img/askwhen-explainer-light.png" alt="The first screen of AskWhen.me setup on iPhone: the mark, the line 'A page where people can ask for a time', and three points — you choose the times, the server never sees your calendar, nothing lands until you accept.">
+        </picture>
+        <figcaption>What you are agreeing to, before any work.</figcaption>
+      </figure>
+      <figure>
+        <picture>
+          <source srcset="img/askwhen-preview-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="img/askwhen-preview-light.png" alt="The preview screen on iPhone: a name field, then '36 times across 14 days' listed by day, above a 'See what it costs' button.">
+        </picture>
+        <figcaption>The page, before you publish it &mdash; worked out on the device.</figcaption>
+      </figure>
+      <figure>
+        <picture>
+          <source srcset="img/askwhen-live-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="img/askwhen-live-light.png" alt="The live page screen on iPhone: 'Your page is live' with the address askwhen.me/x7f2k9, a Share link, notifications, and which device publishes.">
+        </picture>
+        <figcaption>Live. The address is yours, and the switch is right there.</figcaption>
+      </figure>
+    </div>
+    <p class="muted" style="margin-top:22px;font-size:14px">Every screen here is from a synthetic
+      configuration &mdash; invented calendars, an invented owner. No real person appears.</p>
+  </section>
+
+  <section id="holds">
+    <div class="eyebrow">What the server holds</div>
+    <h2>Two things. Everything else stops at your device.</h2>
+    <p class="muted">The design is a dead drop: times go in, requests come out, and the server
+      is never told who you are. The <a href="privacy.html">privacy page</a> says the same in
+      full, with how long each thing is kept.</p>
+    <div class="holds">
+      <div class="card">
+        <h3>It holds</h3>
+        <ul>
+          <li>The times you chose to offer, as start and end &mdash; nothing about why those.</li>
+          <li>The name you put on the page and the line under it, the meeting title and length, and your time zone.</li>
+          <li>Requests from people who asked: the time, their name, their address, a note &mdash; until you answer, and 14 days at most.</li>
+          <li>An anonymous subscription identifier from Apple, stored hashed. It says a page is paid for, not who paid.</li>
+        </ul>
+      </div>
+      <div class="card never">
+        <h3>It never sees</h3>
+        <ul>
+          <li>Your calendar, or any event in it &mdash; titles, locations, attendees, notes.</li>
+          <li>Which calendars you chose, or how many there are.</li>
+          <li>Your email address, your Apple ID, or your payment details.</li>
+          <li>The shape of your week beyond the handful of times you offered.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="links">
+    <div class="eyebrow">With Send times</div>
+    <h2>A link for one person</h2>
+    <p class="muted">Calendar Mirror 2.0 can <b>send times</b>: one tap gives you your next
+      three free times as a line of text, ready to paste into a message. With AskWhen.me on,
+      that message can carry a <b>personal link</b>: it opens your page once, for a week, for
+      the person you sent it to. Because you sent it, there is no email confirmation &mdash;
+      if the time is still clear when they pick it, your device accepts it for you.</p>
+    <div class="grid">
+      <div class="card"><div class="ic">💬</div><h3>Paste it anywhere</h3><p>Messages, Mail, Slack. The times are worked out on your device and put on the clipboard; nothing leaves your device to do it.</p></div>
+      <div class="card"><div class="ic">🔗</div><h3>One link, one person, one week</h3><p>A personal link is not your page&rsquo;s address. It opens once and expires, so a forwarded message does not become an open door.</p></div>
+      <div class="card"><div class="ic">🛡️</div><h3>Still re-checked</h3><p>Even a personal link goes through the same re-check against your real calendar. If the time is gone, they are told, and nothing is written.</p></div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="eyebrow">What it costs</div>
+    <h2>Free for 90 days, then a year at a time</h2>
+    <p class="muted">Long enough for a stranger to actually ask. Bought through the App Store, so
+      payment is Apple&rsquo;s and we never see it; renewal, cancellation and refunds are under
+      Apple&rsquo;s terms. Setup is free and stays on your device &mdash; the subscription is asked
+      for at the end, after you have seen the page you would be publishing.</p>
+    <div class="grid">
+      <div class="card price"><h3>Request Page</h3><p><b>Free for 90 days, then $19.99 a year.</b> One page at askwhen.me/yourpage.</p></div>
+      <div class="card price"><h3>Custom Subdomain</h3><p><b>$34.99 a year.</b> Your own name &mdash; you.askwhen.me &mdash; and more than one page.</p></div>
+      <div class="card price"><h3>Custom Domain</h3><p><b>$69.99 a year.</b> Your page on a domain you own, one DNS record away.</p></div>
+    </div>
+    <p class="muted" style="margin-top:22px;font-size:14px">The <a href="terms.html">terms</a> say
+      what happens to your page and your address when a subscription ends. They are short.</p>
+  </section>
+
+  <section id="get" style="text-align:center">
+    <div class="eyebrow">Turn it on</div>
+    <h2>It starts inside Calendar Mirror</h2>
+    <p class="muted">Calendar Mirror is a small app that keeps a one-way copy of one calendar
+      inside another. AskWhen.me is the one thing in it that talks to a server, and it is off
+      until you turn it on &mdash; the row is under <em>Background sync</em>.</p>
+    <div class="cta" style="margin-top:28px">
+      <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get it on the App Store</a>
+      <a class="btn ghost" href="index.html">About Calendar Mirror</a>
+    </div>
+  </section>
+
+  <footer>
+    <div>AskWhen.me · a request page whose server never sees your calendar · © Matt Baylor</div>
+    <div>
+      <a href="index.html">Calendar Mirror</a> ·
+      <a href="privacy.html">Privacy</a> ·
+      <a href="terms.html">Terms</a> ·
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

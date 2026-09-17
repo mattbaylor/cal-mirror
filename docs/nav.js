@@ -15,6 +15,7 @@ const LINKS = [
   ["what",      "#what",          "What it does"],
   ["filters",   "#filters",       "Which events"],
   ["how",       "#how",           "How it works"],
+  ["askwhen",   "askwhen.html",   "AskWhen.me"],
   ["compare",   "vs/",            "Compare"],
   ["changelog", "changelog.html", "Release notes"],
   ["coming",    "coming.html",    "What’s coming"],

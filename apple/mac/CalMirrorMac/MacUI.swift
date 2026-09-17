@@ -154,7 +154,16 @@ struct ManageView: View {
             }
         }
         .frame(minWidth: 820, minHeight: 520)
-        .onAppear { if selection == nil { selection = model.config.mirrors.first?.id } }
+        .onAppear {
+            if selection == nil { selection = model.config.mirrors.first?.id }
+            #if DEBUG
+            // After the fixture has sized the window (App.swift, two seconds
+            // in): a sheet already up would hold the window at its old size.
+            if MacFixture.wantsSheet {
+                Task { try? await Task.sleep(for: .seconds(3)); showingSetup = true }
+            }
+            #endif
+        }
         .overlay(alignment: .top) {
             if !model.access {
                 Text("Calendar access not granted yet — grant it in System Settings so the pickers can list your calendars.")

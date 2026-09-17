@@ -31,7 +31,7 @@ enum RequestCopy {
         /// one line. Three of them replace the four paragraphs the explainer
         /// used to be (apple/design/native.md, section 1).
         struct Feature { let symbol: String; let headline: String; let line: String }
-        static let symbol = "calendar.badge.clock"
+        static let symbol = "AskWhenMark"
         static let title = "A page where people can ask for a time"
         static let features: [Feature] = [
             Feature(symbol: "calendar", headline: "You choose the times", line: "A handful of offers, worked out from your calendars."),

@@ -31,6 +31,10 @@ const FORBIDDEN = [
 // two exceptions are namespaces, which are identifiers and never fetched.
 const URL_PATTERN = /(?:https?:)?\/\/[a-z0-9.-]+\.[a-z]{2,}/gi;
 const NAMESPACES = new Set(['http://www.w3.org', '//www.w3.org']);
+// The page's own origin, for the one URL that has to be absolute: og:image
+// (Open Graph rejects a relative one). The browser never fetches it — a
+// link preview does — and it is this host.
+const SELF = new Set(['https://askwhen.me']);
 
 const problems = [];
 
@@ -54,7 +58,7 @@ for (const file of readdirSync(dist)) {
 
   for (const match of source.match(URL_PATTERN) ?? []) {
     const origin = match.replace(/(\/\/[^/]+).*/, '$1');
-    if (NAMESPACES.has(match) || NAMESPACES.has(origin)) continue;
+    if (NAMESPACES.has(match) || NAMESPACES.has(origin) || SELF.has(origin)) continue;
     problems.push(`${file}: references ${match}`);
   }
 
