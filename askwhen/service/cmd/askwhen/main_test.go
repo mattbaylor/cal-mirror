@@ -244,7 +244,7 @@ func TestTheBareDomainGoesToTheProductSite(t *testing.T) {
 	r.Host = "askwhen.me"
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	if w.Code != http.StatusMovedPermanently || w.Header().Get("Location") != "https://calendarmirror.com/" {
+	if w.Code != http.StatusMovedPermanently || w.Header().Get("Location") != "https://calendarmirror.com/askwhen.html" {
 		t.Fatalf("/ -> %d %s", w.Code, w.Header().Get("Location"))
 	}
 	if !strings.Contains(w.Header().Get("Cache-Control"), "max-age=86400") {

@@ -299,10 +299,11 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 		fmt.Fprintln(w, "ok")
 	})
 
-	// The bare domain is nobody's page. Send whoever lands there to the product
-	// site (Matt, 10 Sept 2026). 301 as asked, but with a one-day cache rather
-	// than a browser's default forever, so a landing page here later — "what is
-	// this link I was sent?" — does not fight a redirect cached in 2026.
+	// The bare domain is nobody's page. Send whoever lands there to
+	// AskWhen.me's own page on the product site (Matt, 17 Sept 2026; the site
+	// root before that). 301 as asked, but with a one-day cache rather than a
+	// browser's default forever, so a landing page here later — "what is this
+	// link I was sent?" — does not fight a redirect cached in 2026.
 	//
 	// On a customer's own hostname — ask.example.com, matt.askwhen.me — the
 	// root *is* the page: the shell is served and fetches /p/host.json, which
@@ -312,7 +313,7 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 		host := hostOf(r)
 		if host == cfg.zone || host == "www."+cfg.zone || host == "" {
 			w.Header().Set("Cache-Control", "public, max-age=86400")
-			http.Redirect(w, r, "https://calendarmirror.com/", http.StatusMovedPermanently)
+			http.Redirect(w, r, "https://calendarmirror.com/askwhen.html", http.StatusMovedPermanently)
 			return
 		}
 		if _, err := st.SlugForHost(r.Context(), host); err != nil {
