@@ -30,15 +30,9 @@ check cloudflare_apitoken \
    elif curl -sf -H "$H" $B/accounts/$cloudflare_accountid/tokens/verify | grep -q "\"status\":\"active\""; then echo account-owned;
    else exit 1; fi'
 
-# R2 (S3 API): a signed ListBuckets against the account endpoint. Needs the
-# aws CLI; prints the bucket count and nothing else.
-if command -v aws >/dev/null; then
-  check cloudflare_r2 \
-    'AWS_ACCESS_KEY_ID="$cloudflare_accesskey" AWS_SECRET_ACCESS_KEY="$cloudflare_secretaccesskey" \
-     aws s3 ls --endpoint-url "$cloudflare_s3apiendpoint" --region auto 2>/dev/null | wc -l | tr -d " "'
-else
-  say cloudflare_r2 "skipped (no aws CLI)"
-fi
+# R2: deleted on 17 Sept 2026 (nothing used the keys), so there is nothing
+# to verify. If cloudflare_accesskey ever reappears in prod, this is where
+# its check goes — a signed ListBuckets against cloudflare_s3apiendpoint.
 
 # GitHub PAT: whose is it. Prints the login, which is not a secret.
 check gh_claude \
