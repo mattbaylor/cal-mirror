@@ -126,6 +126,12 @@ Xcode with the StoreKit configuration attached (`XCODE=1 apple/tools/run-sim.sh`
 in App Store Connect; it is uploaded there by hand, per subscription, under
 *Review Information*.
 
+**The subscriptions' promotional image** is `sources/askwhen-promo-1024.png`:
+the AskWhen.me mark, 1024×1024, square corners and no alpha channel, which is
+what App Store Connect accepts for the optional image on a subscription (it
+applies its own corner mask). Regenerated with the rest of the mark by
+`assets/askwhen-markgen.swift`; never redrawn. Uploaded by hand.
+
 **Notes for App Review** are generated too: `metadata/<platform>/review_notes.txt`
 from `REVIEW_NOTES` in `genmeta.py`. The sandbox tester is not in them: `asc_apply.py`
 puts it in the review details' demo-account fields from the `ASC_DEMO_USER` /
