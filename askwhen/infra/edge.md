@@ -166,9 +166,9 @@ their own address and the limit is worse than absent.
 domain works end to end, and only then enable `on_demand` — so the first thing
 that ever exercises issuance on this proxy is a name we chose.
 
-## What we gave up by not taking a spare IP
+## What we gave up by not taking a dedicated IP
 
-`.168`, `.169` and `.175` are free, and a dedicated address would have kept
+A dedicated address would have kept
 on-demand issuance entirely away from the proxy that matters. That remains the
 fallback if the shared edge turns out to be uncomfortable; nothing here is hard
 to undo, and the DNS change is one record.

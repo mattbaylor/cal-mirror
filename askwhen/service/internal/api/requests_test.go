@@ -304,6 +304,34 @@ func TestClientIP(t *testing.T) {
 	}
 }
 
+// Two edges overlap during a move, so the trusted proxy may be a short list.
+// Anything not on it — including an empty list — is a stranger.
+func TestProxyTrusted(t *testing.T) {
+	cases := []struct {
+		remote, list string
+		want         bool
+	}{
+		{"172.16.1.4", "172.16.1.4", true},
+		{"172.28.0.2", "172.16.1.4, 172.28.0.2", true},
+		{"172.28.0.2", "172.16.1.4 172.28.0.2", true},
+		{"172.16.1.5", "172.16.1.4, 172.28.0.2", false},
+		{"172.16.1.4", "", false},
+		{"", "172.16.1.4", false},
+		{"172.16.1", "172.16.1.4", false},
+	}
+	for _, c := range cases {
+		if got := ProxyTrusted(c.remote, c.list); got != c.want {
+			t.Errorf("ProxyTrusted(%q, %q) = %v, want %v", c.remote, c.list, got, c.want)
+		}
+	}
+	r := httptest.NewRequest(http.MethodPost, "/", nil)
+	r.RemoteAddr = "172.28.0.2:4444"
+	r.Header.Set("X-Forwarded-For", "198.51.100.7")
+	if got := clientIP(r, "172.16.1.4, 172.28.0.2"); got != "198.51.100.7" {
+		t.Fatalf("from the second proxy in the list, clientIP = %q, want the forwarded client", got)
+	}
+}
+
 // ----------------------------------------------------------- personal links
 
 // mintLink puts a live personal link in the store the way Owner.Links would.

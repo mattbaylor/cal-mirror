@@ -21,10 +21,15 @@ that already matches is skipped and says so, so a second run is quiet and safe.
 
 Steps, in order:
 
-    preflight   secrets present, sane, and not tracked by git
+    preflight   secrets present, sane, and not tracked by git; Caddyfile present
     build       docker compose build
     up          docker compose up -d
+    reload      validate the Caddyfile inside the running caddy, then reload it
     verify      read-only probes: health, TLS at the edge, /internal refused
+
+`up` recreates the caddy container only when compose.yml or the image changed;
+a Caddyfile edit alone needs `reload`, which keeps the old config if the new
+one fails to validate — a mistake is a message, not an outage.
 
 There is no migrate step. The binary applies schema.sql at startup, from the
 copy baked into the image, so the schema that runs is the schema that was
@@ -35,8 +40,10 @@ migration that loses one loses the rows in it. Before `up --apply` against a
 database with rows and a changed schema.sql, take a copy of the volume;
 `preflight` tells you how.
 
-TLS is not this host's job. caddy-dc terminates it and proxies here; the
-Caddyfile that matters is in edge.md, and reloading it is done there.
+TLS is this host's job since 16 September 2026: the caddy container in
+compose.yml terminates it at 64.111.27.242 and proxies to the app over the
+`edge` network. Its Caddyfile is the one beside this script. The DC edge at
+172.16.1.4 carries askwhen.me only until DNS moves; edge.md has the order.
 
 Also irreversible, and not done here: creating DNS records, generating the DKIM
 key, and rotating the token pepper. The pepper is the worst of the three —
@@ -48,9 +55,9 @@ import os, shlex, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 COMPOSE = ["docker", "compose", "-f", os.path.join(HERE, "compose.yml")]
 
-STEPS = ["preflight", "build", "up", "verify"]
+STEPS = ["preflight", "build", "up", "reload", "verify"]
 # verify is read-only and pointless in a plan, so a bare run stops before it.
-DEFAULT = ["preflight", "build", "up"]
+DEFAULT = ["preflight", "build", "up", "reload"]
 
 APPLY = "--apply" in sys.argv
 args = [a for a in sys.argv[1:] if not a.startswith("-")]
@@ -134,6 +141,11 @@ def preflight():
     else:
         fail("docker compose not available on this host")
 
+    if os.path.exists(os.path.join(HERE, "Caddyfile")):
+        ok("Caddyfile present")
+    else:
+        fail("Caddyfile missing beside compose.yml")
+
     # Said rather than done. Backing up automatically would mean deciding where
     # to put a file containing requester email addresses, which is a decision
     # that belongs to whoever runs this, not to this.
@@ -156,13 +168,30 @@ def up():
     act("start or update containers", COMPOSE + ["up", "-d"])
 
 
+CADDY_ENV = 'AW_TLS_AUTH_SECRET="$(cat /run/secrets/tls_auth_secret)"'
+
+
+def reload():
+    # validate first, in the container, against the binary that will run it.
+    # A failure here stops before reload; reload's own failure keeps the old
+    # config. Either way the edge stays up.
+    for verb in ("validate", "reload"):
+        act(f"caddy {verb}", COMPOSE + ["exec", "-T", "caddy", "sh", "-c",
+            f"{CADDY_ENV} caddy {verb} --config /etc/caddy/Caddyfile --adapter caddyfile"])
+
+
 def verify():
     """Read-only. Nothing here writes, so it runs without --apply."""
     checks = [
         ("app answers its health check",
          COMPOSE + ["exec", "-T", "app", "/askwhen", "-healthcheck"], None),
+        # The caddy container is up and pfSense's :80 forward lands on it:
+        # plain HTTP for any name is a redirect to https.
+        ("caddy redirects plain http",
+         ["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}",
+          "-H", "Host: askwhen.me", "http://127.0.0.1/"], "301"),
         # Through the edge, over TLS, the way a visitor arrives. A 200 here is
-        # caddy-dc, its certificate, and this host all agreeing.
+        # the edge, its certificate, and this host all agreeing.
         ("healthz serves over TLS at the edge",
          ["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}",
           "https://askwhen.me/healthz"], "200"),
@@ -186,7 +215,7 @@ def verify():
     print("    host and this script has no route to it — mail.md, 'Verifying'.")
 
 
-ACTIONS = dict(preflight=preflight, build=build, up=up, verify=verify)
+ACTIONS = dict(preflight=preflight, build=build, up=up, reload=reload, verify=verify)
 
 
 def main():

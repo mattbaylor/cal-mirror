@@ -1,9 +1,10 @@
 # askwhen.me — the whole deployment.
 #
-# Runs on CT 112 (172.16.1.41). TLS is terminated one hop out, on caddy-dc
-# (172.16.1.4), which proxies askwhen.me to this host's :8080 — see edge.md.
-# There is no Caddy here: the edge is the router, and putting a second one on
-# the guest would mean a DNS credential on a box that otherwise needs none.
+# Runs on CT 112 (172.16.1.41), public at 64.111.27.242 through a pfSense port
+# forward. Two containers: the service, and its own Caddy terminating TLS —
+# decided 16 September 2026 so that on-demand issuance for customer domains
+# never runs on the proxy other people's sites depend on (edge.md). No DNS
+# credential lives here: there is no wildcard certificate to need one.
 # Mail is not here either: it goes to Postal on dlvr.rehosted.us over its API,
 # so the DKIM private key never exists on this machine (mail.md).
 #
@@ -49,16 +50,22 @@ services:
       AW_PEPPER_FILE: "/run/secrets/pepper"
 
       # The credential the edge presents when asking whether a hostname may
-      # have a certificate issued. Not the pepper: this one is shared with
-      # another host's configuration and can be rotated without invalidating
-      # every write token in existence.
+      # have a certificate issued. Not the pepper: this one is shared with the
+      # caddy container's configuration and can be rotated without
+      # invalidating every write token in existence.
       AW_TLS_AUTH_SECRET_FILE: "/run/secrets/tls_auth_secret"
       AW_ZONE: "askwhen.me"
+      # The proxy whose X-Forwarded-For is believed and whose bare requests
+      # may reach /internal/: the caddy container, at the fixed address the
+      # `edge` network gives it. The DC edge (172.16.1.4) is listed too
+      # while it still proxies askwhen.me; it comes off the day it stops.
+      AW_TRUSTED_PROXY: "172.28.0.2, 172.16.1.4"
       # Where a custom domain is supposed to point (§7): the CNAME target a
       # customer is told, and the edge's public address for an apex that
       # cannot carry a CNAME. Both are checked before the gate will issue.
+      # 64.111.22.170 stays listed while edge.askwhen.me still resolves there.
       AW_EDGE_TARGET: "edge.askwhen.me"
-      AW_EDGE_IPS: "64.111.22.170"
+      AW_EDGE_IPS: "64.111.27.242 64.111.22.170"
 
       # Apple. Transactions must be for this bundle. AW_APPSTORE_SANDBOX=1
       # lets Sandbox transactions create pages, which is how the purchase
@@ -92,10 +99,15 @@ services:
     volumes:
       - aw-data:/data
 
-    # Published on the internal network only; 172.16.1.0/24 is not routable
-    # from outside and caddy-dc is the only thing that talks to it. The gate on
-    # /internal/tls-authorize does not rely on that — it refuses without the
-    # secret regardless of who is asking (tlsauth).
+    networks:
+      - edge
+
+    # Reachable from the caddy container over the `edge` network. Still
+    # published on the internal address as well, for the DC edge, until that
+    # proxy stops carrying askwhen.me; then this block goes and :8080 is not
+    # reachable from anywhere but the caddy container. The gate on
+    # /internal/tls-authorize does not rely on either — it refuses without
+    # the secret regardless of who is asking (tlsauth).
     ports:
       - "8080:8080"
 
@@ -123,6 +135,64 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  caddy:
+    # Pinned. An unpinned tag on a TLS terminator is how the DC edge spent
+    # three years on 2.6.2 without anyone deciding to (infra/edge/upgrade-plan.md).
+    # Upgrading is: pull the next tag, validate the Caddyfile against it,
+    # change this line, `deploy.py up --apply`.
+    image: caddy:2.11.4
+    restart: unless-stopped
+
+    # The secret is a file (a compose secret) and the Caddyfile wants it as
+    # an environment variable at adapt time, so the command bridges the two.
+    # `deploy.py reload` does the same before `caddy reload`, or the reload
+    # would adapt the file with an empty key and the gate would refuse
+    # everything — fail closed, but broken.
+    command:
+      - sh
+      - -c
+      - 'AW_TLS_AUTH_SECRET="$$(cat /run/secrets/tls_auth_secret)" exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile'
+
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+
+    networks:
+      edge:
+        # Fixed, because the app trusts X-Forwarded-For from exactly this
+        # address (AW_TRUSTED_PROXY above) and admits /internal/ from it alone.
+        ipv4_address: 172.28.0.2
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # The ACME account key and every issued certificate. Losing it means
+      # re-issuing all of them against Let's Encrypt's weekly limits.
+      - caddy-data:/data
+      - caddy-config:/config
+
+    secrets:
+      - tls_auth_secret
+
+    depends_on:
+      app:
+        condition: service_healthy
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+networks:
+  # Its own subnet so the caddy container's address is knowable in advance.
+  # Not 172.16.0.0/16, which is the datacenter's internal range.
+  edge:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+
 
 secrets:
   # From Infisical: postal_api_key. A Postal *server* credential of type API,
@@ -132,9 +202,13 @@ secrets:
   pepper:
     file: ./secrets/pepper
   # openssl rand -hex 32 > infra/secrets/tls_auth_secret
-  # The same value goes into caddy-dc's Caddyfile — see edge.md.
+  # Shared by the app (as a file) and the caddy container (as an environment
+  # variable, via its command). Until the DC edge stops carrying askwhen.me,
+  # the same value is also in its Caddyfile — see edge.md.
   tls_auth_secret:
     file: ./secrets/tls_auth_secret
 
 volumes:
   aw-data:
+  caddy-data:
+  caddy-config:
