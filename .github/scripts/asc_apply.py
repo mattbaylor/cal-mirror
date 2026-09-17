@@ -279,18 +279,28 @@ def ensure_screenshots(lid, folder, display):
     local = {fn: hashlib.md5(open(os.path.join(ROOT, "screenshots", folder, fn), "rb").read()).hexdigest()
              for fn in files}
 
-    remote = {}
+    remote, order = {}, []
     if st is not None:
         for sh in get(f"/v1/appScreenshotSets/{st['id']}/appScreenshots?limit=30").get("data", []):
             a = sh["attributes"]
             remote[a.get("fileName")] = (sh["id"], a.get("sourceFileChecksum"),
                                          (a.get("assetDeliveryState") or {}).get("state"))
+            order.append(a.get("fileName"))
     missing = [fn for fn in files if fn not in remote]
     stale = [fn for fn in files if fn in remote and
              (remote[fn][1] != local[fn] or remote[fn][2] != "COMPLETE")]
     extra = [fn for fn in remote if fn not in local]
     if st is not None and not missing and not stale and not extra:
-        print(f"    = {display}: {len(files)} already uploaded, checksums match")
+        # The API returns the set in display order. A replacement was appended
+        # when uploaded, so the order is checked and fixed on its own.
+        if order == files:
+            print(f"    = {display}: {len(files)} uploaded, checksums match, in order")
+            return
+        print(f"    ~ {display}: complete but out of order — {', '.join(f[:2] for f in order)}")
+        changes.append(f"{display}: reorder")
+        if APPLY:
+            call("PATCH", f"/v1/appScreenshotSets/{st['id']}/relationships/appScreenshots",
+                 {"data": [{"type": "appScreenshots", "id": remote[fn][0]} for fn in files]})
         return
     if st is None:
         print(f"    + {display}: create set and upload {len(files)}")
