@@ -100,6 +100,14 @@
   .screens img{width:100%;height:auto;display:block;border-radius:14px;border:1px solid var(--line);box-shadow:var(--shadow)}
   .screens figcaption{color:var(--dim);font-size:13px;margin-top:10px}
 
+  /* The same four states in a browser on a Mac. */
+  .desk{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px}
+  @media(max-width:820px){.desk{grid-template-columns:1fr}}
+  .desk figure{margin:0;text-align:center}
+  .desk img{width:100%;height:auto;display:block;border-radius:12px;border:1px solid var(--line);box-shadow:var(--shadow)}
+  .desk figcaption{color:var(--dim);font-size:13px;margin-top:10px}
+  .subhead{text-align:center;color:var(--mut);font-size:15px;margin:38px auto 0;max-width:660px}
+
   /* The two columns of the dead drop: what the server holds and what it never sees. */
   .holds{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:34px}
   @media(max-width:820px){.holds{grid-template-columns:1fr}}
@@ -228,6 +236,37 @@
           <img src="img/askwhen-req-accepted-light.png" alt="Accepted: a green check, 'Dana Cho accepted, and has written the event into their calendar. The invitation is on its way to you by email.'">
         </picture>
         <figcaption>4 &middot; Accepted &mdash; from the owner&rsquo;s device, with a calendar file by email.</figcaption>
+      </figure>
+    </div>
+    <p class="subhead">The same page in a browser on a Mac. It is one page, laid out for the width it is given &mdash; no app to install on either side of the ask.</p>
+    <div class="desk">
+      <figure>
+        <picture>
+          <source srcset="img/askwhen-desk-pick-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="img/askwhen-desk-pick-light.png" width="1100" height="720" alt="The request page in a desktop browser: 'Ask Dana Cho for a time', the freshness note, and the week's times to pick from.">
+        </picture>
+        <figcaption>1 &middot; Pick a time</figcaption>
+      </figure>
+      <figure>
+        <picture>
+          <source srcset="img/askwhen-desk-ask-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="img/askwhen-desk-ask-light.png" width="1100" height="720" alt="Step two in a desktop browser: the chosen time, then name and email fields.">
+        </picture>
+        <figcaption>2 &middot; Say who you are</figcaption>
+      </figure>
+      <figure>
+        <picture>
+          <source srcset="img/askwhen-desk-confirm-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="img/askwhen-desk-confirm-light.png" width="1100" height="720" alt="Step three in a desktop browser: 'Check your email', the request held for fifteen minutes.">
+        </picture>
+        <figcaption>3 &middot; Confirm your email</figcaption>
+      </figure>
+      <figure>
+        <picture>
+          <source srcset="img/askwhen-desk-accepted-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="img/askwhen-desk-accepted-light.png" width="1100" height="720" alt="Accepted, in a desktop browser: a green check and 'Dana Cho accepted, and has written the event into their calendar.'">
+        </picture>
+        <figcaption>4 &middot; Accepted</figcaption>
       </figure>
     </div>
   </section>
