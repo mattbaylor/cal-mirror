@@ -44,7 +44,7 @@ left behind is below, under *Next*.
 | 3 | **Sandbox proof of the lapse path** — a real purchase from a build, then `EXPIRED` → grace → delete against `/hooks/appstore-sandbox`. Waits on 1. | mine, once 1 happens |
 | 4 | **Privacy policy, terms, listing and site** — drafted in the F PR (16 Sept), waiting on Matt's read plus three TODOs: log retention, the support address, the operator's name on the terms. | **Matt** to review |
 | 5 | ~~Rotate the five leaked credentials~~ **done 17 Sept**, verified. | done |
-| 6 | **Release 2.0 from CI** (`release.yml`), never from the laptop. 1.4.2 folds in. | **Matt** |
+| 6 | ~~Release 2.0 from CI~~ **done 17 Sept** — build 12 uploaded by `release.yml`, attached by `asc-apply`, submitted with the subscriptions. Both platforms waiting for review. | done |
 
 ## Asks — none open
 
