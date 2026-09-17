@@ -166,11 +166,16 @@ def ensure_review_details(vid, platform):
         desired.update(demoAccountName=user, demoAccountPassword=pw or "")
     if cur:
         rid, attrs = cur["id"], cur["attributes"]
-        for k, v in desired.items():
-            if k == "demoAccountPassword":
-                continue   # never read back; written with the name below
-            want(f"review {k}", attrs.get(k), v, lambda: None)
-        if APPLY and any(attrs.get(k) != v for k, v in desired.items() if k != "demoAccountPassword"):
+        # The password is never read back, so it is never "already correct";
+        # it is written whenever anything else is.
+        stale = [k for k, v in desired.items() if k != "demoAccountPassword" and attrs.get(k) != v]
+        if not stale:
+            print("    = review details already correct")
+            return
+        for k in stale:
+            print(f"    ~ review {k}: {str(attrs.get(k))[:40]!r} -> {str(desired[k])[:40]!r}")
+        changes.append(f"{platform}: review details")
+        if APPLY:
             call("PATCH", f"/v1/appStoreReviewDetails/{rid}",
                  {"data": {"type": "appStoreReviewDetails", "id": rid, "attributes": desired}})
         return
