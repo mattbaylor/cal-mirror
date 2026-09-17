@@ -39,7 +39,11 @@ if [ "$SIGN_ID" = "-" ]; then
   echo "    ad-hoc signed (set CM_SIGN_ID to a Developer ID to persist Calendar access)"
 else
   # Hardened runtime + secure timestamp so the build is notarization-ready.
-  codesign -s "$SIGN_ID" --force --deep --options runtime --timestamp "$APP"
-  echo "    signed: $SIGN_ID (hardened runtime)"
+  # The entitlements file matters: with the hardened runtime, an app without
+  # com.apple.security.personal-information.calendars is refused Calendar
+  # access silently — no prompt, no entry in System Settings.
+  codesign -s "$SIGN_ID" --force --deep --options runtime --timestamp \
+    --entitlements "$DIR/cal-mirror.entitlements" "$APP"
+  echo "    signed: $SIGN_ID (hardened runtime, Calendar entitlement)"
 fi
 echo "    built: $APP"

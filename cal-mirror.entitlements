@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- The standalone engine, signed with a Developer ID and the hardened
+       runtime, must declare Calendar access or TCC denies it without ever
+       showing the prompt (found 17 Sept 2026: every earlier local install was
+       ad-hoc signed, where the rule does not apply). No sandbox: the engine
+       reads and writes ~/.local/cal-mirror. -->
+  <key>com.apple.security.personal-information.calendars</key>
+  <true/>
+</dict>
+</plist>
