@@ -94,6 +94,43 @@ def rounded(im, radius):
     return im
 
 
+# The AskWhen.me mark beside its name, above a frame that is about AskWhen.me
+# rather than Calendar Mirror: a lockup, in white, with a white ring around
+# the mark so it separates from the gradient it was cut from. Matt's call
+# (17 Sept) and the one place white sits on the warm gradient — a lockup at
+# this size is a logo, not copy; the frame's words stay ink. Per platform:
+# (mark px, name px, ring px, gap under the row).
+BRAND = {"iphone": (150, 84, 6, 40), "ipad": (180, 96, 7, 48), "mac": (84, 44, 3, 22)}
+
+
+def brand_row(base, platform, x, y, max_w, align="left"):
+    """Draw the ringed mark and "AskWhen.me" as one row; return the y below it."""
+    msz, fsz, ring, gap = BRAND[platform]
+    mark = Image.open(os.path.join(HERE, os.pardir, "sources", "askwhen-promo-1024.png"))
+    mark = rounded(mark.resize((msz, msz), Image.LANCZOS), int(msz * 0.2237))
+    fnt = font(fsz, "Bold")
+    d = ImageDraw.Draw(base)
+    name = "AskWhen.me"
+    tw = d.textlength(name, font=fnt)
+    pad = int(msz * 0.22)
+    row_w = msz + pad + tw
+    rx = int(x if align == "left" else x + (max_w - row_w) / 2)
+    # The ring: a white rounded square one ring-width larger on every side,
+    # at the same corner ratio, with the mark composited over it.
+    d.rounded_rectangle([rx - ring, y - ring, rx + msz + ring - 1, y + msz + ring - 1],
+                        radius=int((msz + 2 * ring) * 0.2237), fill=W)
+    base.alpha_composite(mark, (rx, y))
+    # Centre the name on the mark's vertical middle.
+    ty = y + (msz - fsz * 1.2) / 2
+    d.text((rx + msz + pad, ty), name, font=fnt, fill=W)
+    return y + msz + gap
+
+
+def brand_height(platform):
+    msz, _, _, gap = BRAND[platform]
+    return msz + gap
+
+
 def paste_shot(base, path, box_w, top, radius=26, crop=None, shadow=48):
     """Scale a capture to box_w and paste centred at y=top, with a soft shadow.
     `crop` is a (l, t, r, b) box applied before scaling."""
@@ -219,12 +256,12 @@ FRAMES = [
                               "On the clipboard, ready to paste anywhere",
                               "Also a Shortcuts action and a Siri phrase"])),
     # 9 — 2.0. AskWhen.me, as the preview the owner sees before the offer. Every word of the frame is glossary.md: a request page, never booking.
-    dict(kind="shot", grad=G_WARM, fg="ink",
+    dict(kind="shot", grad=G_WARM, fg="ink", brand=True,
          head="A request page whose server never sees your calendar.",
          sub="AskWhen.me — a separate subscription you can turn on. Your device chooses the times; nothing lands until you accept.",
          shot=dict(iphone="ios-askwhen-light.png"),
-         crop=dict(iphone=(0, 0, 1206, 1900)),
-         ipad_swap=dict(kind="list", grad=G_WARM, fg="ink",
+         crop=dict(iphone=(0, 0, 1206, 1720)),
+         ipad_swap=dict(kind="list", grad=G_WARM, fg="ink", brand=True,
                         head="A request page whose server never sees your calendar.",
                         sub="AskWhen.me — a separate subscription you can turn on from inside the app.",
                         items=["Your device works out which times to offer and sends only those",
@@ -232,7 +269,7 @@ FRAMES = [
                                "Nothing lands in your calendar until you accept",
                                "Off by default — no network request until you turn it on",
                                "Free for 90 days, then $19.99 a year"]),
-         mac_swap=dict(kind="list", grad=G_WARM, fg="ink",
+         mac_swap=dict(kind="list", grad=G_WARM, fg="ink", brand=True,
                        head="A request page whose server never sees your calendar.",
                        sub="AskWhen.me — a separate subscription you can turn on from inside the app.",
                        items=["Your Mac works out which times to offer and sends only those",
@@ -352,14 +389,19 @@ def build(platform, idx, spec):
             bh += len(wrap(d0, it, bf, maxw - int(bf.size * 0.85))) * int(bf.size * 1.18)
             bh += int(bf.size * (1.9 - 1.18) * 0.5)
         block = (len(wrap(d0, spec["head"], hf, maxw)) * int(hf.size * 1.14) + m["gap"]
-                 + len(wrap(d0, spec["sub"], sf, maxw)) * int(sf.size * 1.3) + gap2 + bh)
+                 + len(wrap(d0, spec["sub"], sf, maxw)) * int(sf.size * 1.3) + gap2 + bh
+                 + (brand_height(platform) if spec.get("brand") else 0))
         y = max(m["top"], (size[1] - block) // 2)
+        if spec.get("brand"):
+            y = brand_row(base, platform, m["margin"], y, maxw)
         y = text_block(base, spec["head"], hf, m["margin"], y, maxw, W, spacing=1.14)
         y = text_block(base, spec["sub"], sf, m["margin"], y + m["gap"], maxw, SUB, spacing=1.3)
         y += gap2
         bullets(base, spec["items"], bf, m["margin"], y, maxw, W, dot=DOT)
 
     else:  # portrait shot
+        if spec.get("brand"):
+            y = brand_row(base, platform, m["margin"], y, maxw, align="center")
         y = text_block(base, spec["head"], font(m["head"], "Bold"), m["margin"], y, maxw, W,
                        spacing=1.12, align="center")
         y = text_block(base, spec["sub"], font(m["sub"], "Regular"), m["margin"], y + m["gap"],

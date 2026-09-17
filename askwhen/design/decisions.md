@@ -574,6 +574,12 @@ on amber is 2.1:1), and since amber is 2:1 against a light surface — short
 of a control's 3:1 edge — light mode gives the fill a 1.5pt accent border
 (4.8:1) and dark mode, where amber is 9:1 against the page, none.
 
+One exception, also Matt's, the same day: **the store frame's lockup is
+white** — the mark in a white ring, "AskWhen.me" in white beside it, above
+the frame's headline on all three platforms. It is a logo at 84–180px, not
+copy, and the frame's words stay ink. Chosen knowing white is 2.1:1 on the
+amber end; silver was offered as the alternative and is lower still.
+
 **The row for a page the Keychain knows and the device does not says
 "Reconnect".** *(16 September 2026)* Matt. Not *Carry on* (promises the
 setup back, when only the address and the key survive), not *Set up* (reads
