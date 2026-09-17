@@ -16,7 +16,7 @@ on:
       build:
         description: Build number to attach
         type: string
-        default: "11"
+        default: "12"
       apply:
         description: Actually write (unticked = plan only)
         type: boolean
