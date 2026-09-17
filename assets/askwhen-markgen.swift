@@ -14,6 +14,9 @@
 //   askwhen/web/static/favicon-16.png, favicon-32.png    square
 //   askwhen/web/static/apple-touch-icon.png (180)        square; iOS rounds it
 //   askwhen/web/static/og.png (1024)                     square
+//   appstore/sources/askwhen-promo-1024.png              square, no alpha: the
+//       subscriptions' promotional image in App Store Connect, which rejects
+//       an alpha channel and applies its own corner mask
 //   docs/img/askwhen-mark.png (256)                      rounded, for the site
 //   apple/Shared/AskWhen.xcassets/AskWhenMark.imageset/   56 @1x/@2x/@3x, rounded
 import AppKit
@@ -42,6 +45,22 @@ func render(_ px: Int, rounded: Bool) -> Data {
     return rep.representation(using: .png, properties: [:])!
 }
 
+/// The same pixels with no alpha channel. AppKit will not draw into a
+/// three-sample bitmap, so the square is rendered as usual and copied into an
+/// opaque CGContext; the PNG encoder then writes RGB.
+func opaque(_ png: Data) -> Data {
+    let src = NSBitmapImageRep(data: png)!.cgImage!
+    let ctx = CGContext(data: nil, width: src.width, height: src.height, bitsPerComponent: 8,
+        bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+    ctx.draw(src, in: CGRect(x: 0, y: 0, width: src.width, height: src.height))
+    let out = NSMutableData()
+    let dest = CGImageDestinationCreateWithData(out, "public.png" as CFString, 1, nil)!
+    CGImageDestinationAddImage(dest, ctx.makeImage()!, nil)
+    CGImageDestinationFinalize(dest)
+    return out as Data
+}
+
 func write(_ data: Data, _ rel: String) {
     let url = root.appendingPathComponent(rel)
     try! FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -53,6 +72,7 @@ write(render(16, rounded: false), "askwhen/web/static/favicon-16.png")
 write(render(32, rounded: false), "askwhen/web/static/favicon-32.png")
 write(render(180, rounded: false), "askwhen/web/static/apple-touch-icon.png")
 write(render(1024, rounded: false), "askwhen/web/static/og.png")
+write(opaque(render(1024, rounded: false)), "appstore/sources/askwhen-promo-1024.png")
 write(render(256, rounded: true), "docs/img/askwhen-mark.png")
 for (scale, px) in [(1, 56), (2, 112), (3, 168)] {
     write(render(px, rounded: true), "apple/Shared/AskWhen.xcassets/AskWhenMark.imageset/mark@\(scale)x.png")
