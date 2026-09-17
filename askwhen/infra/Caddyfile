@@ -16,7 +16,6 @@
 # `AW_TLS_AUTH_SECRET` is read from the compose file-secret by the container
 # command (compose.yml) and substituted at adapt time; it is not in this file
 # and this file is safe to commit.
-
 {
 	# When a hostname nothing below names arrives in a handshake, ask the
 	# service before ordering a certificate. It answers 200 only for a

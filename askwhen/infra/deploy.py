@@ -189,7 +189,7 @@ def verify():
         # plain HTTP for any name is a redirect to https.
         ("caddy redirects plain http",
          ["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}",
-          "-H", "Host: askwhen.me", "http://127.0.0.1/"], "301"),
+          "-H", "Host: askwhen.me", "http://127.0.0.1/"], "308"),
         # Through the edge, over TLS, the way a visitor arrives. A 200 here is
         # the edge, its certificate, and this host all agreeing.
         ("healthz serves over TLS at the edge",
