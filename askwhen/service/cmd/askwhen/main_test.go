@@ -511,3 +511,40 @@ func TestMintingAPersonalLinkNeedsTheWriteToken(t *testing.T) {
 		t.Fatalf("unauthenticated mint: %d; want the same 404 as a wrong token", w.Code)
 	}
 }
+
+func TestTheMarkIsServedBesideTheShell(t *testing.T) {
+	// The favicon, touch icon and og:image are literal routes like /app.js,
+	// PNG, long-cached, and absent from an older dist rather than fatal.
+	h, _ := testRoutesAndStore(t)
+	for _, name := range api.AssetNames {
+		w := do(h, http.MethodGet, "/"+name, nil)
+		// The test dist has no assets; the route exists and says so honestly.
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("/%s without the file: %d, want 404", name, w.Code)
+		}
+	}
+
+	// With the file: PNG, an ETag, a day of caching, and a 304 on revisit.
+	web := t.TempDir()
+	os.WriteFile(filepath.Join(web, "index.html"), []byte("<!doctype html>"), 0o644)
+	os.WriteFile(filepath.Join(web, "app.js"), []byte("1"), 0o644)
+	os.WriteFile(filepath.Join(web, "favicon-32.png"), []byte("\x89PNG\r\n"), 0o644)
+	shell, err := api.LoadShell(web, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := httptest.NewRequest(http.MethodGet, "/favicon-32.png", nil)
+	w := httptest.NewRecorder()
+	shell.Asset("favicon-32.png")(w, r)
+	if w.Code != http.StatusOK || w.Header().Get("Content-Type") != "image/png" ||
+		!strings.Contains(w.Header().Get("Cache-Control"), "max-age") || w.Header().Get("ETag") == "" {
+		t.Fatalf("favicon: %d %v", w.Code, w.Header())
+	}
+	r2 := httptest.NewRequest(http.MethodGet, "/favicon-32.png", nil)
+	r2.Header.Set("If-None-Match", w.Header().Get("ETag"))
+	w2 := httptest.NewRecorder()
+	shell.Asset("favicon-32.png")(w2, r2)
+	if w2.Code != http.StatusNotModified {
+		t.Fatalf("revalidating the favicon: %d", w2.Code)
+	}
+}

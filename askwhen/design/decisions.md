@@ -550,6 +550,30 @@ before any more code. **Against it:** *Not now* on the explainer is a second
 way out where the Mac sheet already has Done, so it is iOS-only; and the
 first-run sheet has no *Learn more*, so the long form is only on the web.
 
+**AskWhen.me has its own mark and a warm palette; Calendar Mirror keeps
+blue.** *(17 September 2026)* Matt. The mark is the master SVG at
+`assets/askwhen-mark.svg`, used exactly and never redrawn; every raster of it
+(favicons, the touch icon, `og.png`, the in-app 1x/2x/3x, the site's 256)
+comes from `assets/askwhen-markgen.swift`, beside `icongen.swift`. The
+knockout vanishing at 32px and below is accepted. The palette is the mark's
+gradient, `#FF9A3C → #EE4380`, with the accent `#C7355F` in light and
+`#F0689A` in dark for text, borders and focus; ink `#06121F` is the only
+text on the gradient, and white and body text never sit on it. **Where it
+applies:** the web request page; the request-page screens in the app
+(`apple/Shared/RequestPage`) through a warm `.tint` at the flow root, where
+the explainer's symbol becomes the mark; the `#askwhen` section and pricing
+on the site; the two 2.0 store frames. **Where it does not:** the emails,
+the Calendar Mirror icon, the menu-bar glyphs, the mirror form — its toggles
+and day chips stay blue on both platforms, because they are Calendar Mirror.
+
+Refined the same day: **a submit is never red.** The first pass filled
+Continue, Accept and the offer's buy button with the accent, which is red
+enough to read as *cancel* — the universal colour for it. Filled controls
+are now the gradient's amber, `#FF9A3C`, with ink as the label (8.9:1; white
+on amber is 2.1:1), and since amber is 2:1 against a light surface — short
+of a control's 3:1 edge — light mode gives the fill a 1.5pt accent border
+(4.8:1) and dark mode, where amber is 9:1 against the page, none.
+
 **The row for a page the Keychain knows and the device does not says
 "Reconnect".** *(16 September 2026)* Matt. Not *Carry on* (promises the
 setup back, when only the address and the key survive), not *Set up* (reads

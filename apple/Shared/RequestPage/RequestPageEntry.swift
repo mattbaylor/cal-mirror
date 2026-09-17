@@ -83,13 +83,19 @@ struct RequestPageExplainer: View {
     var onDismiss: (() -> Void)? = nil
 
     var body: some View {
+        explainer.askWhenLook()
+    }
+
+    private var explainer: some View {
         ScrollView {
             VStack(spacing: 28) {
                 VStack(spacing: 12) {
-                    Image(systemName: RequestCopy.Explainer.symbol)
-                        .font(.system(size: 56, weight: .medium))
-                        .foregroundStyle(.tint)
-                        .accessibilityHidden(true)
+                    // The mark, not a symbol: this is the one screen where
+                    // AskWhen.me introduces itself.
+                    Image(RequestCopy.Explainer.symbol)
+                        .resizable()
+                        .frame(width: 72, height: 72)
+                        .accessibilityLabel("AskWhen.me")
                     Text(RequestCopy.Explainer.title)
                         .font(.title.weight(.bold))
                         .multilineTextAlignment(.center)
@@ -131,8 +137,7 @@ struct RequestPageExplainer: View {
                 Button(action: onContinue) {
                     Text(RequestCopy.Explainer.primary).frame(maxWidth: .infinity)
                 }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                    .askWhenProminent()
                 if let onDismiss {
                     Button(RequestCopy.Explainer.secondary, action: onDismiss)
                         .buttonStyle(.plain)

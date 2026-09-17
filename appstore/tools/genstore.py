@@ -29,6 +29,10 @@ G_BLUE = ((0x3A, 0xA0, 0xFF), (0x6B, 0x5B, 0xF5))
 G_DEEP = ((0x12, 0x62, 0xD6), (0x1E, 0x2B, 0x6B))
 G_DARK = ((0x0D, 0x14, 0x22), (0x1A, 0x2A, 0x44))
 G_MINT = ((0x1FB, 0, 0)[0] and (0x17, 0xB8, 0x9E), (0x24, 0xC2, 0xB0))
+# AskWhen.me's own gradient (decisions.md, 17 Sept 2026). Text on it is ink,
+# never white: ink is 8.9:1 on the amber end and 5.2:1 on the pink end, where
+# white would be 2.1:1. A frame on it says fg="ink".
+G_WARM = ((0xFF, 0x9A, 0x3C), (0xEE, 0x43, 0x80))
 
 
 def font(px, weight="Bold"):
@@ -141,6 +145,9 @@ def icon(base, box, size_px, top):
 #       "list"  -> headline + subtitle + bullet list
 W = "#FFFFFF"
 SUB = (255, 255, 255, 224)
+# Headline, sub and bullet colours per foreground; see G_WARM.
+FG = {"light": (W, SUB, (255, 255, 255, 235)),
+      "ink": ("#06121F", (6, 18, 31, 224), (6, 18, 31, 235))}
 
 FRAMES = [
     # 1
@@ -212,12 +219,12 @@ FRAMES = [
                               "On the clipboard, ready to paste anywhere",
                               "Also a Shortcuts action and a Siri phrase"])),
     # 9 — 2.0. AskWhen.me, as the preview the owner sees before the offer. Every word of the frame is glossary.md: a request page, never booking.
-    dict(kind="shot", grad=G_TEAL,
+    dict(kind="shot", grad=G_WARM, fg="ink",
          head="A request page whose server never sees your calendar.",
          sub="AskWhen.me — a separate subscription you can turn on. Your device chooses the times; nothing lands until you accept.",
          shot=dict(iphone="ios-askwhen-light.png"),
          crop=dict(iphone=(0, 0, 1206, 1900)),
-         ipad_swap=dict(kind="list", grad=G_TEAL,
+         ipad_swap=dict(kind="list", grad=G_WARM, fg="ink",
                         head="A request page whose server never sees your calendar.",
                         sub="AskWhen.me — a separate subscription you can turn on from inside the app.",
                         items=["Your device works out which times to offer and sends only those",
@@ -225,7 +232,7 @@ FRAMES = [
                                "Nothing lands in your calendar until you accept",
                                "Off by default — no network request until you turn it on",
                                "Free for 90 days, then $19.99 a year"]),
-         mac_swap=dict(kind="list", grad=G_TEAL,
+         mac_swap=dict(kind="list", grad=G_WARM, fg="ink",
                        head="A request page whose server never sees your calendar.",
                        sub="AskWhen.me — a separate subscription you can turn on from inside the app.",
                        items=["Your Mac works out which times to offer and sends only those",
@@ -259,6 +266,7 @@ def build(platform, idx, spec):
     size = SIZES[platform]
     m = METRICS[platform]
     base = gradient(size, *spec["grad"]).convert("RGBA")
+    W, SUB, DOT = FG[spec.get("fg", "light")]
 
     y = m["top"]
     maxw = size[0] - 2 * m["margin"]
@@ -349,7 +357,7 @@ def build(platform, idx, spec):
         y = text_block(base, spec["head"], hf, m["margin"], y, maxw, W, spacing=1.14)
         y = text_block(base, spec["sub"], sf, m["margin"], y + m["gap"], maxw, SUB, spacing=1.3)
         y += gap2
-        bullets(base, spec["items"], bf, m["margin"], y, maxw, W)
+        bullets(base, spec["items"], bf, m["margin"], y, maxw, W, dot=DOT)
 
     else:  # portrait shot
         y = text_block(base, spec["head"], font(m["head"], "Bold"), m["margin"], y, maxw, W,

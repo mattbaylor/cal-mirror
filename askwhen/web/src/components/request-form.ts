@@ -124,9 +124,9 @@ export class RequestForm extends LitElement {
         font: inherit;
         font-weight: 600;
         font-size: 16px;
-        color: #06121f;
-        background: var(--accent);
-        border: 1px solid var(--accent);
+        color: var(--on-fill);
+        background: var(--accent-fill);
+        border: 1px solid var(--fill-edge);
         border-radius: 999px;
         padding: 12px 26px;
         cursor: pointer;

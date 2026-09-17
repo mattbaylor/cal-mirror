@@ -124,8 +124,7 @@ struct RequestOfferView: View {
                                                : RequestCopy.Offer.buyWithTrial)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                    .askWhenProminent()
                 } footer: {
                     Text(RequestCopy.Offer.renews)
                 }
@@ -173,8 +172,7 @@ struct RequestOfferView: View {
             } label: {
                 Text(RequestCopy.Offer.publish).frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .askWhenProminent()
         } footer: {
             Text(RequestCopy.Offer.tokenWarning)
         }

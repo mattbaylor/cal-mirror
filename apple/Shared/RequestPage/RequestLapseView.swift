@@ -58,7 +58,7 @@ struct RequestLapseView: View {
             }
             Button(state == .gone ? RequestCopy.Lapse.startAgain : RequestCopy.Lapse.renew,
                    action: onRenew)
-                .buttonStyle(.borderedProminent)
+                .askWhenProminent(.regular)
         }
     }
 

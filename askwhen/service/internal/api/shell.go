@@ -22,8 +22,22 @@ import (
 type Shell struct {
 	html, js         []byte
 	htmlETag, jsETag string
-	Logger           *slog.Logger
+	// The mark, rasterised at build time into dist/ (askwhen-markgen.swift):
+	// favicon-16.png, favicon-32.png, apple-touch-icon.png, og.png. Read once
+	// like the shell, served at the root, and optional — a dist without them
+	// is an older build, not a broken one.
+	assets map[string]asset
+	Logger *slog.Logger
 }
+
+type asset struct {
+	body []byte
+	etag string
+}
+
+// AssetNames is what the shell serves beside app.js. Each is a literal route
+// in main.go, which beats the /{slug} wildcard; none is a legal slug anyway.
+var AssetNames = []string{"favicon-16.png", "favicon-32.png", "apple-touch-icon.png", "og.png"}
 
 // LoadShell reads dist/index.html and dist/app.js from dir. A missing dir is
 // an error rather than a warning: a service that answers every page with 404
@@ -38,12 +52,41 @@ func LoadShell(dir string, log *slog.Logger) (*Shell, error) {
 	if err != nil {
 		return nil, err
 	}
+	assets := map[string]asset{}
+	for _, name := range AssetNames {
+		if b, err := os.ReadFile(filepath.Join(dir, name)); err == nil {
+			assets[name] = asset{body: b, etag: httpcache.StrongETag(b)}
+		}
+	}
 	return &Shell{
 		html: html, js: js,
 		htmlETag: httpcache.StrongETag(html),
 		jsETag:   httpcache.StrongETag(js),
+		assets:   assets,
 		Logger:   log,
 	}, nil
+}
+
+// Asset answers GET /<name> for one of AssetNames. PNG only; long-cached,
+// because the bytes are keyed by the build and a changed mark is a new
+// image and a new ETag.
+func (s *Shell) Asset(name string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		a, ok := s.assets[name]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		h := w.Header()
+		h.Set("Content-Type", "image/png")
+		h.Set("Cache-Control", "public, max-age=86400")
+		h.Set("X-Content-Type-Options", "nosniff")
+		if httpcache.Serve(w, r, a.etag) {
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(a.body)
+	}
 }
 
 // Page answers GET /{slug}.

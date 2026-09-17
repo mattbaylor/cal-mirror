@@ -167,9 +167,9 @@ export class RequestPage extends LitElement {
       }
 
       ol.path li[aria-current] .n {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: #06121f;
+        background: var(--accent-fill);
+        border-color: var(--fill-edge);
+        color: var(--on-fill);
       }
 
       ol.path li.done .n {
