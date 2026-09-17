@@ -1,0 +1,14 @@
+# The nightly backup sidecar: sqlite3 and a loop, nothing else.
+#
+# A WAL-mode SQLite file inside a running container is not guaranteed
+# consistent in a filesystem snapshot, which is what PBS takes of CT 112.
+# `VACUUM INTO` writes a consistent copy in one transaction, and the copy is
+# an ordinary file a snapshot can carry (TASKS.md, "Database backup").
+FROM alpine:3.21
+RUN apk add --no-cache sqlite
+COPY infra/backup.sh /backup.sh
+# The app runs as distroless's nonroot (65532) and owns the database files,
+# including the -shm the WAL needs a reader to touch. Same uid, so a
+# read-only open works and nothing here can write the database itself.
+USER 65532:65532
+ENTRYPOINT ["/bin/sh", "/backup.sh"]

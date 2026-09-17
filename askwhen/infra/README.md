@@ -249,6 +249,28 @@ operational chore.
 
 ---
 
+## Backups
+
+The `backup` service in `compose.yml` is a sidecar — Alpine, `sqlite3` and
+`backup.sh` — that runs `VACUUM INTO` against the database once at start and
+then daily at 03:10 UTC, into the `aw-backups` volume, keeping fourteen days.
+Each copy is made in one transaction with the database opened read-only
+(`mode=ro`), then checked with `PRAGMA integrity_check` and removed if it
+fails. A WAL-mode SQLite file mid-write is not guaranteed consistent in a
+filesystem snapshot, which is what PBS takes of the guest; these copies are,
+and they live under `/var/lib/docker/volumes/askwhen_aw-backups/` where the
+snapshot carries them.
+
+The copies hold what the database holds — requester names and addresses for
+up to fourteen days — so the volume is the database's equal in every policy
+sense, and it does not leave the host.
+
+    docker compose -f infra/compose.yml logs backup      # "backup: … ok (N bytes)"
+    docker run --rm -v askwhen_aw-backups:/b alpine ls -la /b
+
+Restoring is stopping the app, copying a file over `/data/askwhen.db` in
+`aw-data` (and deleting the `-wal` and `-shm` beside it), and starting it.
+
 ## What is irreversible, in one list
 
 - **Pointing the registrar at Cloudflare's nameservers.** Reversible in
