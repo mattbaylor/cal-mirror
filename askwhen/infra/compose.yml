@@ -100,7 +100,10 @@ services:
       - aw-data:/data
 
     networks:
-      - edge
+      edge:
+        # Pinned so that it cannot take the caddy container's address first
+        # (it starts first: caddy depends on it being healthy).
+        ipv4_address: 172.28.0.3
 
     # Reachable from the caddy container over the `edge` network. Still
     # published on the internal address as well, for the DC edge, until that
