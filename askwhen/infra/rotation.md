@@ -37,11 +37,20 @@ What it is: an API token with `Zone:DNS:Edit` on five zones
 repository at runtime — DNS changes have been made by hand or under
 `infisical run` from your shell. The edge must never hold it (same page).
 
-1. Cloudflare dashboard → profile (top right) → **My Profile → API Tokens**.
-2. Find the token. If it is still listed: **Roll** it (keeps the
-   permissions, issues a new secret) — or, if you cannot tell which it is,
-   **Create Token → Edit zone DNS** template, scope it to the same zones,
-   and **delete** the old one after step 3.
+Make it an **account API token**, not a user one: it then belongs to the
+account rather than to your login, which is what a service credential
+should be. It can only reach that account's zones, and that is the point —
+this product needs `Zone → DNS → Edit` on `askwhen.me` and
+`calendarmirror.com` and nothing else. If anything else of yours used the
+old token's reach into other zones, that is its own token in its own
+account.
+
+1. Cloudflare dashboard → the account → **Manage Account → Account API
+   Tokens → Create Token → Edit zone DNS** template. Under *Zone
+   Resources*, include only `askwhen.me` and `calendarmirror.com`.
+2. If you would rather keep a user token: **My Profile → API Tokens**, find
+   the old one, **Roll** it — or create with the same template and
+   **delete** the old one after step 3.
 3. Copy the new secret straight into Infisical (above). Close the Cloudflare
    sheet without leaving the token anywhere else.
 4. Delete any token you replaced rather than rolled.
