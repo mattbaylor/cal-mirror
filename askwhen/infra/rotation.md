@@ -60,30 +60,12 @@ account.
    sheet without leaving the token anywhere else.
 4. Delete any token you replaced rather than rolled.
 
-## 2. The R2 pair, and the endpoint — 10 minutes
+## 2. The R2 pair, and the endpoint — deleted
 
-What they are: an R2 API token (`cloudflare_accesskey` + 
-`cloudflare_secretaccesskey`), used through the S3 API at
-`cloudflare_s3apiendpoint`. What uses them: nothing in this repository; if
-they still matter it is for something of yours outside it, so check
-Cloudflare → R2 → the token's last-used date before deciding whether a
-replacement is needed at all. **If nothing uses them, delete the token and
-delete the three keys from Infisical** — the safest rotation is to nothing.
-
-If they are needed:
-
-1. Cloudflare → **R2 → Manage R2 API Tokens** (account-level, under the R2
-   overview).
-2. **Create API token** with the same permissions and bucket scope as the
-   old one (the old one's row shows them).
-3. Paste **Access Key ID** into `cloudflare_accesskey` and **Secret Access
-   Key** into `cloudflare_secretaccesskey`.
-4. **Delete** the old token.
-
-The endpoint is `https://<account id>.r2.cloudflarestorage.com`, and the
-account id cannot be rotated — it is an identifier, not a credential. With
-the old keys deleted it authorizes nothing, so leave
-`cloudflare_s3apiendpoint` and `cloudflare_accountid` as they are.
+Nothing used them, so on 17 September the R2 API token was deleted in
+Cloudflare and the keys removed from Infisical: the safest rotation is to
+nothing. `cloudflare_s3apiendpoint` and `cloudflare_accountid` are
+identifiers, not credentials, and stay.
 
 ## 3. `gh_claude` — 5 minutes
 
