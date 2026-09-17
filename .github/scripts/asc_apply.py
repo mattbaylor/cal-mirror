@@ -258,22 +258,40 @@ def ensure_subtitle():
 
 # ----------------------------------------------------------------- screenshots
 def ensure_screenshots(lid, folder, display):
+    """Every file in the folder is on the set, byte for byte.
+
+    Matched by file name AND checksum, not by count: App Store Connect copies
+    the previous version's screenshots into a new version, so a new version
+    starts with ten of the old ones and a count-based check calls that done —
+    which is how 2.0's three new frames would have shipped as 1.4.1's. A
+    screenshot whose checksum differs is deleted and uploaded again; the
+    order is preserved at the end so a replacement lands in its slot.
+    """
     sets = get(f"/v1/appStoreVersionLocalizations/{lid}/appScreenshotSets?limit=20").get("data", [])
     st = next((s for s in sets if s["attributes"].get("screenshotDisplayType") == display), None)
     files = sorted(f for f in os.listdir(os.path.join(ROOT, "screenshots", folder))
                    if f.endswith(".png"))
+    local = {fn: hashlib.md5(open(os.path.join(ROOT, "screenshots", folder, fn), "rb").read()).hexdigest()
+             for fn in files}
 
+    remote = {}
     if st is not None:
-        shots = get(f"/v1/appScreenshotSets/{st['id']}/appScreenshots?limit=30").get("data", [])
-        done = [s for s in shots
-                if (s["attributes"].get("assetDeliveryState") or {}).get("state") == "COMPLETE"]
-        if len(done) >= len(files):
-            print(f"    = {display}: {len(done)} already uploaded")
-            return
-        print(f"    ~ {display}: {len(done)}/{len(files)} complete — filling the rest")
-    else:
+        for sh in get(f"/v1/appScreenshotSets/{st['id']}/appScreenshots?limit=30").get("data", []):
+            a = sh["attributes"]
+            remote[a.get("fileName")] = (sh["id"], a.get("sourceFileChecksum"),
+                                         (a.get("assetDeliveryState") or {}).get("state"))
+    missing = [fn for fn in files if fn not in remote]
+    stale = [fn for fn in files if fn in remote and
+             (remote[fn][1] != local[fn] or remote[fn][2] != "COMPLETE")]
+    extra = [fn for fn in remote if fn not in local]
+    if st is not None and not missing and not stale and not extra:
+        print(f"    = {display}: {len(files)} already uploaded, checksums match")
+        return
+    if st is None:
         print(f"    + {display}: create set and upload {len(files)}")
-    changes.append(f"{display}: upload screenshots")
+    else:
+        print(f"    ~ {display}: {len(missing)} missing, {len(stale)} changed, {len(extra)} extra")
+    changes.append(f"{display}: screenshots")
     if not APPLY:
         return
 
@@ -286,16 +304,16 @@ def ensure_screenshots(lid, folder, display):
         if not r:
             return
         st = r["data"]
-        have = set()
-    else:
-        have = {s["attributes"].get("fileName") for s in
-                get(f"/v1/appScreenshotSets/{st['id']}/appScreenshots?limit=30").get("data", [])}
+
+    for fn in stale + extra:
+        call("DELETE", f"/v1/appScreenshots/{remote[fn][0]}")
+        print(f"      removed {folder}/{fn}")
+        remote.pop(fn, None)
 
     for fn in files:
-        if fn in have:
+        if fn in remote:
             continue
-        path = os.path.join(ROOT, "screenshots", folder, fn)
-        blob = open(path, "rb").read()
+        blob = open(os.path.join(ROOT, "screenshots", folder, fn), "rb").read()
         r = call("POST", "/v1/appScreenshots", {"data": {
             "type": "appScreenshots",
             "attributes": {"fileSize": len(blob), "fileName": fn},
@@ -310,9 +328,15 @@ def ensure_screenshots(lid, folder, display):
             call(op.get("method", "PUT"), op["url"], raw=chunk, headers=hdrs)
         call("PATCH", f"/v1/appScreenshots/{sid}", {"data": {
             "type": "appScreenshots", "id": sid,
-            "attributes": {"uploaded": True,
-                           "sourceFileChecksum": hashlib.md5(blob).hexdigest()}}})
+            "attributes": {"uploaded": True, "sourceFileChecksum": local[fn]}}})
+        remote[fn] = (sid, local[fn], "UPLOAD_COMPLETE")
         print(f"      uploaded {folder}/{fn}")
+
+    # The order is the file names' order (01..10). A replacement was appended
+    # at the end, so put the set back in order.
+    ordered = [remote[fn][0] for fn in files if fn in remote]
+    call("PATCH", f"/v1/appScreenshotSets/{st['id']}/relationships/appScreenshots",
+         {"data": [{"type": "appScreenshots", "id": i} for i in ordered]})
 
 
 # ------------------------------------------------------------------ submission
