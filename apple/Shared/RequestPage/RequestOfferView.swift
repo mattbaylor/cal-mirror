@@ -226,13 +226,14 @@ struct RequestOfferView: View {
         if state.isActive { phase = .alreadySubscribed(state); return }
 
         phase = .loading
-        // Two attempts, a second apart. The first product request after launch
-        // was seen to come back empty in the simulator and succeed on the very
-        // next tap of "Try again"; a transient like that should not be the
-        // owner's problem to notice. Anything that fails twice is the real
-        // failure screen, with its retry.
-        for attempt in 0..<2 {
-            if attempt > 0 { try? await Task.sleep(for: .seconds(1)) }
+        // Four attempts, backing off a second at a time. The first product
+        // request after launch comes back empty in the simulator often enough
+        // that two attempts a second apart still showed the failure screen on
+        // 17 Sept, with "Try again" succeeding immediately; a transient like
+        // that must not be the owner's — or a reviewer's — problem to notice.
+        // Anything that fails four times is the real failure screen.
+        for attempt in 0..<4 {
+            if attempt > 0 { try? await Task.sleep(for: .seconds(attempt)) }
             // StoreKit answers an unknown product id with silence, not an
             // error — an empty list, or one without the page tier — and the
             // screen that would render is a heading over nothing with no way

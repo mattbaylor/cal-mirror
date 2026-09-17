@@ -3,8 +3,10 @@
 
 Creates the version if it is missing, sets the subtitle and privacy policy URL,
 pushes the description, keywords, promotional text, release notes and the
-marketing and support URLs, attaches a build, and uploads any screenshots that
-are not already there. Optionally submits for review.
+marketing and support URLs, the notes for App Review with the sandbox tester
+as the demo account (CM_DEMO_USER / CM_DEMO_PASS, from secrets), attaches a
+build, and uploads any screenshots that are not already there. Optionally
+submits for review.
 
 Everything is idempotent and everything is checked before it is written: a field
 that already matches is skipped and says so, so a second run is quiet and safe.
@@ -141,6 +143,58 @@ def ensure_localization(vid, platform):
                                    {"data": {"type": "appStoreVersionLocalizations",
                                              "id": lid, "attributes": {k: v}}}))
     return lid
+
+
+# ---------------------------------------------------------- review details
+def ensure_review_details(vid, platform):
+    """Notes for App Review, and the sandbox tester as the demo account.
+
+    The notes come from metadata/<platform>/review_notes.txt (genmeta.py).
+    The tester never does: it arrives as CM_DEMO_USER / CM_DEMO_PASS from
+    the workflow's secrets and goes into the demo-account fields, which is
+    where Apple wants it. Contact fields are kept from whatever is already
+    on this version, or copied from the most recent version that has them.
+    """
+    notes = read(platform, "review_notes")
+    if notes is None:
+        return
+    user, pw = os.environ.get("CM_DEMO_USER"), os.environ.get("CM_DEMO_PASS")
+    cur = call("GET", f"/v1/appStoreVersions/{vid}/appStoreReviewDetail")
+    cur = (cur or {}).get("data") or None
+    desired = {"notes": notes, "demoAccountRequired": bool(user)}
+    if user:
+        desired.update(demoAccountName=user, demoAccountPassword=pw or "")
+    if cur:
+        rid, attrs = cur["id"], cur["attributes"]
+        for k, v in desired.items():
+            if k == "demoAccountPassword":
+                continue   # never read back; written with the name below
+            want(f"review {k}", attrs.get(k), v, lambda: None)
+        if APPLY and any(attrs.get(k) != v for k, v in desired.items() if k != "demoAccountPassword"):
+            call("PATCH", f"/v1/appStoreReviewDetails/{rid}",
+                 {"data": {"type": "appStoreReviewDetails", "id": rid, "attributes": desired}})
+        return
+    # No detail on this version yet: contact fields from the last version
+    # that had them, since Apple requires a contact.
+    contact = {}
+    for v in get(f"/v1/apps/{APP}/appStoreVersions?limit=40").get("data", []):
+        if v["id"] == vid:
+            continue
+        d = (call("GET", f"/v1/appStoreVersions/{v['id']}/appStoreReviewDetail") or {}).get("data")
+        if d and d["attributes"].get("contactEmail"):
+            contact = {k: d["attributes"].get(k) for k in
+                       ("contactFirstName", "contactLastName", "contactPhone", "contactEmail")}
+            break
+    if not contact:
+        problems.append(f"{platform}: no review contact on any version; fill it in App Store Connect once")
+        return
+    print("    + create review details (notes, demo account, contact copied)")
+    changes.append(f"{platform}: create review details")
+    if APPLY:
+        call("POST", "/v1/appStoreReviewDetails", {"data": {
+            "type": "appStoreReviewDetails",
+            "attributes": dict(contact, **desired),
+            "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions", "id": vid}}}}})
 
 
 def ensure_build(vid, platform):
@@ -301,6 +355,7 @@ def main():
                 problems.append(f"{platform}: no version id")
             continue
         lid = ensure_localization(vid, platform)
+        ensure_review_details(vid, platform)
         ensure_build(vid, platform)
         if lid:
             for folder, display in cfg["shots"]:

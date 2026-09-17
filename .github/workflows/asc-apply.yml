@@ -12,11 +12,11 @@ on:
       version:
         description: Version to bring in line
         type: string
-        default: "1.4.1"
+        default: "2.0"
       build:
         description: Build number to attach
         type: string
-        default: "10"
+        default: "11"
       apply:
         description: Actually write (unticked = plan only)
         type: boolean
@@ -45,6 +45,10 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           CM_VERSION: ${{ inputs.version }}
           CM_BUILD: ${{ inputs.build }}
+          # The sandbox tester, into the review details' demo-account fields.
+          # Repository secrets; never in the notes, never in the repo.
+          CM_DEMO_USER: ${{ secrets.ASC_DEMO_USER }}
+          CM_DEMO_PASS: ${{ secrets.ASC_DEMO_PASS }}
           CM_APPLY: ${{ inputs.apply && '1' || '0' }}
           CM_SUBMIT: ${{ inputs.submit && '1' || '0' }}
         run: python3 .github/scripts/asc_apply.py

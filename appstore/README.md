@@ -119,9 +119,17 @@ real by construction. iPad and Mac say the two new frames in words
 (`ipad_swap` / `mac_swap` in `genstore.py`), because no honest capture of a
 share sheet or a menu exists for those.
 
+**The subscriptions' review screenshot** is `sources/ios-offer-light.png`: the
+offer screen with the three products and Apple's prices, from a run through
+Xcode with the StoreKit configuration attached (`XCODE=1 apple/tools/run-sim.sh`
+— `simctl` alone cannot attach it). One image serves all three subscriptions
+in App Store Connect; it is uploaded there by hand, per subscription, under
+*Review Information*.
+
 **Notes for App Review** are generated too: `metadata/<platform>/review_notes.txt`
-from `REVIEW_NOTES` in `genmeta.py`, with one placeholder — the sandbox tester —
-that only Matt fills in, in App Store Connect, never in the repository.
+from `REVIEW_NOTES` in `genmeta.py`. The sandbox tester is not in them: `asc_apply.py`
+puts it in the review details' demo-account fields from the `ASC_DEMO_USER` /
+`ASC_DEMO_PASS` repository secrets, so it is never in the repository.
 
 **The Mac captures come from `apple/tools/shoot-mac.sh`** (16 Sept 2026 on).
 It builds the App Store app and launches it under `-CalMirrorFixture`, a
