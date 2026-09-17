@@ -48,9 +48,10 @@ type Requests struct {
 	// pure reads, and this is the only write a stranger can cause.
 	RatePerIP  int
 	RateWindow time.Duration
-	// TrustedProxy is the one address whose X-Forwarded-For we believe. Every
-	// request arrives from the edge, so without this the limit counts the proxy;
-	// with it trusted too broadly, a requester forges their own address.
+	// TrustedProxy is the address whose X-Forwarded-For we believe — or, while
+	// two edges are in play, the addresses, separated by commas or spaces.
+	// Every request arrives from an edge, so without this the limit counts the
+	// proxy; with it trusted too broadly, a requester forges their own address.
 	TrustedProxy string
 
 	// Deliver is what sends the confirmation email. Step 5 supplies it; until
@@ -262,15 +263,27 @@ func (h *Requests) overLimit(r *http.Request) (bool, error) {
 	return n > h.RatePerIP, nil
 }
 
-// clientIP believes X-Forwarded-For only from the one proxy we run. From
-// anywhere else the header is attacker-chosen, and trusting it would let a
-// requester pick their own rate-limit bucket.
+// ProxyTrusted reports whether remote is one of the proxies we run. The list
+// is the AW_TRUSTED_PROXY value as configured: normally one address, two only
+// during the move from one edge to another. An empty list trusts nobody.
+func ProxyTrusted(remote, trustedProxies string) bool {
+	for _, p := range strings.FieldsFunc(trustedProxies, func(c rune) bool { return c == ',' || c == ' ' }) {
+		if p == remote {
+			return true
+		}
+	}
+	return false
+}
+
+// clientIP believes X-Forwarded-For only from a proxy we run. From anywhere
+// else the header is attacker-chosen, and trusting it would let a requester
+// pick their own rate-limit bucket.
 func clientIP(r *http.Request, trustedProxy string) string {
 	remote, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		remote = r.RemoteAddr
 	}
-	if trustedProxy != "" && remote == trustedProxy {
+	if ProxyTrusted(remote, trustedProxy) {
 		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 			// The last hop the proxy appended is the client it saw; earlier
 			// entries are whatever the client sent and are not evidence.

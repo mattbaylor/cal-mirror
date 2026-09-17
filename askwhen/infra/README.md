@@ -7,20 +7,24 @@ that means it.
 
 ```
 Dockerfile         the service and the request page, one multi-stage build
-compose.yml        the one container, its volume and its limits
+compose.yml        the service and its Caddy, their volumes and limits
+Caddyfile          the edge: TLS, the on-demand gate, proxy to the service
 schema.sql         the dead drop's storage, written to make the claim structural
 deploy.py          idempotent, plans by default, --apply to act
 dns.md             every record to create, by hand
 mail.md            SPF/DKIM/DMARC, and why this is the part that fails silently
-edge.md            the block on caddy-dc that terminates TLS and proxies here
+edge.md            why the edge is ours alone, what runs, and how it was moved
 verified.md        what the DC actually is, checked, versus what was assumed
 ```
 
-TLS is not terminated on this host. `caddy-dc` (`172.16.1.4`) already fronts
-the datacenter and proxies `askwhen.me` to `:8080` here; the in-guest Caddy this
-directory once carried — with a Cloudflare DNS token for a wildcard — went away
-with it (`verified.md`, `edge.md`). The guest holds no credential that can change
-DNS, which is the better position to be in.
+TLS is terminated on this host, by the pinned `caddy` container in
+`compose.yml`, at `64.111.27.242` — AskWhen.me's own address, port-forwarded
+by pfSense (`edge.md`). For two weeks in September 2026 it sat behind the DC's
+shared Caddy instead; `edge.md` says why that ended. The in-guest Caddy this
+directory carried before *that* needed a Cloudflare DNS token for a wildcard
+certificate; this one needs none, because there is no wildcard certificate —
+every name gets its own, on demand, gated. The guest holds no credential that
+can change DNS, which is the better position to be in.
 
 The design is in `../design/architecture.md`. This directory implements §4 (the
 service), §7 (tiers and domains), §8 (abuse) and §10 (retention), and tries not
@@ -91,7 +95,7 @@ proxy.
 ### The one thing on-demand TLS must never be
 
 Without a gate, on-demand TLS is a public certificate mint: anyone who points a
-name at `64.111.22.172` and opens a TLS connection makes us ask Let's Encrypt
+name at `64.111.27.242` and opens a TLS connection makes us ask Let's Encrypt
 for a certificate, on our rate limit. The budget is 50 certificates per
 registered domain per week and 5 duplicate-order *failures* per hour, and a
 wordlist exhausts the failure budget in minutes. Nothing dramatic happens — real

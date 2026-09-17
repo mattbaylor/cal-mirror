@@ -32,11 +32,16 @@ Do it before anything else and let it settle.
 
 ### Web
 
+`64.111.27.242` is AskWhen.me's own address, from the routed `64.111.27.240/28`
+(not the on-link `/29`, which is full — `verified.md`). It was `64.111.22.170`,
+the DC's shared edge, from 2 to 16 September 2026, and this table said
+`.172` — reHosted's own website — before that, which `verified.md` caught.
+
 | Type | Name | Value | Proxy | TTL | Why |
 |---|---|---|---|---|---|
-| `A` | `askwhen.me` | `64.111.22.172` | **DNS only** | auto | The apex. Every $20 random-slug page, and the invitation page a cold stranger gets on a 404 (§4c). |
-| `A` | `*` | `64.111.22.172` | **DNS only** | auto | The $35 tier. `matt.askwhen.me` and every other customer subdomain resolve without a per-customer record. |
-| `A` | `edge` | `64.111.22.172` | **DNS only** | auto | The stable CNAME target the $70 tier points at. Covered by the wildcard already; it exists explicitly so that the wildcard is not load-bearing for customer domains we cannot fix later. |
+| `A` | `askwhen.me` | `64.111.27.242` | **DNS only** | auto | The apex. Every $20 random-slug page, and the invitation page a cold stranger gets on a 404 (§4c). |
+| `A` | `*` | `64.111.27.242` | **DNS only** | auto | The $35 tier. `matt.askwhen.me` and every other customer subdomain resolve without a per-customer record. |
+| `A` | `edge` | `64.111.27.242` | **DNS only** | auto | The stable CNAME target the $70 tier points at. Covered by the wildcard already; it exists explicitly so that the wildcard is not load-bearing for customer domains we cannot fix later. |
 | `CNAME` | `www` | `askwhen.me` | **DNS only** | auto | People type it. |
 | `CAA` | `askwhen.me` | `0 issue "letsencrypt.org"` | — | auto | Says out loud that no other CA may issue for this name. Cheap, and it turns a mis-issuance into a refusal. |
 
@@ -118,7 +123,7 @@ Two things break this and both look identical from the customer's side:
   Issuance is refused and the certificate simply never appears.
 - **An apex CNAME.** If they want `example.com` itself rather than
   `ask.example.com`, a CNAME at the apex is not legal DNS. Their provider may
-  offer flattening; if not, they need an `A` record at `64.111.22.172`, and then
+  offer flattening; if not, they need an `A` record at `64.111.27.242`, and then
   they own the consequence of us ever changing that address.
 
 Verify before enabling, and record the verification in `domain.verified_at`

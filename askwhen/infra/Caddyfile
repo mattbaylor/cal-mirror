@@ -1,0 +1,60 @@
+# askwhen.me — the edge, on the askwhen guest itself.
+#
+# Decided 16 September 2026, unwinding the 2 September decision to sit behind
+# the DC's shared Caddy (verified.md). The public address is 64.111.27.242,
+# port-forwarded by pfSense to this guest's :80 and :443. Nothing here fronts
+# anyone else, and nothing else fronts this: a mistake in this file stops
+# AskWhen.me and nobody else, and the ACME account that pays for a failed
+# issuance is ours alone.
+#
+# Stock caddy:2.11.4, pinned in compose.yml. No DNS provider is compiled in
+# and none is needed: there is no DNS-01 wildcard. `*.askwhen.me` is a DNS
+# wildcard A record, and every subdomain and custom domain gets its own
+# certificate on demand, gated below. The guest still holds no credential
+# that can change DNS.
+#
+# `AW_TLS_AUTH_SECRET` is read from the compose file-secret by the container
+# command (compose.yml) and substituted at adapt time; it is not in this file
+# and this file is safe to commit.
+{
+	# When a hostname nothing below names arrives in a handshake, ask the
+	# service before ordering a certificate. It answers 200 only for a
+	# hostname a paying owner has claimed — and, for a custom domain, one whose
+	# CNAME has been observed pointing here — and fails closed on any error.
+	# The key rides in the URL because Caddy's ask request carries no headers;
+	# the service also refuses this endpoint from any address but the proxy's,
+	# and refuses it outright if an X-Forwarded-* header is present, which is
+	# how a public request proxied through the block below would look.
+	on_demand_tls {
+		ask http://app:8080/internal/tls-authorize?key={$AW_TLS_AUTH_SECRET}
+	}
+}
+
+(site) {
+	# Belt and braces on top of the service's own perimeter check: nothing
+	# from outside reaches /internal/ even if that check were misconfigured.
+	handle /internal/* {
+		respond 404
+	}
+	handle {
+		reverse_proxy app:8080
+	}
+}
+
+askwhen.me, www.askwhen.me {
+	import site
+}
+
+# Customer subdomains ($35) and custom domains ($70). Customers CNAME at
+# edge.askwhen.me, or point an apex A record at 64.111.27.242. Last, so it
+# matches only what nothing above claims.
+https:// {
+	tls {
+		on_demand
+	}
+	import site
+}
+
+http:// {
+	redir https://{host}{uri} permanent
+}

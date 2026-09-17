@@ -207,13 +207,26 @@ puts **on-demand TLS for arbitrary customer domains** on the same address as the
 company website, and shares the per-IP rate limit between askwhen requesters and
 rehosted.us visitors.
 
-**There are three spare public IPs in the /29** — `.168`, `.169` and `.175` all
-have generic `*.static.hvvc.us` rDNS and nothing forward-resolving to them.
+~~There are three spare public IPs in the /29 — `.168`, `.169` and `.175`.~~
+**Wrong, corrected 16 September 2026:** `.168` is the network address, `.175`
+the broadcast, and `.169` is hvvc's gateway (it answers ping; the WAN sits at
+`.170/29`). Generic rDNS is not "unused". The /29 is full. The spare addresses
+are in the *second* block, **`64.111.27.240/28`**, which is routed to the
+firewall (a pfSense "Other" VIP), so all sixteen are usable; `.240`, `.241`,
+`.243` and `.245` are taken and `.242` is askwhen's.
 Giving askwhen its own address isolates the blast radius, keeps on-demand
 issuance away from the business site, and makes the wildcard and `edge` records
 honest. That is the change I would make to `dns.md`, and it is Matt's call.
 
-### 2. Use the edge that already exists — DECIDED
+### 2. Use the edge that already exists — DECIDED, then UNDONE
+
+**Matt, 16 Sept 2026: a dedicated address and our own Caddy on CT 112.**
+`64.111.27.242`, port-forwarded to `172.16.1.41`; the caddy container in
+`compose.yml`; `edge.md` has what happened and why. The "grow to a second
+edge only if we need to" below lasted two weeks, and what made it necessary
+was not askwhen's traffic but the shared proxy's other names: a pruned site
+block left a stale CNAME falling through to askwhen's on-demand catch-all,
+served with a certificate the business's ACME account paid for.
 
 **Matt, 2 Sept 2026: go behind `caddy-dc`. Grow to a second edge only if we
 need to.** So the branch's own `Caddyfile` and `Dockerfile.caddy` become an
@@ -343,7 +356,7 @@ with it, and decide whether this host is backed up by PBS like the rest.
 
 | IP | rDNS | What |
 |---|---|---|
-| `.168` `.169` `.175` | generic `*.static.hvvc.us` | **spare — candidates for askwhen** |
+| `.168` / `.169` / `.175` | generic `*.static.hvvc.us` | network / **hvvc gateway** / broadcast — not hosts |
 | `.170` | `fw.rehosted.us` | firewall / edge |
 | `.171` | `mail.rehosted.us` | `vft.rehosted.us` forward-resolves here |
 | `.172` | `rehosted.us` | **the hosting business's own website** |

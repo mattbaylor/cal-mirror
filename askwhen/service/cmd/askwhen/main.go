@@ -91,13 +91,16 @@ func loadConfig() (config, error) {
 		schemaPath: envOr("AW_SCHEMA", "/schema.sql"),
 		zone:       envOr("AW_ZONE", "askwhen.me"),
 		origin:     envOr("AW_ORIGIN", "https://askwhen.me"),
-		// The one proxy whose X-Forwarded-For is believed. edge.md: trust it
-		// from 172.16.1.4 and nowhere else, or the per-IP limit either counts
-		// the proxy or lets a requester pick their own bucket.
-		trustedProxy: envOr("AW_TRUSTED_PROXY", "172.16.1.4"),
+		// The proxy whose X-Forwarded-For is believed — edge.md: trust the edge
+		// we run and nowhere else, or the per-IP limit either counts the proxy
+		// or lets a requester pick their own bucket. A comma- or space-separated
+		// list is accepted so that two edges can overlap during a move; it
+		// should be back to one address the day the move is done. The default
+		// is the caddy container's fixed address on the compose `edge` network.
+		trustedProxy: envOr("AW_TRUSTED_PROXY", "172.28.0.2"),
 		webDir:       envOr("AW_WEB", "/web"),
 		edgeTarget:   envOr("AW_EDGE_TARGET", "edge.askwhen.me"),
-		edgeIPs:      strings.Fields(strings.ReplaceAll(envOr("AW_EDGE_IPS", "64.111.22.170"), ",", " ")),
+		edgeIPs:      strings.Fields(strings.ReplaceAll(envOr("AW_EDGE_IPS", "64.111.27.242"), ",", " ")),
 		bundleID:     envOr("AW_BUNDLE_ID", "io.github.mattbaylor.cal-mirror"),
 		// Default on: the sandbox is how the flow is proven before launch.
 		// compose.yml flips it to "0" at launch (TASKS.md).
@@ -572,18 +575,18 @@ func withPersonal(body []byte) ([]byte, error) {
 // own address and was not forwarded on somebody's behalf.
 //
 // Two checks, because one is not enough: a public request for /internal/…
-// that the edge proxies through arrives from the same 172.16.1.4 as Caddy's
+// that the edge proxies through arrives from the same address as Caddy's
 // own `ask`. What tells them apart is that Caddy's ask sets no headers at all
 // (verified against ondemand.go), while a proxied request always carries
 // X-Forwarded-For. Refuses with the same 404 as an unknown page, so the
 // existence of the endpoint is not learnable from outside.
-func internalOnly(proxy string, next http.Handler) http.Handler {
+func internalOnly(proxies string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			ip = r.RemoteAddr
 		}
-		if proxy == "" || ip != proxy ||
+		if !api.ProxyTrusted(ip, proxies) ||
 			r.Header.Get("X-Forwarded-For") != "" || r.Header.Get("X-Forwarded-Host") != "" ||
 			r.Header.Get("X-Forwarded-Proto") != "" {
 			http.NotFound(w, r)
