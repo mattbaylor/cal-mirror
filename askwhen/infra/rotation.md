@@ -1,11 +1,16 @@
 # Rotating the leaked credentials — the guided version
 
+**Done 17 September 2026.** Kept as the procedure for next time. The one
+thing it found on the way: the new values first landed in Infisical's *dev*
+environment, and everything reads *prod* — the environment selector is the
+step to check before the verifier.
+
 Written 16 September 2026. Five values from Infisical project
 `calendarmirror-com-v2-yo` (`6ef20309-ec07-4ecc-8ced-91b4f67300e7`), env
 `prod`, were printed into a session transcript on 4 September:
 `cloudflare_apitoken`, `cloudflare_accesskey`, `cloudflare_secretaccesskey`,
 `cloudflare_s3apiendpoint` and `gh_claude`. Two of the eight are not
-affected (`postal_api_key`, `pepper`); `cloudflare_accountid` rides in the
+affected (`postal_api_key`, `askwhen_pepper` — renamed from `pepper` on 17 Sept); `cloudflare_accountid` rides in the
 endpoint and is discussed below.
 
 **The rule this whole page obeys: the new values never pass through a

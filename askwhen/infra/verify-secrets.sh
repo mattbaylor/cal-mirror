@@ -52,6 +52,6 @@ check postal_api_key \
 
 # The pepper is only ever compared, never used against a provider. Present
 # and the right shape is all that can be checked from here.
-check pepper 'test "${#pepper}" -ge 40'
+check askwhen_pepper 'test "${#askwhen_pepper}" -ge 40'
 
 exit $fail
