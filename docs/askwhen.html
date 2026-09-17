@@ -89,6 +89,9 @@
   .phones figure{margin:0;text-align:center;max-width:260px}
   .phones img{width:260px;max-width:44vw;height:auto;border-radius:22px;border:1px solid var(--line);box-shadow:var(--shadow)}
   .phones figcaption{color:var(--dim);font-size:13px;margin-top:12px}
+  .mac{margin:34px 0 0;text-align:center}
+  .mac img{display:block;max-width:100%;width:940px;height:auto;margin:0 auto;border-radius:12px;border:1px solid var(--line);box-shadow:var(--shadow)}
+  .mac figcaption{color:var(--dim);font-size:13px;margin-top:12px}
 
   /* The requester's side: four states of the page, at phone width, as a strip. */
   .screens{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:34px}
@@ -182,6 +185,13 @@
         <figcaption>Live. The address is yours, and the switch is right there.</figcaption>
       </figure>
     </div>
+    <figure class="mac">
+      <picture>
+        <source srcset="img/askwhen-mac-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="img/askwhen-mac-light.png" width="940" height="700" alt="On the Mac, the same setup as a sheet over Calendar Mirror's Manage Mirrors window: the AskWhen.me mark, 'A page where people can ask for a time', the three points, and a Continue button.">
+      </picture>
+      <figcaption>On the Mac it is the same setup, as a sheet over Manage Mirrors. One subscription covers iPhone, iPad and Mac.</figcaption>
+    </figure>
   </section>
 
   <section id="theirs">
@@ -194,7 +204,7 @@
       <figure>
         <picture>
           <source srcset="img/askwhen-req-pick-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-req-pick-light.png" alt="The request page at askwhen.me: 'Ask Dana Okonkwo for a time', a freshness note saying the times are an offer, not a reservation, and a week of times to pick from, shown in the visitor's time zone.">
+          <img src="img/askwhen-req-pick-light.png" alt="The request page at askwhen.me: 'Ask Dana Cho for a time', a freshness note saying the times are an offer, not a reservation, and a week of times to pick from, shown in the visitor's time zone.">
         </picture>
         <figcaption>1 &middot; Pick a time, in your own zone.</figcaption>
       </figure>
@@ -215,14 +225,11 @@
       <figure>
         <picture>
           <source srcset="img/askwhen-req-accepted-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-req-accepted-light.png" alt="Accepted: a green check, 'Dana Okonkwo accepted, and has written the event into their calendar. The invitation is on its way to you by email.'">
+          <img src="img/askwhen-req-accepted-light.png" alt="Accepted: a green check, 'Dana Cho accepted, and has written the event into their calendar. The invitation is on its way to you by email.'">
         </picture>
         <figcaption>4 &middot; Accepted &mdash; from the owner&rsquo;s device, with a calendar file by email.</figcaption>
       </figure>
     </div>
-    <p class="muted" style="margin-top:22px;font-size:14px">Every screen on this page is from a
-      synthetic configuration &mdash; invented calendars, an invented owner, an invented visitor.
-      No real person appears.</p>
   </section>
 
   <section id="holds">
