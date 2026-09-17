@@ -54,7 +54,12 @@ def token():
 
 def call(method, path, body=None, raw=None, headers=None):
     url = path if path.startswith("http") else API + path
-    h = {"Authorization": "Bearer " + TOK}
+    # The bearer is for App Store Connect only. A screenshot's upload
+    # operations are pre-signed URLs on Apple's object storage, and S3
+    # refuses a pre-signed request that also carries an Authorization
+    # header — "400 Invalid request", which is how every 2.0 screenshot
+    # upload failed on 17 Sept.
+    h = {} if path.startswith("http") else {"Authorization": "Bearer " + TOK}
     data = None
     if body is not None:
         data = json.dumps(body).encode()
