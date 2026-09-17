@@ -21,9 +21,14 @@ check() {           # check <name> <shell that exits 0 on success>
 }
 
 # Cloudflare API token: the verify endpoint answers about the token itself.
+# A user-owned token verifies under /user; an account-owned one (the kind a
+# service credential should be — rotation.md) under /accounts/{id}. Try both;
+# print which, since that is worth knowing and is not a secret.
 check cloudflare_apitoken \
-  'curl -sf -H "Authorization: Bearer $cloudflare_apitoken" https://api.cloudflare.com/client/v4/user/tokens/verify \
-   | grep -q "\"status\":\"active\""'
+  'H="Authorization: Bearer $cloudflare_apitoken"; B=https://api.cloudflare.com/client/v4;
+   if curl -sf -H "$H" $B/user/tokens/verify | grep -q "\"status\":\"active\""; then echo user-owned;
+   elif curl -sf -H "$H" $B/accounts/$cloudflare_accountid/tokens/verify | grep -q "\"status\":\"active\""; then echo account-owned;
+   else exit 1; fi'
 
 # R2 (S3 API): a signed ListBuckets against the account endpoint. Needs the
 # aws CLI; prints the bucket count and nothing else.
