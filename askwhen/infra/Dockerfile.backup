@@ -7,6 +7,13 @@
 FROM alpine:3.21
 RUN apk add --no-cache sqlite
 COPY infra/backup.sh /backup.sh
+# The mount point exists in the image, owned by the uid below. Docker seeds a
+# *new* named volume from the image's mount point, ownership included; without
+# this the volume comes up root-owned and the first VACUUM INTO fails with
+# "unable to open database (14)" — the same trap the first deploy of the app
+# hit (STATUS.md). An existing volume is not touched by this; a root-owned
+# one from before this line has to be removed once, empty, and recreated.
+RUN mkdir -p /backups && chown 65532:65532 /backups
 # The app runs as distroless's nonroot (65532) and owns the database files,
 # including the -shm the WAL needs a reader to touch. Same uid, so a
 # read-only open works and nothing here can write the database itself.
