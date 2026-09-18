@@ -71,10 +71,19 @@ identifiers, not credentials, and stay.
 
 What it is: a GitHub personal access token for the `mattbaylor` account
 (the verifier prints the login, which is how that is known). What uses it:
-nothing in this repository — `CM_RELEASE_TOKEN` is a separate repo secret
-in Actions and is not affected. If `gh_claude` was for a Claude session's
+nothing in this repository. If `gh_claude` was for a Claude session's
 `gh` and that session now uses the keyring, it is a candidate for deletion
 rather than replacement.
+
+**Lesson from 17 Sept:** this section originally said `CM_RELEASE_TOKEN`
+(the Actions secret `watch-review.yml` pushes with) was a separate token
+and not affected. Within two hours of the rotation the watcher started
+failing checkout with GitHub rejecting that token — it was the same PAT,
+or was deleted alongside it. A PAT's value in Infisical and its value in
+an Actions secret are not two tokens. Before deleting any GitHub PAT,
+check **Settings → Developer settings → Personal access tokens** for what
+the token is named and which repos it reaches, and if it is the watcher's,
+set the new value with `gh secret set CM_RELEASE_TOKEN` in the same sitting.
 
 1. GitHub → **Settings → Developer settings → Personal access tokens**
    (fine-grained, or classic — whichever list it is in).
