@@ -76,6 +76,26 @@ same forwarding was done by a `redirect.js` in every page, on the belief that
 Pages only redirected when it held the domain; it does not, and the script is
 gone.)
 
+## Search engines
+
+`docs/robots.txt` allows everything and names the sitemap. `docs/sitemap.xml`
+is written by `python3 infra/site/sitemap.py` from the pages in `docs/`, dated
+from git — run it in the same change as any page edit. Every page carries a
+canonical URL, so `/`, `/index.html` and `/?platform=ios` count as one page.
+`coming.html` is `noindex` and left out of the sitemap since nothing links to it.
+
+**IndexNow** (Bing, and through Bing Yahoo and DuckDuckGo; Yandex, Naver,
+Seznam) is a POST on deploy: `infra/site/indexnow.sh` runs on CT 112 as an
+`ExecStartPost` of `site-pull.service`, pings only when `main` moved and only
+with the pages that changed, and keeps the last-pinged commit in
+`/var/lib/site-pull/indexnow.last`. The key is the file `docs/<key>.txt`;
+it is public by design (IndexNow verifies it by fetching it from the site).
+
+**Google** is not in IndexNow. It reads the sitemap through Search Console,
+which is an account, not a file: a Domain property for `calendarmirror.com`,
+verified by DNS, with `sitemap.xml` submitted under Indexing → Sitemaps. Bing
+Webmaster Tools can import that property without re-verifying.
+
 ## Analytics
 
 Every page loads Plausible from `stats.rehosted.us` — our own instance on our
