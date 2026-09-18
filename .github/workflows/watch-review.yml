@@ -34,20 +34,31 @@ jobs:
   watch:
     runs-on: ubuntu-latest
     steps:
+      # Checkout with the workflow token, never the PAT: a revoked PAT used to
+      # kill the run here with "could not read Username", which says nothing.
+      # The push steps name their own token in the URL instead.
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.CM_RELEASE_TOKEN || github.token }}
+          persist-credentials: false
 
       - run: pip install --quiet cryptography
 
       # The secrets context is not available in step-level `if:`, so resolve
-      # whether we have a push token into a plain output first.
+      # whether we have a push token into a plain output first — and prove
+      # it still works, so a dead one fails with the fix in the message
+      # rather than on release day.
       - id: cfg
         env:
           TOKEN: ${{ secrets.CM_RELEASE_TOKEN }}
         run: |
-          if [ -n "$TOKEN" ]; then echo "has_token=true" >> "$GITHUB_OUTPUT";
-          else echo "has_token=false" >> "$GITHUB_OUTPUT"; fi
+          if [ -z "$TOKEN" ]; then echo "has_token=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if curl -sf -o /dev/null -H "Authorization: Bearer $TOKEN" \
+               "https://api.github.com/repos/${{ github.repository }}"; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::CM_RELEASE_TOKEN is set but GitHub rejects it (revoked, expired, or no access to ${{ github.repository }}). Mint a fine-grained PAT with Contents: read+write on this repo, then: gh secret set CM_RELEASE_TOKEN"
+            exit 1
+          fi
 
       - id: check
         env:
@@ -58,6 +69,8 @@ jobs:
 
       - name: Commit to main (needs CM_RELEASE_TOKEN)
         if: steps.check.outputs.released == 'true' && steps.cfg.outputs.has_token == 'true'
+        env:
+          TOKEN: ${{ secrets.CM_RELEASE_TOKEN }}
         run: |
           set -euo pipefail
           git config user.name  "github-actions[bot]"
@@ -69,7 +82,7 @@ jobs:
           platform, so the release notes no longer say In review and the
           build-from-source notes are gone from the home page. Stamped
           automatically by .github/workflows/watch-review.yml."
-          git push origin HEAD:main
+          git push "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}" HEAD:main
 
       - name: Open a PR instead (no token)
         if: steps.check.outputs.released == 'true' && steps.cfg.outputs.has_token == 'false'
@@ -83,7 +96,7 @@ jobs:
           git checkout -b "$BR"
           git add docs/changelog.html docs/index.html
           git commit -m "Site: ${{ steps.check.outputs.version }} cleared review on ${{ steps.check.outputs.date }}"
-          git push origin "$BR"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" "$BR"
           if ! gh pr create --base main --head "$BR" \
               --title "Site: ${{ steps.check.outputs.version }} cleared review" \
               --body "App Store Connect reports ${{ steps.check.outputs.version }} live on every platform, so the release notes should no longer say *In review* and the build-from-source notes should be gone from the home page.
