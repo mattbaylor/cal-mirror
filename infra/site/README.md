@@ -38,6 +38,13 @@ A systemd timer on CT 112 pulls every ten minutes:
 /etc/systemd/system/site-pull.timer     OnBootSec=2min, OnUnitActiveSec=10min
 ```
 
+**Changing the Caddyfile.** The container reads it from a read-only bind mount
+of `/opt/site-serve/Caddyfile`. Replacing that file with `mv` leaves the mount
+on the old inode, so after copying the new file in, `docker restart site`
+(a two-second blip) — `caddy reload` inside the container will not see it.
+Validate first:
+`docker run --rm -v /opt/site-serve/Caddyfile:/etc/caddy/Caddyfile:ro caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile`.
+
 **Pull, not push, deliberately.** The alternative is a deploy key for this host
 living in GitHub Actions — a third party holding a credential to our
 infrastructure, which is the thing moving off Pages was meant to avoid. The
