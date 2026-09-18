@@ -139,7 +139,7 @@ have; **mine** means it can be built and tested without you.
 | 7 | ~~Rotate the five leaked credentials~~ **done 17 Sept**, verified by `askwhen/infra/verify-secrets.sh`. | done | — |
 | 8 | ~~Back up the pepper~~ **done** (Infisical, as `askwhen_pepper`). | done | — |
 | 9 | **A simulator pass over the request-page UI, then App Store screenshots and review notes for Calendar Mirror 2.0** — from a synthetic config, never the live one. These are one job now: the first run of the UI is also where the screenshots come from, and `apple/tools/review-fixture.json` already holds a synthetic owner to drive it. | **Yours** to run, mine to fix what it finds | a day |
-| 10 | ~~Release Calendar Mirror 2.0 from CI~~ **Submitted 17 Sept**: build 12 from `release.yml` (release macOS, `24G830`), attached to both 2.0 versions by `asc-apply`; the three subscriptions and their group in the iOS submission. Both platforms `WAITING_FOR_REVIEW`. `watch-review.yml` clears the site's `UNRELEASED:2.0` markers on approval. **On approval day: `AW_APPSTORE_SANDBOX=0` on CT 112.** | done | — |
+| 10 | ~~Release Calendar Mirror 2.0 from CI~~ **Submitted 17 Sept**: build 12 from `release.yml` (release macOS, `24G830`), attached to both 2.0 versions by `asc-apply`; the three subscriptions and their group in the iOS submission. iOS was bounced the same evening by an automated 3.1.2 check (no Terms of Use link in the listing); the descriptions now end with Apple's standard EULA link, pushed by `asc-apply` and resubmitted. macOS still `WAITING_FOR_REVIEW`. `watch-review.yml` clears the site's `UNRELEASED:2.0` markers on approval. **On approval day: `AW_APPSTORE_SANDBOX=0` on CT 112.** | done | — |
 
 ### Should — ship-worthy without them, worse for it
 
