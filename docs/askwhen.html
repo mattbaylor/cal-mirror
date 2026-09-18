@@ -2,356 +2,486 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
-<script type="module" src="nav.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AskWhen.me — a request page whose server never sees your calendar</title>
 <meta name="description" content="AskWhen.me is a page where people can ask you for a time. Your device chooses which times to offer, the server never sees your calendar, and nothing lands until you accept. A subscription you turn on from inside Calendar Mirror.">
+<link rel="preload" href="fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="site.css?v=20260917f">
 <link rel="icon" href="img/askwhen-mark.png">
 <meta property="og:title" content="AskWhen.me">
 <meta property="og:description" content="A page where people can ask you for a time. Your device chooses the times, the server never sees your calendar, and nothing lands until you accept.">
 <meta property="og:image" content="https://calendarmirror.com/img/askwhen-mark.png">
 <meta property="og:type" content="website">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="nav.js?v=20260917f"></script>
+<script src="platform.js?v=20260917f"></script>
 <style>
-  /* AskWhen.me's own page, in its own look (askwhen/design/decisions.md,
-     17 Sept 2026): the mark's gradient and accent, ink on the gradient and
-     never white, and the accent for text, borders and focus. The surfaces
-     are the site's, so the page still reads as part of calendarmirror.com. */
-  :root{
-    --bg:#0b0e14; --bg2:#0f1420; --card:#151b28; --card2:#1b2333;
-    --line:#232c3d; --tx:#e6edf3; --mut:#93a1b5; --dim:#6b7a90;
-    --accent:#f0689a; --amber:#ff9a3c; --pink:#ee4380; --ink:#06121f; --good:#2ecc71;
-    --radius:16px; --shadow:0 12px 40px rgba(0,0,0,.35);
+  /* AskWhen.me is a separate product with its own look (decisions.md,
+     17 Sept 2026): the amber→rose gradient and its accent. On this page they
+     carry the button, the links, the field behind the demo and the demo itself;
+     the ground and the type stay Calendar Mirror's, so the two products read
+     as related without being the same thing. Text on the gradient is ink. */
+  :root{--link:#C7355F;--aw-amber:#FF9A3C;--aw-rose:#EE4380;--aw-ink:#06121F}
+  @media (prefers-color-scheme: dark){ :root{--link:#F0689A} }
+  .button{background:var(--aw-amber);color:var(--aw-ink);box-shadow:inset 0 0 0 1.5px #C7355F}
+  @media (prefers-color-scheme: dark){ .button{background:var(--aw-amber);box-shadow:none} }
+  .hero{text-align:center;padding-top:clamp(1rem,4vw,3rem)}
+  .hero h1{max-width:52rem;margin-left:auto;margin-right:auto}
+  .hero .lede{max-width:36rem;margin-left:auto;margin-right:auto}
+  .mark{display:block;width:80px;height:80px;border-radius:18px;margin:0 auto 1.6rem}
+  section > h2.centered{max-width:46rem}
+
+  /* The demo: two devices and the traffic between them. Dana's device offers a
+     few times; only those cross the wire to the page on Alex's device; the
+     request comes back; Dana accepts; the answer goes out. Each device is a
+     phone or a Mac window, following the switch above. */
+  .field{margin:2.6rem auto 0;padding:clamp(14px,3vw,34px);border-radius:28px;
+    background:linear-gradient(135deg, rgba(255,154,60,.20), rgba(238,67,128,.16))}
+  @media (prefers-color-scheme: dark){ .field{background:linear-gradient(135deg, rgba(255,154,60,.16), rgba(238,67,128,.12))} }
+  .demo{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1rem}
+  .side{min-width:0;display:flex;flex-direction:column;align-items:center;gap:.8rem}
+  .who{font-size:14px;color:var(--ink);font-weight:600;background:var(--paper);border-radius:999px;padding:.35em .9em;
+    box-shadow:0 1px 3px rgba(15,26,43,.12)}
+  .frame.mac{width:100%;max-width:27rem}
+  .frame.mac .body,.frame.phone .body{padding:.9rem 1rem 1rem}
+  .frame.phone .body{padding-top:.2rem}
+  .wire{position:relative;width:clamp(3rem,8vw,7rem);height:2px;background:rgba(15,26,43,.18);border-radius:2px}
+  @media (prefers-color-scheme: dark){ .wire{background:rgba(234,240,247,.22)} }
+  .packet{position:absolute;top:50%;left:0;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);
+    background:linear-gradient(135deg,var(--aw-amber),var(--aw-rose));box-shadow:0 0 0 5px rgba(238,67,128,.18);opacity:0;
+    transition:left 1s cubic-bezier(.4,0,.2,1),opacity .25s}
+  .packet.on{opacity:1}
+  .wire-label{position:absolute;left:50%;top:-1.9rem;transform:translateX(-50%);white-space:nowrap;font-size:12.5px;font-weight:600;color:var(--link);
+    opacity:0;transition:opacity .3s}
+  .wire-label.on{opacity:1}
+  .day{position:relative;height:320px}
+  .tick{position:absolute;left:0;right:0;border-top:1px solid var(--rule);font-size:11px;color:var(--muted);line-height:1;padding-top:3px}
+  .ev{position:absolute;left:2.6rem;right:.2rem;border-radius:7px;padding:.25rem .6rem;font-size:13px;line-height:1.3;
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;transition:opacity .5s,transform .5s cubic-bezier(.2,.8,.2,1)}
+  .ev.own{background:#E9EEF5;color:#2C3A4F}
+  .ev.offer{border:1.5px dashed var(--link);color:var(--link);background:transparent;font-weight:600}
+  .ev.booked{background:var(--aw-amber);color:var(--aw-ink);font-weight:600}
+  .ev.hidden{opacity:0;transform:translateY(6px)}
+  .request{position:absolute;left:.6rem;right:.6rem;bottom:.6rem;background:var(--paper);border:1px solid var(--rule);
+    border-radius:12px;padding:.7rem .8rem;box-shadow:0 12px 30px -12px rgba(15,26,43,.35);font-size:13px;line-height:1.35;
+    transition:opacity .4s,transform .5s cubic-bezier(.2,.8,.2,1)}
+  .request.hidden{opacity:0;transform:translateY(16px)}
+  .request b{display:block;font-size:13.5px}
+  .request .acts{display:flex;gap:.4rem;margin-top:.5rem}
+  .request .acts span{border-radius:8px;padding:.35em .8em;font-weight:600;font-size:12.5px;border:1.5px solid var(--rule);color:var(--muted)}
+  .request .acts .yes{background:var(--aw-amber);color:var(--aw-ink);border-color:transparent;transition:filter .2s}
+  .request.pressed .acts .yes{filter:brightness(.85)}
+  .page{min-height:320px;position:relative}
+  .page .url{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);margin-bottom:.8rem;background:var(--soft);border-radius:8px;padding:.4em .7em}
+  .page h4{font-size:17px;font-weight:600;letter-spacing:-.01em;margin:0 0 .2rem;display:flex;align-items:center;gap:.5rem}
+  .page h4 img{width:22px;height:22px;border-radius:6px}
+  .page .sub{font-size:12.5px;color:var(--muted);margin:0 0 .9rem}
+  .times{display:flex;flex-direction:column;gap:.4rem}
+  .times span{display:block;border:1.5px solid var(--rule);background:var(--paper);border-radius:9px;padding:.45em .7em;font-size:13.5px;
+    transition:opacity .5s,transform .5s cubic-bezier(.2,.8,.2,1),border-color .3s}
+  .times span.hidden{opacity:0;transform:translateX(-24px)}
+  .times span.picked{border-color:var(--link);box-shadow:inset 0 0 0 1px var(--link)}
+  .cursor{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--link);opacity:0;transform:translate(-50%,-50%);
+    box-shadow:0 0 0 4px rgba(199,53,95,.25);transition:opacity .3s,left .8s cubic-bezier(.4,0,.2,1),top .8s cubic-bezier(.4,0,.2,1);left:60%;top:30%;z-index:2}
+  .cursor.on{opacity:1}
+  html[data-platform="mac"] .cursor{width:20px;height:24px;border-radius:0;background:none;box-shadow:none;transform:translate(-2px,-2px);
+    background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 24'><path d='M3 2 L3 19 L7.5 15 L10.5 22 L13.5 20.7 L10.6 14 L16.5 14 Z' fill='black' stroke='white' stroke-width='1.6' stroke-linejoin='round'/></svg>") no-repeat}
+  .status{margin-top:.8rem;border-radius:10px;padding:.6rem .8rem;font-size:13px;line-height:1.35;
+    background:var(--paper);border:1px solid var(--rule);transition:opacity .4s,transform .4s}
+  .status.hidden{opacity:0;transform:translateY(10px)}
+  .status.ok{border-color:transparent;background:linear-gradient(135deg,var(--aw-amber),var(--aw-rose));color:var(--aw-ink)}
+  .status b{display:block}
+  .demo-note{text-align:center;font-size:14.5px;color:var(--muted);margin:1.4rem auto 0;max-width:36rem}
+  @media (prefers-color-scheme: dark){ .ev.own{background:#1E2A3D;color:#C9D6E8} }
+  @media (max-width:700px){
+    .demo{grid-template-columns:1fr}
+    .wire{width:2px;height:3.5rem;margin:0 auto}
+    .packet{left:50% !important;top:0;transition:top 1s cubic-bezier(.4,0,.2,1),opacity .25s}
+    .packet.to-b{top:100%}
+    .wire-label{left:1.2rem;top:50%;transform:translateY(-50%)}
   }
-  @media (prefers-color-scheme: light){
-    :root{ --bg:#f6f8fc; --bg2:#eef2f9; --card:#ffffff; --card2:#f3f6fb;
-      --line:#e2e8f2; --tx:#0d1220; --mut:#4a5568; --dim:#78889d; --accent:#c7355f;
-      --shadow:0 12px 40px rgba(30,50,90,.10); }
-  }
-  *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{margin:0;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    color:var(--tx);background:
-      radial-gradient(1200px 600px at 78% -8%, rgba(255,154,60,.16), transparent 60%),
-      radial-gradient(900px 500px at 8% 4%, rgba(238,67,128,.12), transparent 55%),
-      var(--bg);-webkit-font-smoothing:antialiased}
-  a{color:inherit}
-  .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
 
-  header.hero{text-align:center;padding:56px 0 26px}
-  .mark{display:block;width:96px;height:96px;margin:0 auto 22px;border-radius:21px;box-shadow:var(--shadow)}
-  .pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
-  .pill{font-size:12px;color:var(--mut);border:1px solid var(--line);background:var(--card);
-    padding:5px 11px;border-radius:999px}
-  h1{font-size:clamp(36px,5.6vw,60px);line-height:1.06;margin:.1em 0 .2em;letter-spacing:-1.2px;font-weight:800}
-  .grad{background:linear-gradient(120deg,var(--amber),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .lede{font-size:clamp(17px,2.4vw,20px);color:var(--mut);max-width:660px;margin:0 auto 30px}
-  .cta{display:flex;gap:13px;justify-content:center;flex-wrap:wrap}
-  .btn{display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:12px;
-    font-weight:650;text-decoration:none;font-size:15px;border:1px solid transparent;transition:.15s transform,.15s box-shadow}
-  .btn:hover{transform:translateY(-2px)}
-  /* The primary is the gradient's amber with ink, never white, on it — and a
-     light-mode edge in the accent, since amber alone is 2:1 against the page. */
-  .btn.primary{background:var(--amber);color:var(--ink);border-color:var(--accent);box-shadow:0 10px 30px rgba(255,154,60,.32)}
-  @media (prefers-color-scheme: dark){ .btn.primary{border-color:transparent} }
-  .btn.ghost{background:var(--card);border-color:var(--line);color:var(--tx)}
-  .sub{font-size:12.5px;color:var(--dim);margin-top:12px}
+  /* The four steps, as a strip. A genuine sequence, so the numbers are honest;
+     they wear the gradient with ink on it. */
+  .steps{display:grid;grid-template-columns:1fr;gap:1.6rem 2rem;margin:2.6rem auto 0;padding:0;list-style:none;counter-reset:step}
+  @media (min-width:700px){ .steps{grid-template-columns:repeat(4,1fr)} }
+  .steps li{margin:0;counter-increment:step}
+  .steps li::before{content:counter(step);display:grid;place-items:center;width:2.2rem;height:2.2rem;border-radius:50%;
+    background:linear-gradient(135deg,var(--aw-amber),var(--aw-rose));color:var(--aw-ink);font-weight:700;font-size:15px;margin-bottom:.8rem}
+  .steps b{display:block;font-size:17px;margin-bottom:.3rem}
+  .steps p{margin:0;font-size:15.5px;line-height:1.5;color:var(--muted)}
 
-  section{padding:52px 0}
-  .eyebrow{font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent);text-align:center}
-  h2{font-size:clamp(26px,3.6vw,34px);text-align:center;margin:.25em 0 .1em;letter-spacing:-.5px}
-  .muted{color:var(--mut);text-align:center;max-width:660px;margin:0 auto}
-  .muted a, .card a, .price a{color:var(--accent)}
-
-  .new{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
-    color:var(--ink);background:linear-gradient(135deg,var(--amber),var(--pink));
-    border-radius:999px;padding:3px 10px;vertical-align:middle;margin-left:8px}
-  .newnote{max-width:660px;margin:14px auto 0;text-align:center;font-size:13.5px;color:var(--dim);
-    border:1px dashed var(--line);border-radius:12px;padding:10px 16px}
-  .newnote b{color:var(--mut)}
-
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px}
-  @media(max-width:820px){.grid{grid-template-columns:1fr}}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
-  .card .ic{font-size:22px}
-  .card h3{margin:.5em 0 .3em;font-size:17px}
-  .card p{margin:0;color:var(--mut);font-size:14.5px}
-  .card.price b{color:var(--accent)}
-
-  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:34px}
-  @media(max-width:820px){.steps{grid-template-columns:1fr}}
-  .step{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
-  .step .n{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:700;
-    background:linear-gradient(135deg,var(--amber),var(--pink));color:var(--ink);margin-bottom:10px}
-  .step h3{margin:.1em 0 .3em;font-size:16px}.step p{margin:0;color:var(--mut);font-size:14px}
-
-  .phones{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin-top:34px}
-  .phones figure{margin:0;text-align:center;max-width:260px}
-  .phones img{width:260px;max-width:44vw;height:auto;border-radius:22px;border:1px solid var(--line);box-shadow:var(--shadow)}
-  .phones figcaption{color:var(--dim);font-size:13px;margin-top:12px}
-  .mac{margin:34px 0 0;text-align:center}
-  .mac img{display:block;max-width:100%;width:940px;height:auto;margin:0 auto;border-radius:12px;border:1px solid var(--line);box-shadow:var(--shadow)}
-  .mac figcaption{color:var(--dim);font-size:13px;margin-top:12px}
-
-  /* The requester's side: four states of the page, at phone width, as a strip. */
-  .screens{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:34px}
-  @media(max-width:820px){.screens{grid-template-columns:repeat(2,1fr)}}
-  .screens figure{margin:0;text-align:center}
-  .screens img{width:100%;height:auto;display:block;border-radius:14px;border:1px solid var(--line);box-shadow:var(--shadow)}
-  .screens figcaption{color:var(--dim);font-size:13px;margin-top:10px}
-
-  /* The same four states in a browser on a Mac. */
-  .desk{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px}
-  @media(max-width:820px){.desk{grid-template-columns:1fr}}
-  .desk figure{margin:0;text-align:center}
-  .desk img{width:100%;height:auto;display:block;border-radius:12px;border:1px solid var(--line);box-shadow:var(--shadow)}
-  .desk figcaption{color:var(--dim);font-size:13px;margin-top:10px}
-  .subhead{text-align:center;color:var(--mut);font-size:15px;margin:38px auto 0;max-width:660px}
-
-  /* The two columns of the dead drop: what the server holds and what it never sees. */
-  .holds{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:34px}
-  @media(max-width:820px){.holds{grid-template-columns:1fr}}
-  .holds .card h3{margin-top:0}
-  .holds ul{margin:0;padding-left:20px;color:var(--mut);font-size:14.5px}
-  .holds li{margin:.35em 0}
-  .holds .never h3{color:var(--accent)}
-
-  footer{border-top:1px solid var(--line);margin-top:30px;padding:28px 0 46px;color:var(--dim);
-    display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13.5px}
-  footer a{color:var(--dim)}
+  /* Rows of phone screens, and a grid of desktop ones. Both break the measure. */
+  .phones{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:1.6rem 1.4rem;margin:2.6rem 0 2.4rem}
+  .phones figure{margin:0}
+  .phones img{width:100%;max-width:18rem}
+  .desk{display:grid;grid-template-columns:1fr;gap:1.6rem;margin:1.6rem 0 2.4rem}
+  @media (min-width:720px){ .desk{grid-template-columns:1fr 1fr} }
+  .desk figure{margin:0}
+  .holds{display:grid;grid-template-columns:1fr;gap:1.4rem 2.4rem;margin:2.4rem auto 0}
+  @media (min-width:600px){ .holds{grid-template-columns:1fr 1fr} }
+  .holds > div{border-radius:16px;padding:1.2rem 1.4rem;background:var(--soft)}
+  .holds h3{margin:0 0 .5rem;font-size:18px}
+  .holds ul{font-size:15.5px;line-height:1.55;margin:0;color:var(--muted)}
+  .tiers th:last-child,.tiers td:last-child{white-space:nowrap;text-align:right;padding-right:0}
+  .flow{display:grid;grid-template-columns:1fr;gap:2rem 1.4rem;margin:2.6rem auto 0;padding:0;list-style:none;counter-reset:step}
+  @media (min-width:700px){ html[data-platform="ios"] .flow{grid-template-columns:repeat(4,1fr)} html[data-platform="mac"] .flow{grid-template-columns:repeat(2,1fr)} }
+  .flow li{margin:0;counter-increment:step;display:flex;flex-direction:column}
+  .flow li::before{content:counter(step);display:grid;place-items:center;width:2rem;height:2rem;border-radius:50%;
+    background:linear-gradient(135deg,var(--aw-amber),var(--aw-rose));color:var(--aw-ink);font-weight:700;font-size:14px;margin-bottom:.6rem}
+  .flow b{display:block;font-size:16px;margin-bottom:.2rem}
+  .flow p{margin:0 0 1rem;font-size:14.5px;line-height:1.45;color:var(--muted)}
+  .flow figure{margin:auto 0 0}
+  .flow figure img{border-radius:22px}
+  .flow figure img.desk{border-radius:10px}
 </style>
 </head>
 <body>
 <cm-nav current="askwhen"></cm-nav>
 <div class="wrap">
 
-  <header class="hero">
-    <img class="mark" src="img/askwhen-mark.png" width="96" height="96" alt="">
-    <div class="pills">
-      <span class="pill">Turned on from Calendar Mirror</span>
-      <span class="pill">Free for 90 days</span>
-      <span class="pill">Nothing lands until you accept</span>
+  <header class="hero wide">
+    <img class="mark" src="img/askwhen-mark.png" width="72" height="72" alt="">
+    <h1>A page where people can ask you for a time.</h1>
+    <p class="lede">Your device already knows when you&rsquo;re free. AskWhen.me lets it answer:
+      a page at askwhen.me/yourpage where someone picks a time and asks, from a server that never
+      sees your calendar.</p>
+    <div class="cta centered">
+      <a class="button" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get Calendar Mirror, $2.99</a>
+      <p class="small">AskWhen.me is a subscription inside it: free for 90 days, then $19.99 a year.</p>
     </div>
-    <h1>A page where people can<br><span class="grad">ask you for a time</span>.</h1>
-    <p class="lede">Your phone already knows when you&rsquo;re free. AskWhen.me lets it answer
-      &mdash; without handing your calendar to anyone. A page at <b>askwhen.me/yourpage</b>,
-      served from a server that is never given your calendar, where someone picks a time and
-      <em>asks</em>. Your device decides.</p>
-    <div class="cta">
-      <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get Calendar Mirror</a>
-      <a class="btn ghost" href="#how">How it works</a>
-    </div>
-    <p class="sub">A separate subscription, bought through the App Store, turned on from inside
-      Calendar Mirror 2.0. Off by default.</p>
-    <!--UNRELEASED:2.0--><p class="newnote"><b>Coming in 2.0.</b> AskWhen.me turns on from Calendar Mirror 2.0, which is on its way through App Store review.</p><!--/UNRELEASED-->
   </header>
 
-  <section id="why">
-    <div class="eyebrow">Why it is different</div>
-    <h2>Everyone else&rsquo;s server reads your calendar. Ours can&rsquo;t.</h2>
-    <p class="muted">A booking page works by holding your calendar: you connect it once, and from
-      that day on their server reads every event you have so it can promise a slot on the spot.
-      That is the deal, and it is why they can say <em>book</em>. AskWhen.me is not a booking
-      page. Its server is never connected to your calendar, so it cannot promise anything &mdash;
-      it can only carry the question to the one thing that knows the answer: your device.</p>
-    <div class="grid">
-      <div class="card"><div class="ic">🔒</div><h3>The server is never given your calendar</h3><p>Your device works out which times to offer and sends only those. Not your events, not their titles, not your address, not your name beyond the label you choose.</p></div>
-      <div class="card"><div class="ic">✅</div><h3>A request, not a reservation</h3><p>Someone picks a time and says who they are. The request comes to your device, which re-checks your real calendar before anything is written. If something landed in the meantime, it says so.</p></div>
-      <div class="card"><div class="ic">📵</div><h3>Off until you say</h3><p>Setup is free and stays on your device. Calendar Mirror makes no network request of any kind until you turn on AskWhen.me &mdash; and the first one it makes is to Apple, for the price.</p></div>
+  <div class="field wide">
+    <div class="demo" id="demo">
+      <div class="side">
+        <div class="who">Dana&rsquo;s device</div>
+        <div class="frame" id="frame-a">
+          <div class="notch ios-only"></div>
+          <div class="titlebar mac-only"><div class="lights"><i></i><i></i><i></i></div><span>Calendar Mirror</span></div>
+          <div class="screen">
+            <div class="body">
+              <div class="day" id="device"></div>
+              <div class="request hidden" id="request">
+                <b>Alex Rivera asks for 2:00&nbsp;PM</b>
+                <span>&ldquo;Coffee about the grant?&rdquo; Tuesday at 2 is still clear.</span>
+                <div class="acts"><span class="yes">Accept</span><span>Decline</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="wire"><span class="packet" id="packet"></span><span class="wire-label" id="wire-label"></span></div>
+      <div class="side">
+        <div class="who">Alex&rsquo;s device</div>
+        <div class="frame" id="frame-b">
+          <div class="notch ios-only"></div>
+          <div class="titlebar safari mac-only"><div class="lights"><i></i><i></i><i></i></div><div class="address">askwhen.me/dana</div></div>
+          <div class="screen">
+            <div class="body page">
+              <div class="url ios-only">askwhen.me/dana</div>
+              <h4><img src="img/askwhen-mark.png" alt="">Ask Dana Cho for a time</h4>
+              <p class="sub">Tuesday. An offer, not a reservation: Dana confirms every one.</p>
+              <div class="times" id="times"></div>
+              <div class="cursor" id="cursor"></div>
+              <div class="status hidden" id="status"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+    <p class="demo-note">Three times cross the wire, and nothing else. The request comes back to
+      Dana, and nothing goes on her calendar until she says yes.</p>
+  </div>
+
+  <section>
+  <h2 class="centered">Everyone else&rsquo;s server reads your calendar. By design, ours won&rsquo;t.</h2>
+  <p class="lede centered">A booking app holds your calendar so it can promise a slot on the spot.
+    AskWhen.me holds a few times a day, and a question.</p>
+  <p>Your device publishes a few times it is willing to be asked about, and nothing else. When
+    someone picks one, the request comes back to your device, which checks your calendar again
+    before anything is written. Until you turn it on, Calendar Mirror makes no network request at
+    all.</p>
   </section>
 
-  <section id="how">
-    <div class="eyebrow">How it works</div>
-    <h2>Your device offers. They ask. You answer.</h2>
-    <div class="steps">
-      <div class="step"><div class="n">1</div><h3>Your device chooses the times</h3><p>From the calendars you pick, it works out a handful of times you are willing to be asked about &mdash; a few a day, inside the hours you say, with room around what is already there.</p></div>
-      <div class="step"><div class="n">2</div><h3>You publish those, and only those</h3><p>The times go up to askwhen.me/yourpage under the name you chose. The page shows a list of times and nothing else about you.</p></div>
-      <div class="step"><div class="n">3</div><h3>Someone asks</h3><p>They pick a time, say who they are, and confirm their email address. The request waits for your device &mdash; the server holds it, and no more.</p></div>
-      <div class="step"><div class="n">4</div><h3>You accept, on your device</h3><p>It re-checks your calendar first. Accept, and the event is written by your device; they get a calendar file by email. Decline, and they are told the time is gone.</p></div>
-    </div>
-    <div class="phones">
-      <figure>
-        <picture>
-          <source srcset="img/askwhen-explainer-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-explainer-light.png" alt="The first screen of AskWhen.me setup on iPhone: the mark, the line 'A page where people can ask for a time', and three points — you choose the times, the server never sees your calendar, nothing lands until you accept.">
-        </picture>
-        <figcaption>What you are agreeing to, before any work.</figcaption>
-      </figure>
-      <figure>
-        <picture>
-          <source srcset="img/askwhen-preview-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-preview-light.png" alt="The preview screen on iPhone: a name field, then '36 times across 14 days' listed by day, above a 'See what it costs' button.">
-        </picture>
-        <figcaption>The page, before you publish it &mdash; worked out on the device.</figcaption>
-      </figure>
-      <figure>
-        <picture>
-          <source srcset="img/askwhen-live-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-live-light.png" alt="The live page screen on iPhone: 'Your page is live' with the address askwhen.me/x7f2k9, a Share link, notifications, and which device publishes.">
-        </picture>
-        <figcaption>Live. The address is yours, and the switch is right there.</figcaption>
-      </figure>
-    </div>
-    <figure class="mac">
+  <section>
+  <h2 class="centered">Two ways to be asked</h2>
+  <p class="lede centered">A page anyone can ask from, and a link for one person.</p>
+  <div class="columns wide" style="grid-template-columns:repeat(2,1fr);max-width:44rem">
+    <div><h3>The page</h3><p>askwhen.me/yourpage. Anyone with the address can pick a time and ask. Every request waits for you.</p></div>
+    <div><h3>The link</h3><p>Sent to one person. If the time they pick is still clear, your device answers for you.</p></div>
+  </div>
+  </section>
+
+  <section>
+  <h2 class="centered">The page: your device offers, they ask, you answer.</h2>
+  <p class="lede centered">Anyone with the address can ask. Every request waits for you.</p>
+  <ol class="steps wide">
+    <li><b>Your device chooses the times</b><p>From the calendars you pick: a few a day, inside the
+      hours you say, with room around what is already there.</p></li>
+    <li><b>You publish those, and only those</b><p>They go up to askwhen.me/yourpage under the
+      name you chose. The page shows a list of times and nothing else about you.</p></li>
+    <li><b>Someone asks</b><p>They pick a time, say who they are, and confirm their email. The
+      request waits for your device; the server holds it, and no more.</p></li>
+    <li><b>You accept, on your device</b><p>It re-checks your calendar first. Accept, and the
+      event is written by your device and they get a calendar file by email.</p></li>
+  </ol>
+
+  <div class="phones wide ios-only">
+    <figure>
       <picture>
-        <source srcset="img/askwhen-mac-dark.png" media="(prefers-color-scheme: dark)">
-        <img src="img/askwhen-mac-light.png" width="940" height="700" alt="On the Mac, the same setup as a sheet over Calendar Mirror's Manage Mirrors window: the AskWhen.me mark, 'A page where people can ask for a time', the three points, and a Continue button.">
+        <source srcset="img/askwhen-explainer-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="img/askwhen-explainer-light.png" width="285" height="620" alt="The first screen of AskWhen.me setup on iPhone: the mark, the line 'A page where people can ask for a time', and three points: you choose the times, the server never sees your calendar, nothing lands until you accept.">
       </picture>
-      <figcaption>On the Mac it is the same setup, as a sheet over Manage Mirrors. One subscription covers iPhone, iPad and Mac.</figcaption>
+      <figcaption>What you are agreeing to, before any work.</figcaption>
     </figure>
-  </section>
+    <figure>
+      <picture>
+        <source srcset="img/askwhen-preview-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="img/askwhen-preview-light.png" width="285" height="620" alt="The preview screen on iPhone: a name field, then '36 times across 14 days' listed by day, above a 'See what it costs' button.">
+      </picture>
+      <figcaption>The page before you publish it, worked out on the device.</figcaption>
+    </figure>
+    <figure>
+      <picture>
+        <source srcset="img/askwhen-live-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="img/askwhen-live-light.png" width="285" height="620" alt="The live page screen on iPhone: 'Your page is live' with the address askwhen.me/x7f2k9, a Share link, notifications, and which device publishes.">
+      </picture>
+      <figcaption>Live. The address is yours, and the switch is right there.</figcaption>
+    </figure>
+  </div>
+  <figure class="wide mac-only">
+    <picture>
+      <source srcset="img/askwhen-mac-dark.png" media="(prefers-color-scheme: dark)">
+      <img src="img/askwhen-mac-light.png" width="940" height="700" alt="On the Mac, the same setup as a sheet over Calendar Mirror's Manage Mirrors window: the AskWhen.me mark, 'A page where people can ask for a time', the three points, and a Continue button.">
+    </picture>
+    <figcaption>Setup on the Mac, as a sheet over Manage Mirrors: what you are agreeing to, before any work. One subscription covers iPhone, iPad and Mac.</figcaption>
+  </figure>
 
-  <section id="theirs">
-    <div class="eyebrow">What the person asking sees</div>
-    <h2>A list of times, a name, and a promise it is a request</h2>
-    <p class="muted">Your page says whose it is and nothing else about you. The times are shown in
-      the visitor&rsquo;s own zone, the line under the name is yours, and the page says on every
-      step that this is an offer, not a reservation &mdash; that you confirm every one.</p>
-    <div class="screens">
+  </section>
+  <section>
+  <h2 class="centered">What the person asking sees</h2>
+  <p class="lede centered">Your page says whose it is and nothing else about you. The times are shown
+    in their own zone, and every step says this is an offer, not a reservation.</p>
+  <ol class="flow wide">
+    <li><b>Pick a time</b><p>A week of times, in the visitor&rsquo;s zone. The line under your name is yours.</p>
       <figure>
-        <picture>
+        <picture class="ios-only">
           <source srcset="img/askwhen-req-pick-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-req-pick-light.png" alt="The request page at askwhen.me: 'Ask Dana Cho for a time', a freshness note saying the times are an offer, not a reservation, and a week of times to pick from, shown in the visitor's time zone.">
+          <img src="img/askwhen-req-pick-light.png" width="285" height="620" alt="The request page: 'Ask Dana Cho for a time', a note saying the times are an offer, not a reservation, and a week of times to pick from.">
         </picture>
-        <figcaption>1 &middot; Pick a time, in your own zone.</figcaption>
-      </figure>
-      <figure>
-        <picture>
-          <source srcset="img/askwhen-req-ask-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-req-ask-light.png" alt="Step two: the chosen time, then two fields — your name and your email. The note says the owner never sees the address until you confirm it.">
-        </picture>
-        <figcaption>2 &middot; Say who you are. Two fields, no account.</figcaption>
-      </figure>
-      <figure>
-        <picture>
-          <source srcset="img/askwhen-req-confirm-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-req-confirm-light.png" alt="Step three: 'Check your email' — the request is held for fifteen minutes until the link in the email is clicked; until then nothing reaches the owner.">
-        </picture>
-        <figcaption>3 &middot; Confirm your email. Nothing reaches the owner until you do.</figcaption>
-      </figure>
-      <figure>
-        <picture>
-          <source srcset="img/askwhen-req-accepted-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-req-accepted-light.png" alt="Accepted: a green check, 'Dana Cho accepted, and has written the event into their calendar. The invitation is on its way to you by email.'">
-        </picture>
-        <figcaption>4 &middot; Accepted &mdash; from the owner&rsquo;s device, with a calendar file by email.</figcaption>
-      </figure>
-    </div>
-    <p class="subhead">The same page in a browser on a Mac. It is one page, laid out for the width it is given &mdash; no app to install on either side of the ask.</p>
-    <div class="desk">
-      <figure>
-        <picture>
+        <picture class="mac-only">
           <source srcset="img/askwhen-desk-pick-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-desk-pick-light.png" width="1100" height="720" alt="The request page in a desktop browser: 'Ask Dana Cho for a time', the freshness note, and the week's times to pick from.">
+          <img class="desk" src="img/askwhen-desk-pick-light.png" width="1100" height="720" alt="The request page: 'Ask Dana Cho for a time', a note saying the times are an offer, not a reservation, and a week of times to pick from.">
         </picture>
-        <figcaption>1 &middot; Pick a time</figcaption>
       </figure>
+    </li>
+    <li><b>Say who you are</b><p>A name and an email. No account. The address is not shown to Dana until it is confirmed.</p>
       <figure>
-        <picture>
+        <picture class="ios-only">
+          <source srcset="img/askwhen-req-ask-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="img/askwhen-req-ask-light.png" width="285" height="620" alt="Step two: the chosen time, then two fields, your name and your email.">
+        </picture>
+        <picture class="mac-only">
           <source srcset="img/askwhen-desk-ask-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-desk-ask-light.png" width="1100" height="720" alt="Step two in a desktop browser: the chosen time, then name and email fields.">
+          <img class="desk" src="img/askwhen-desk-ask-light.png" width="1100" height="720" alt="Step two: the chosen time, then two fields, your name and your email.">
         </picture>
-        <figcaption>2 &middot; Say who you are</figcaption>
       </figure>
+    </li>
+    <li><b>Confirm by email</b><p>The request is held for fifteen minutes. Nothing reaches Dana until the link is clicked.</p>
       <figure>
-        <picture>
+        <picture class="ios-only">
+          <source srcset="img/askwhen-req-confirm-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="img/askwhen-req-confirm-light.png" width="285" height="620" alt="Step three: 'Check your email'. The request is held until the link in the email is clicked.">
+        </picture>
+        <picture class="mac-only">
           <source srcset="img/askwhen-desk-confirm-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-desk-confirm-light.png" width="1100" height="720" alt="Step three in a desktop browser: 'Check your email', the request held for fifteen minutes.">
+          <img class="desk" src="img/askwhen-desk-confirm-light.png" width="1100" height="720" alt="Step three: 'Check your email'. The request is held until the link in the email is clicked.">
         </picture>
-        <figcaption>3 &middot; Confirm your email</figcaption>
       </figure>
+    </li>
+    <li><b>Get an answer</b><p>Dana says yes on her device, and the invitation arrives by email.</p>
       <figure>
-        <picture>
-          <source srcset="img/askwhen-desk-accepted-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="img/askwhen-desk-accepted-light.png" width="1100" height="720" alt="Accepted, in a desktop browser: a green check and 'Dana Cho accepted, and has written the event into their calendar.'">
+        <picture class="ios-only">
+          <source srcset="img/askwhen-req-accepted-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="img/askwhen-req-accepted-light.png" width="285" height="620" alt="Accepted: 'Dana Cho accepted, and has written the event into their calendar. The invitation is on its way to you by email.'">
         </picture>
-        <figcaption>4 &middot; Accepted</figcaption>
+        <picture class="mac-only">
+          <source srcset="img/askwhen-desk-accepted-dark.png" media="(prefers-color-scheme: dark)">
+          <img class="desk" src="img/askwhen-desk-accepted-light.png" width="1100" height="720" alt="Accepted: 'Dana Cho accepted, and has written the event into their calendar. The invitation is on its way to you by email.'">
+        </picture>
       </figure>
-    </div>
-  </section>
+    </li>
+  </ol>
+  <p class="small centered" style="margin-top:1.6rem">One page, laid out for the width it is given. There is no app to install on either side of the ask.</p>
 
-  <section id="holds">
-    <div class="eyebrow">What the server holds</div>
-    <h2>Two things. Everything else stops at your device.</h2>
-    <p class="muted">The design is a dead drop: times go in, requests come out, and the server
-      is never told who you are. The <a href="privacy.html">privacy page</a> says the same in
-      full, with how long each thing is kept.</p>
-    <div class="holds">
-      <div class="card">
-        <h3>It holds</h3>
-        <ul>
-          <li>The times you chose to offer, as start and end &mdash; nothing about why those.</li>
-          <li>The name you put on the page and the line under it, the meeting title and length, and your time zone.</li>
-          <li>Requests from people who asked: the time, their name, their address, a note &mdash; until you answer, and 14 days at most.</li>
-          <li>An anonymous subscription identifier from Apple, stored hashed. It says a page is paid for, not who paid.</li>
-        </ul>
-      </div>
-      <div class="card never">
-        <h3>It never sees</h3>
-        <ul>
-          <li>Your calendar, or any event in it &mdash; titles, locations, attendees, notes.</li>
-          <li>Which calendars you chose, or how many there are.</li>
-          <li>Your email address, your Apple ID, or your payment details.</li>
-          <li>The shape of your week beyond the handful of times you offered.</li>
-        </ul>
-      </div>
-    </div>
   </section>
-
-  <section id="links">
-    <div class="eyebrow">With Send times</div>
-    <h2>A link for one person</h2>
-    <p class="muted">Calendar Mirror 2.0 can <b>send times</b>: one tap gives you your next
-      three free times as a line of text, ready to paste into a message. With AskWhen.me on,
-      that message can carry a <b>personal link</b>: it opens your page once, for a week, for
-      the person you sent it to. Because you sent it, there is no email confirmation &mdash;
-      if the time is still clear when they pick it, your device accepts it for you.</p>
-    <div class="grid">
-      <div class="card"><div class="ic">💬</div><h3>Paste it anywhere</h3><p>Messages, Mail, Slack. The times are worked out on your device and put on the clipboard; nothing leaves your device to do it.</p></div>
-      <div class="card"><div class="ic">🔗</div><h3>One link, one person, one week</h3><p>A personal link is not your page&rsquo;s address. It opens once and expires, so a forwarded message does not become an open door.</p></div>
-      <div class="card"><div class="ic">🛡️</div><h3>Still re-checked</h3><p>Even a personal link goes through the same re-check against your real calendar. If the time is gone, they are told, and nothing is written.</p></div>
-    </div>
-  </section>
-
-  <section id="pricing">
-    <div class="eyebrow">What it costs</div>
-    <h2>Free for 90 days, then a year at a time</h2>
-    <p class="muted">Long enough for a stranger to actually ask. Bought through the App Store, so
-      payment is Apple&rsquo;s and we never see it; renewal, cancellation and refunds are under
-      Apple&rsquo;s terms. Setup is free and stays on your device &mdash; the subscription is asked
-      for at the end, after you have seen the page you would be publishing.</p>
-    <div class="grid">
-      <div class="card price"><h3>Request Page</h3><p><b>Free for 90 days, then $19.99 a year.</b> One page at askwhen.me/yourpage.</p></div>
-      <div class="card price"><h3>Custom Subdomain</h3><p><b>$34.99 a year.</b> Your own name &mdash; you.askwhen.me &mdash; and more than one page.</p></div>
-      <div class="card price"><h3>Custom Domain</h3><p><b>$69.99 a year.</b> Your page on a domain you own, one DNS record away.</p></div>
-    </div>
-    <p class="muted" style="margin-top:22px;font-size:14px">The <a href="terms.html">terms</a> say
-      what happens to your page and your address when a subscription ends. They are short.</p>
-  </section>
-
-  <section id="get" style="text-align:center">
-    <div class="eyebrow">Turn it on</div>
-    <h2>It starts inside Calendar Mirror</h2>
-    <p class="muted">Calendar Mirror is a small app that keeps a one-way copy of one calendar
-      inside another. AskWhen.me is the one thing in it that talks to a server, and it is off
-      until you turn it on &mdash; the row is under <em>Background sync</em>.</p>
-    <div class="cta" style="margin-top:28px">
-      <a class="btn primary" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get it on the App Store</a>
-      <a class="btn ghost" href="index.html">About Calendar Mirror</a>
-    </div>
-  </section>
-
-  <footer>
-    <div>AskWhen.me · a request page whose server never sees your calendar · © Matt Baylor</div>
+  <section>
+  <h2 class="centered">What the server holds</h2>
+  <p>The design is a dead drop: times go in, requests come out, and the server is never told
+    who you are. The <a href="privacy.html">privacy page</a> says the same in full, with how
+    long each thing is kept.</p>
+  <div class="holds">
     <div>
-      <a href="index.html">Calendar Mirror</a> ·
-      <a href="privacy.html">Privacy</a> ·
-      <a href="terms.html">Terms</a> ·
-      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <h3>It holds</h3>
+      <ul>
+        <li>The times you chose to offer, as start and end. Nothing about why those.</li>
+        <li>The name you put on the page and the line under it, the meeting title and length, and your time zone.</li>
+        <li>Requests from people who asked: the time, their name, their address, a note. Until you answer, and 14 days at most.</li>
+        <li>An anonymous subscription identifier from Apple, stored hashed. It says a page is paid for, not who paid.</li>
+      </ul>
     </div>
+    <div>
+      <h3>It never sees</h3>
+      <ul>
+        <li>Your calendar, or any event in it: titles, locations, attendees, notes.</li>
+        <li>Which calendars you chose, or how many there are.</li>
+        <li>Your email address, your Apple ID, or your payment details.</li>
+        <li>The shape of your week beyond the handful of times you offered.</li>
+      </ul>
+    </div>
+  </div>
+
+  </section>
+  <section>
+  <h2 class="centered">The link: one person, one week, no waiting.</h2>
+  <p class="lede centered">Send times puts your next three free times on the clipboard, ready to
+    paste into a text, an email or Slack. With AskWhen.me on, it carries a link.</p>
+  <p>The link is not your page&rsquo;s address. It opens once, for a week, for the person you sent
+    it to, so a forwarded message is not an open door. And because you sent it, there is no email
+    confirmation: if the time they pick is still clear, your device says yes for you. If it has
+    gone, they are told, and nothing is written.</p>
+
+  </section>
+  <section>
+  <h2 class="centered">What it costs</h2>
+  <p>Free for 90 days, long enough for a stranger to actually ask, then a year at a time. Bought
+    through the App Store, so payment is Apple&rsquo;s and we never see it; renewal, cancellation
+    and refunds are under Apple&rsquo;s terms. The subscription is asked for at the end of setup,
+    after you have seen the page you would be publishing.</p>
+  <table class="tiers">
+    <tr><th>Tier</th><th>What you get</th><th>Per year</th></tr>
+    <tr><td>Request Page</td><td>One page at askwhen.me/yourpage. The first 90 days are free.</td><td>$19.99</td></tr>
+    <tr><td>Custom Subdomain</td><td>Your own name, you.askwhen.me, and more than one page.</td><td>$34.99</td></tr>
+    <tr><td>Custom Domain</td><td>Your page on a domain you own, one DNS record away.</td><td>$69.99</td></tr>
+  </table>
+  <p class="small">US prices; Apple sets the equivalent elsewhere. The <a href="terms.html">terms</a>
+    say what happens to your page and your address when a subscription ends. They are short.</p>
+
+  </section>
+  <section>
+  <h2 class="centered">It starts inside Calendar Mirror</h2>
+  <p class="centered">Calendar Mirror is a small app that keeps a one-way copy of one calendar inside
+    another. AskWhen.me is the one thing in it that talks to a server, and it is off until you
+    turn it on; the row is under <em>Background sync</em>. <a href="index.html">About Calendar Mirror.</a></p>
+  <div class="cta centered">
+    <a class="button" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get Calendar Mirror, $2.99</a>
+    <p class="small">AskWhen.me is free for 90 days, then $19.99 a year.</p>
+  </div>
+
+  </section>
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="index.html">Calendar Mirror</a>
+      <a href="https://apps.apple.com/us/app/cal-mirror/id6787358036">App Store</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+    </nav>
+    <div>&copy; Matt Baylor</div>
   </footer>
 
 </div>
+
+<script type="module">
+// The hero demo: two devices and the wire between them. Dana's device works
+// out three gaps; only those cross to the page on Alex's device; Alex picks
+// one; the request crosses back; Dana accepts; the answer crosses again.
+// Pure DOM, nothing fetched. Under reduced motion the accepted state is drawn once.
+const START = 9, END = 18, LEN = 1;
+const device = document.getElementById("device");
+const times = document.getElementById("times");
+const request = document.getElementById("request");
+const cursor = document.getElementById("cursor");
+const status = document.getElementById("status");
+const packet = document.getElementById("packet");
+const wireLabel = document.getElementById("wire-label");
+const pct = (h) => ((h - START) / (END - START) * 100).toFixed(2) + "%";
+
+// Each device is a phone or a Mac window, following the page's switch.
+function dress() {
+  const ios = document.documentElement.dataset.platform === "ios";
+  for (const id of ["frame-a", "frame-b"]) {
+    const f = document.getElementById(id);
+    f.classList.toggle("phone", ios); f.classList.toggle("mac", !ios);
+  }
+}
+dress(); document.addEventListener("cm-platform", dress);
+
+for (let h = START; h < END; h++) {
+  const t = document.createElement("div"); t.className = "tick"; t.style.top = pct(h);
+  t.textContent = h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`; device.append(t);
+}
+function block(cls, text, at, len) {
+  const el = document.createElement("div"); el.className = `ev ${cls}`;
+  el.style.top = `calc(${pct(at)} + 1px)`; el.style.height = `calc(${(len / (END - START) * 100).toFixed(2)}% - 3px)`;
+  el.textContent = text; device.append(el); return el;
+}
+block("own", "Standup", 9.5, 0.5); block("own", "Grant review", 11, 1); block("own", "Lunch", 12.5, 1); block("own", "Pick up Sam", 15.5, 1);
+const OFFERS = [[10, "10:00 AM"], [14, "2:00 PM"], [16.5, "4:30 PM"]];
+const offers = OFFERS.map(([at, label]) => block("offer", `Offered, ${label.replace(" ", "\u00a0")}`, at, LEN));
+const booked = block("booked", "Alex Rivera, coffee", 14, LEN); booked.classList.add("hidden");
+const chips = OFFERS.map(([, label]) => { const s = document.createElement("span"); s.textContent = `Tuesday, ${label}`; times.append(s); return s; });
+const pick = chips[1];
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+function say(cls, head, body) { status.className = `status ${cls}`; status.innerHTML = `<b>${head}</b>${body}`; }
+// Something crosses the wire: from Dana's device to Alex's ("b") or back ("a").
+async function cross(to, label) {
+  packet.classList.remove("on"); packet.classList.toggle("to-b", to !== "b");
+  packet.style.left = to === "b" ? "0%" : "100%";
+  await sleep(60); packet.classList.add("on"); wireLabel.textContent = label; wireLabel.classList.add("on");
+  await sleep(60); packet.style.left = to === "b" ? "100%" : "0%"; packet.classList.toggle("to-b", to === "b");
+  await sleep(1000); packet.classList.remove("on"); wireLabel.classList.remove("on");
+}
+
+async function loop() {
+  while (true) {
+    for (const o of offers) o.classList.add("hidden");
+    for (const c of chips) c.classList.add("hidden"); pick.classList.remove("picked");
+    booked.classList.add("hidden"); request.classList.add("hidden"); request.classList.remove("pressed");
+    cursor.classList.remove("on"); status.classList.add("hidden");
+    await sleep(900);
+    for (const o of offers) { o.classList.remove("hidden"); await sleep(260); }   // the device chooses
+    await sleep(700);
+    await cross("b", "3 times, nothing else");                                   // only those go up
+    for (const c of chips) { c.classList.remove("hidden"); await sleep(220); }
+    await sleep(1300);
+    const r = pick.getBoundingClientRect(), pr = pick.offsetParent.getBoundingClientRect();   // Alex picks 2:00
+    cursor.style.left = "70%"; cursor.style.top = "20%"; cursor.classList.add("on"); await sleep(300);
+    cursor.style.left = `${(r.left - pr.left + r.width * .5) / pr.width * 100}%`;
+    cursor.style.top = `${(r.top - pr.top + r.height * .5) / pr.height * 100}%`;
+    await sleep(900); pick.classList.add("picked"); await sleep(400); cursor.classList.remove("on");
+    say("", "Asked. Check your email to confirm.", " Held for 15 minutes; nothing reaches Dana until you do.");
+    status.classList.remove("hidden");
+    await sleep(1400);
+    await cross("a", "one request");                                             // back to Dana
+    request.classList.remove("hidden");
+    await sleep(2200);
+    request.classList.add("pressed"); await sleep(350);                          // Dana accepts
+    request.classList.add("hidden"); offers[1].classList.add("hidden"); booked.classList.remove("hidden");
+    await sleep(400);
+    await cross("b", "accepted");
+    say("ok", "Dana said yes.", " Tuesday at 2:00 PM is on her calendar, and an invitation is on its way to you.");
+    await sleep(3600);
+  }
+}
+if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  offers[1].classList.add("hidden"); booked.classList.remove("hidden"); pick.classList.add("picked");
+  say("ok", "Dana said yes.", " Tuesday at 2:00 PM is on her calendar, and an invitation is on its way to you.");
+} else {
+  loop();
+}
+</script>
 </body>
 </html>

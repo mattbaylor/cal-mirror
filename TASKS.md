@@ -2,7 +2,8 @@
 
 The living board. [`STATUS.md`](STATUS.md) is the narrative — where things
 stand and what is left to ship Calendar Mirror 2.0 and launch AskWhen.me — and is the place to start; this is the
-granular list underneath it.
+granular list underneath it. Things noticed and deliberately not done live in
+[`PARKING.md`](PARKING.md), with no owner and no date.
 
 Last accurate: **16 September 2026, evening.** Anything here that the repo or the
 GitHub API can settle should be checked rather than trusted.
