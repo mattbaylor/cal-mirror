@@ -20,11 +20,11 @@ A pair can skip meetings you declined or have not answered, events the organizer
 
 IT NOTICES WHEN YOUR CALENDAR CHANGES
 
-Turn on realtime and the copy follows a calendar change soon after it; a five-minute pass still runs underneath as the backstop.
+Turn on realtime and the copy follows a calendar change soon after; a five-minute pass still runs as the backstop.
 
 IT TELLS YOU WHEN SOMETHING BREAKS
 
-A healthy pair is silent. If one stops syncing, an all-day warning appears in the destination calendar itself, and clears the moment the pair recovers.
+A healthy pair is silent. If one stops syncing, an all-day warning appears in the destination calendar, and clears the moment the pair recovers.
 
 SEND TIMES
 
@@ -50,6 +50,6 @@ WHAT IT DOES NOT DO
 
 PRIVACY
 
-No account. No analytics, no tracking, no telemetry, no ads. No server, and no network request of any kind, until you turn on AskWhen.me — and its server never sees your calendar either. Once a copy lands in iCloud, Google or Exchange, that provider stores it under their policies, as for any event you added yourself.
+No account. No analytics, no tracking, no telemetry, no ads. No server, and no network request, until you turn on AskWhen.me — and its server never sees your calendar either. Once a copy lands in iCloud, Google or Exchange, that provider stores it under their policies.
 
-Open source under the MIT licence. One purchase covers iPhone, iPad and Mac.
+Open source under the MIT licence. One purchase covers iPhone, iPad and Mac. Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
