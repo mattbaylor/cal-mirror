@@ -14,16 +14,19 @@
 	file_server
 
 	header {
-		# The site is hand-written HTML and CSS with two scripts: nav.js, the
-		# header as a web component ('self'), and Plausible, self-hosted at
-		# stats.rehosted.us (our own infrastructure, so still nothing
-		# third-party), which needs script-src to load and connect-src to POST
-		# each pageview to /api/event. There is no inline script and no
-		# 'unsafe-inline' for scripts anywhere.
+		# The site is hand-written HTML and CSS with its own scripts under
+		# docs/ (the header, the Mac/iPhone switch, the two hero demos — all
+		# 'self') and Plausible, self-hosted at stats.rehosted.us (our own
+		# infrastructure, so still nothing third-party), which needs
+		# script-src to load and connect-src to POST each pageview to
+		# /api/event. Fonts are self-hosted under docs/fonts, hence font-src
+		# 'self'. There is no inline script and no 'unsafe-inline' for
+		# scripts anywhere; the inline style attributes the demos use are
+		# covered by style-src.
 		#
 		# This is the header GitHub Pages could not set, and part of why the
 		# site moved off it.
-		Content-Security-Policy "default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' https://stats.rehosted.us; connect-src https://stats.rehosted.us; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' https://stats.rehosted.us; connect-src https://stats.rehosted.us; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 		# The GitHub Pages 301 for the old address lands on http:// (see
 		# README); HSTS lets a browser that has been here before skip that
 		# plaintext hop.
