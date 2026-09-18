@@ -31,12 +31,36 @@ calendarmirror.com ──DNS──▶ 64.111.22.170 (fw.rehosted.us)
 
 ## Updating
 
-A systemd timer on CT 112 pulls every ten minutes:
+A systemd timer on CT 112 pulls every ten minutes, then pings IndexNow with
+whatever changed:
 
 ```
-/etc/systemd/system/site-pull.service   git fetch --depth 1 && git reset --hard origin/main
+/etc/systemd/system/site-pull.service
+  ExecStart=/usr/bin/git -C /opt/site fetch --depth 1 origin main
+  ExecStart=/usr/bin/git -C /opt/site reset --hard origin/main
+  ExecStartPost=/opt/site/infra/site/indexnow.sh
 /etc/systemd/system/site-pull.timer     OnBootSec=2min, OnUnitActiveSec=10min
 ```
+
+So the whole publish path is: merge to `main`, wait up to ten minutes. To
+skip the wait:
+
+```
+ssh root@172.16.1.41 systemctl start site-pull.service
+```
+
+That pulls, and pings only if `main` moved since the last ping (the stamp is
+`/var/lib/site-pull/indexnow.last`). To see what the last run did:
+
+```
+ssh root@172.16.1.41 journalctl -u site-pull.service -n 5 --no-pager -o cat
+```
+
+A run that pinged logs `indexnow: 202 for N pages`; a quiet run logs nothing
+from the script. To force a full re-ping of every page — after changing the
+key, or if an engine seems to have lost the site — delete the stamp and start
+the service again. The script itself is in the pulled tree, so a change to it
+on `main` is live on the next pull with nothing to install.
 
 **Changing the Caddyfile.** The container reads it from a read-only bind mount
 of `/opt/site-serve/Caddyfile`. Replacing that file with `mv` leaves the mount
