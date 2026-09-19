@@ -109,6 +109,39 @@ def main():
                 done = sum(1 for s in shots
                            if (s["attributes"].get("assetDeliveryState") or {}).get("state") == "COMPLETE")
                 print(f"  {dt:28} {len(shots)} image(s), {done} complete")
+
+    # Subscriptions live on the app, not on a platform's version. Which platform's
+    # submission carried them (or none) is the thing this section exists to show.
+    print("\nSUBSCRIPTIONS")
+    groups = get(f"/v1/apps/{APP}/subscriptionGroups?limit=10").get("data", [])
+    if not groups:
+        print("  none")
+    for g in groups:
+        print(f"  group {g['attributes'].get('referenceName')!r}")
+        for sub in get(f"/v1/subscriptionGroups/{g['id']}/subscriptions?limit=20").get("data", []):
+            a = sub["attributes"]
+            print(f"    {a.get('productId'):40} {a.get('state')}")
+
+    # Every review submission, with what each one carried and what became of it.
+    print("\nREVIEW SUBMISSIONS")
+    subs = get(f"/v1/apps/{APP}/reviewSubmissions?limit=10"
+               "&fields[reviewSubmissions]=platform,state,submittedDate").get("data", [])
+    for rs in subs:
+        a = rs["attributes"]
+        print(f"  {a.get('platform'):8} {a.get('state'):28} submitted {a.get('submittedDate')}  id {rs['id']}")
+        items = get(f"/v1/reviewSubmissions/{rs['id']}/items?limit=20"
+                    "&include=appStoreVersion,subscription,subscriptionGroup"
+                    "&fields[appStoreVersions]=versionString,platform"
+                    "&fields[subscriptions]=productId,state")
+        names = {}
+        for inc in items.get("included", []):
+            ia = inc.get("attributes", {})
+            names[(inc["type"], inc["id"])] = (ia.get("versionString") or ia.get("productId")
+                                                or ia.get("referenceName") or inc["id"])
+        for it in items.get("data", []):
+            rel = {k: v.get("data") for k, v in it.get("relationships", {}).items() if v.get("data")}
+            what = ", ".join(f"{k}={names.get((d['type'], d['id']), d['id'])}" for k, d in rel.items())
+            print(f"    {it['attributes'].get('state'):28} {what}")
     return 0
 
 
