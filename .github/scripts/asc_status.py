@@ -57,7 +57,7 @@ def main():
         a = v["attributes"]
         state = a.get("appVersionState") or a.get("appStoreState")
         mark = "  <-" if a.get("versionString") == WANT else ""
-        print(f"  {a.get('versionString'):8} {a.get('platform'):8} {state}{mark}")
+        print(f"  {a.get('versionString'):8} {a.get('platform'):8} {state:24} release={a.get('releaseType')}{mark}")
         if a.get("versionString") == WANT:
             mine.append(v)
     if not mine:
