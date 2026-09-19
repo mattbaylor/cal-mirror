@@ -68,11 +68,12 @@ services:
       AW_EDGE_IPS: "64.111.27.242"
 
       # Apple. Transactions must be for this bundle. AW_APPSTORE_SANDBOX=1
-      # lets Sandbox transactions create pages, which is how the purchase
-      # flow is proven before launch; set it to "0" at launch, or anyone
-      # with a sandbox account for the bundle gets free pages.
+      # let Sandbox transactions create pages while the purchase flow was
+      # proven and 2.0 was in review; "0" since launch, because anyone with
+      # a sandbox account for the bundle would otherwise get free pages.
+      # Flip it back to "1" only on a staging copy, never here.
       AW_BUNDLE_ID: "io.github.mattbaylor.cal-mirror"
-      AW_APPSTORE_SANDBOX: "1"
+      AW_APPSTORE_SANDBOX: "0"
 
       # Retention, from architecture §10. Here rather than compiled in, because
       # these are the numbers a regulator or a customer will ask about and they
