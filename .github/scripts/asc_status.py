@@ -123,6 +123,9 @@ def main():
             print(f"    {a.get('productId'):40} {a.get('state')}")
 
     # Every review submission, with what each one carried and what became of it.
+    # The API only relates version-shaped items (app versions, custom product
+    # pages, experiments, events) — subscriptions in a submission are invisible
+    # here, so their own state above is the only read-only witness to them.
     print("\nREVIEW SUBMISSIONS")
     subs = get(f"/v1/apps/{APP}/reviewSubmissions?limit=10"
                "&fields[reviewSubmissions]=platform,state,submittedDate").get("data", [])
@@ -130,14 +133,9 @@ def main():
         a = rs["attributes"]
         print(f"  {a.get('platform'):8} {a.get('state'):28} submitted {a.get('submittedDate')}  id {rs['id']}")
         items = get(f"/v1/reviewSubmissions/{rs['id']}/items?limit=20"
-                    "&include=appStoreVersion,subscription,subscriptionGroup"
-                    "&fields[appStoreVersions]=versionString,platform"
-                    "&fields[subscriptions]=productId,state")
-        names = {}
-        for inc in items.get("included", []):
-            ia = inc.get("attributes", {})
-            names[(inc["type"], inc["id"])] = (ia.get("versionString") or ia.get("productId")
-                                                or ia.get("referenceName") or inc["id"])
+                    "&include=appStoreVersion&fields[appStoreVersions]=versionString,platform")
+        names = {(i["type"], i["id"]): i["attributes"].get("versionString")
+                 for i in items.get("included", [])}
         for it in items.get("data", []):
             rel = {k: v.get("data") for k, v in it.get("relationships", {}).items() if v.get("data")}
             what = ", ".join(f"{k}={names.get((d['type'], d['id']), d['id'])}" for k, d in rel.items())
