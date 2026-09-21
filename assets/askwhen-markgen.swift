@@ -15,8 +15,15 @@
 //   askwhen/web/static/apple-touch-icon.png (180)        square; iOS rounds it
 //   askwhen/web/static/og.png (1024)                     square
 //   appstore/sources/askwhen-promo-1024.png              square, no alpha: the
-//       subscriptions' promotional image in App Store Connect, which rejects
-//       an alpha channel and applies its own corner mask
+//       Request Page subscription's promotional image in App Store Connect,
+//       which rejects an alpha channel and applies its own corner mask
+//   appstore/sources/askwhen-promo-subdomain-1024.png    the same for Custom
+//   appstore/sources/askwhen-promo-domain-1024.png       Subdomain and Custom
+//       Domain, from askwhen-mark-subdomain.svg and askwhen-mark-domain.svg:
+//       the face unchanged, the tile at the smile's end a fan of checked pages
+//       and a globe. App Review (2.3.2, 19 Sept 2026) requires each promoted
+//       product's image to be unique and to represent that product; the
+//       same mark on all three was rejected.
 //   docs/img/askwhen-mark.png (256)                      rounded, for the site
 //   apple/Shared/AskWhen.xcassets/AskWhenMark.imageset/   56 @1x/@2x/@3x, rounded
 import AppKit
@@ -24,7 +31,7 @@ import AppKit
 let root = URL(fileURLWithPath: CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : ".")
 let master = NSImage(contentsOf: root.appendingPathComponent("assets/askwhen-mark.svg"))!
 
-func render(_ px: Int, rounded: Bool) -> Data {
+func render(_ px: Int, rounded: Bool, of image: NSImage = master) -> Data {
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px,
         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
@@ -40,7 +47,7 @@ func render(_ px: Int, rounded: Bool) -> Data {
         gctx.cgContext.addPath(CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil))
         gctx.cgContext.clip()
     }
-    master.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
+    image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
 }
@@ -73,6 +80,10 @@ write(render(32, rounded: false), "askwhen/web/static/favicon-32.png")
 write(render(180, rounded: false), "askwhen/web/static/apple-touch-icon.png")
 write(render(1024, rounded: false), "askwhen/web/static/og.png")
 write(opaque(render(1024, rounded: false)), "appstore/sources/askwhen-promo-1024.png")
+for tier in ["subdomain", "domain"] {
+    let variant = NSImage(contentsOf: root.appendingPathComponent("assets/askwhen-mark-\(tier).svg"))!
+    write(opaque(render(1024, rounded: false, of: variant)), "appstore/sources/askwhen-promo-\(tier)-1024.png")
+}
 write(render(256, rounded: true), "docs/img/askwhen-mark.png")
 for (scale, px) in [(1, 56), (2, 112), (3, 168)] {
     write(render(px, rounded: true), "apple/Shared/AskWhen.xcassets/AskWhenMark.imageset/mark@\(scale)x.png")
