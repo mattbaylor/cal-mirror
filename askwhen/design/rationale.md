@@ -75,7 +75,7 @@ One tap is the right shape anyway. A notification saying *"Alex asked for Tuesda
 and it means the invitation genuinely comes from them rather than from software
 acting as them.
 
-`../prototype/make_shipback.py` emits a real `.eml` so the one assumption
+`prototype/make_shipback.py` emits a real `.eml` so the one assumption
 underneath all of this can be tested by opening a file. Verified structurally:
 `multipart/alternative`, a `text/plain` part, and a `text/calendar;
 method=REQUEST` part whose VEVENT carries `METHOD:REQUEST`, the owner as

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Hold the website to the same accuracy rules as the App Store listing.
 
-genmeta.py polices the metadata; nothing policed the site, and REVIEW.md
+genmeta.py polices the metadata; nothing policed the site, and notes/REVIEW.md
 (D5, 16 Sept 2026) found it overselling realtime. This scans every HTML page
 under docs/ for the claims the listing may not make either:
 
