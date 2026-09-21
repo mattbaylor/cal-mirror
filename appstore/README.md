@@ -126,11 +126,18 @@ Xcode with the StoreKit configuration attached (`XCODE=1 apple/tools/run-sim.sh`
 in App Store Connect; it is uploaded there by hand, per subscription, under
 *Review Information*.
 
-**The subscriptions' promotional image** is `sources/askwhen-promo-1024.png`:
-the AskWhen.me mark, 1024×1024, square corners and no alpha channel, which is
-what App Store Connect accepts for the optional image on a subscription (it
-applies its own corner mask). Regenerated with the rest of the mark by
-`assets/askwhen-markgen.swift`; never redrawn. Uploaded by hand.
+**The subscriptions' promotional images** are `sources/askwhen-promo-1024.png`
+(Request Page: the AskWhen.me mark), `askwhen-promo-subdomain-1024.png` (the
+tile at the smile's end becomes a fan of checked pages) and
+`askwhen-promo-domain-1024.png` (the tile carries a globe) — 1024×1024, square
+corners and no alpha channel, which is what App Store Connect accepts for the
+optional image on a subscription (it applies its own corner mask). One image
+per product, and they must differ: App Review rejected 2.0 on 19 Sept 2026
+under 2.3.2 for the same mark on all three ("duplicate or identical
+promotional images for different promoted In-App Purchase products").
+Regenerated with the rest of the mark by `assets/askwhen-markgen.swift` from
+`assets/askwhen-mark{,-subdomain,-domain}.svg`; never redrawn. Uploaded by
+hand, under each subscription's *App Store Promotion*.
 
 **Notes for App Review** are generated too: `metadata/<platform>/review_notes.txt`
 from `REVIEW_NOTES` in `genmeta.py`. The sandbox tester is not in them: `asc_apply.py`
