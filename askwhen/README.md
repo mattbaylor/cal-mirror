@@ -15,7 +15,7 @@ things get collected, and it never knows who lives there.
 a server holding your calendar, and that is the trade this exists to refuse. The
 name says so out loud, which is the point of it.
 
-Picking this up after a break? Start at [`../STATUS.md`](../STATUS.md).
+Picking this up after a break? Start at [`../notes/STATUS.md`](../notes/STATUS.md).
 
 ## Layout
 
@@ -23,7 +23,7 @@ Picking this up after a break? Start at [`../STATUS.md`](../STATUS.md).
 askwhen/
   design/      architecture, why it is shaped this way, and what proved impossible
   schema/      the policy dump — the ONLY artifact that leaves the device
-  prototype/   POCs: availability page, ship-back invitation
+  design/prototype/  POCs: availability page, ship-back invitation
   web/         the Lit application (one app, N pages)
   service/     the dead drop
   infra/       containers, proxy, TLS, DNS, mail — inert until someone applies it

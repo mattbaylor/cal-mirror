@@ -208,8 +208,8 @@ review; it supersedes the earlier version of this section.
 
 ```
 You are picking up cal-mirror and askwhen.me for the last stretch: shipping
-Calendar Mirror 2.0 and launching AskWhen.me. Read, in this order: STATUS.md,
-REVIEW.md, TASKS.md, askwhen/design/decisions.md (Settled first, then the
+Calendar Mirror 2.0 and launching AskWhen.me. Read, in this order: notes/STATUS.md,
+notes/REVIEW.md, notes/TASKS.md, askwhen/design/decisions.md (Settled first, then the
 Proposed entries dated 16 September), apple/design/native.md. Where any of
 them makes a claim the repo, the GitHub API or the live service can settle,
 check rather than trust, and say what has drifted.

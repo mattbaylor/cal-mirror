@@ -11,9 +11,9 @@ Linux, which is how this work came to be written without ever being run.
 You are picking up the AskWhen.me request-page UI on Matt's Mac. It was built
 in a Linux container that could never run it, so everything below has been
 compiled by CI and, until 15 September, seen by nobody. It has been run once
-since (TASKS.md, "Next", row 1); the walk below still holds for the next time.
+since (notes/TASKS.md, "Next", row 1); the walk below still holds for the next time.
 
-Read, in this order: STATUS.md, TASKS.md ("Next"), askwhen/design/glossary.md,
+Read, in this order: notes/STATUS.md, notes/TASKS.md ("Next"), askwhen/design/glossary.md,
 and askwhen/design/decisions.md — especially the four 15 September entries
 about the trial opt-in, the offer screen, the product load, and the UI being
 approved as built.

@@ -422,7 +422,7 @@ the link is on by default; the personal link's expiry and use count; and what
 feed on it.
 
 **AskWhen.me launches paid, from day one.** *(16 September 2026)* Matt,
-against `REVIEW.md`'s recommendation of a free beta. The 90-day trial on the
+against `notes/REVIEW.md`'s recommendation of a free beta. The 90-day trial on the
 page tier is already the free period, so what goes live paid on the first day
 is the $35 and $70 ladder. Consequence, and it is a sequencing one: the three
 things the review said should precede money — the credential rotation, an
@@ -773,7 +773,7 @@ notification, and it is rarer than two devices. **Against it:** the
 requester's mail goes out before the event exists, so a calendar refusing
 the write leaves the owner holding an acceptance with nothing behind it,
 and the fix for that is the same notification the other order already
-sends. Not built; filed on `TASKS.md`.
+sends. Not built; filed on `notes/TASKS.md`.
 
 **The screens should read as Apple's, and mostly do not because of where the
 prose sits.** *(16 September 2026.)* Audited from the CI frames and the store
@@ -790,7 +790,7 @@ the copy with the most care in it; it survives in `Copy.json`, the site and
 the listing, but not where the owner is looking when they decide.
 
 **From the first run of the UI on a Mac** *(15 September 2026, evening — the
-simulator pass `TASKS.md` "Next" 1 asked for.)* Everything below was seen
+simulator pass `notes/TASKS.md` "Next" 1 asked for.)* Everything below was seen
 moving on an iPhone 17 Pro simulator under Xcode 27, not read. The bugs it
 found are fixed in the same change and are not decisions; these are the
 things that are.
