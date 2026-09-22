@@ -3,7 +3,7 @@
 
 genmeta.py polices the metadata; nothing policed the site, and notes/REVIEW.md
 (D5, 16 Sept 2026) found it overselling realtime. This scans every HTML page
-under docs/ for the claims the listing may not make either:
+under site/ for the claims the listing may not make either:
 
   * "within seconds" / "instantly": a change notification is best-effort, and
     iOS has no realtime at all.
@@ -21,7 +21,7 @@ hit, and CI runs it.
 """
 import os, re, sys, html
 
-ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir, "docs")
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir, "site")
 
 def text_of(path):
     raw = open(path, encoding="utf-8").read()

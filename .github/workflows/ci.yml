@@ -90,7 +90,7 @@ jobs:
     # App Store build can do on each platform, the glossary, and the 2.0
     # network claim with its qualifier. genmeta.py regenerates the metadata
     # and fails on a banned phrase or an overlong field; checksite.py scans
-    # every page under docs/. notes/REVIEW.md D5 is why the second exists.
+    # every page under site/. notes/REVIEW.md D5 is why the second exists.
     name: listing and site claims
     runs-on: ubuntu-latest
     steps:
@@ -108,7 +108,7 @@ jobs:
       # reads the language list out of nav.js, so adding a language adds its
       # requirement automatically.
       - name: Every page exists in every language
-        run: python3 docs/i18n-check.py
+        run: python3 site/i18n-check.py
 
   askwhen-web:
     # The request page. Linux, because nothing here is Apple — and because the

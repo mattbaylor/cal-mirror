@@ -14,7 +14,7 @@
 // names — /de/index.html, /de/blog/on-call-rotas.html — so a page's counterpart
 // in another language is a path transform, and nothing has to be registered.
 // `lang` picks the labels and the link set. There is no per-page opt-in and no
-// "(EN)" fallback: every page exists in every language, which docs/i18n-check.py
+// "(EN)" fallback: every page exists in every language, which site/i18n-check.py
 // enforces, so the switcher can always point at the same path under another
 // language's directory.
 //
@@ -142,7 +142,7 @@ class CMNav extends HTMLElement {
       links.append(a);
     }
 
-    // The switcher. Every page exists in every language — docs/i18n-check.py
+    // The switcher. Every page exists in every language — site/i18n-check.py
     // fails the build otherwise — so the counterpart is always the same path
     // under another language's directory, and there is nothing to qualify.
     const bare = barePath();

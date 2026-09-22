@@ -26,8 +26,16 @@ calendarmirror.com ──DNS──▶ 64.111.22.170 (fw.rehosted.us)
                               ▼
                      CT 112, 172.16.1.41
                      caddy:2-alpine, this Caddyfile
-                     serving /opt/site/docs
+                     serving /opt/site/site
 ```
+
+The container is described by `/opt/site-serve/docker-compose.yaml` on CT 112,
+written on 22 September 2026 from the shape of a container that had been started
+by hand. It bind-mounts `/opt/site/site` — the directory this repository calls
+`site/` — at `/srv`, and caps its own log at 10 MB across three files. Renaming
+`docs/` to `site/` on 22 September needed that mount changed in the same breath
+as the pull; a mount pointing at a directory git has just renamed serves
+nothing.
 
 ## Updating
 
@@ -85,7 +93,7 @@ The redirect is GitHub's own behavior once the Pages site has a custom domain
 set, and it does not care where that domain's DNS points — so the domain can
 resolve to our edge and GitHub still redirects to it. Because the Pages site is
 deployed by workflow rather than from a branch, the domain is a repository
-setting rather than a `CNAME` file in `docs/`; it was set on 15 September 2026
+setting rather than a `CNAME` file in `site/`; it was set on 15 September 2026
 with:
 
 ```
@@ -102,8 +110,8 @@ gone.)
 
 ## Search engines
 
-`docs/robots.txt` allows everything and names the sitemap. `docs/sitemap.xml`
-is written by `python3 infra/site/sitemap.py` from the pages in `docs/` — every
+`site/robots.txt` allows everything and names the sitemap. `site/sitemap.xml`
+is written by `python3 infra/site/sitemap.py` from the pages in `site/` — every
 published page in every language, found by one recursive walk, so a new section
 or language needs no edit. It carries no `lastmod`: the old one dated each page
 from git, which lied whenever a page was edited without rerunning the script.
@@ -115,7 +123,7 @@ pair plus `x-default` tying it to its counterpart in the other language.
 Seznam) is a POST on deploy: `infra/site/indexnow.sh` runs on CT 112 as an
 `ExecStartPost` of `site-pull.service`, pings only when `main` moved and only
 with the pages that changed, and keeps the last-pinged commit in
-`/var/lib/site-pull/indexnow.last`. The key is the file `docs/<key>.txt`;
+`/var/lib/site-pull/indexnow.last`. The key is the file `site/<key>.txt`;
 it is public by design (IndexNow verifies it by fetching it from the site).
 
 **Google** is not in IndexNow. It reads the sitemap through Search Console,
@@ -129,5 +137,5 @@ Every page loads Plausible from `stats.rehosted.us` — our own instance on our
 own infrastructure, so the "no third-party anything" claim above still holds.
 It sets no cookies and keeps no IP addresses; the privacy page says so. The CSP
 allows that one host for `script-src` and `connect-src`, plus `'self'` for
-`docs/nav.js` — the site header as a web component, `<cm-nav>`, so seventeen
+`site/nav.js` — the site header as a web component, `<cm-nav>`, so seventeen
 pages share one copy of it — and nothing else.

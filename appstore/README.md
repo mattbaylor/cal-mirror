@@ -86,7 +86,7 @@ launchd label, the `x-calmirror:` marker and the BGTaskScheduler refresh id.
 There is an unrelated app called **CalMirror: Multi Calendar Sync** by
 bad-company Incorporated (Apple ID 6759219374, registered before this one). It
 mirrors Google calendars only, so the two do different jobs, and
-`docs/vs/calmirror.html` says so publicly.
+`site/vs/calmirror.html` says so publicly.
 
 "Calendar Mirror" is two ordinary descriptive words rather than an imitation of
 their coined name — and note it is *less* similar to "CalMirror" than the
