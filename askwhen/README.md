@@ -226,5 +226,5 @@ they belong there too.
   greppable, no external URLs.
 - **The server must never be able to email the owner.** It holds no address for
   them. That is not an oversight to fix later.
-- `docs/` is hand-written and build-step-free on purpose. This is a bundled app.
+- `site/` is hand-written and build-step-free on purpose. This is a bundled app.
   They do not meet.

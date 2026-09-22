@@ -58,10 +58,10 @@ def main():
 
     for a in drift:
         print(f"::warning::{a['name']} is now {a['live']}, page says {a['price']} "
-              f"(docs/vs/{a['page']})")
+              f"(site/vs/{a['page']})")
     for a in gone:
         print(f"::warning::{a['name']} returned no App Store result — delisted? "
-              f"(docs/vs/{a['page']})")
+              f"(site/vs/{a['page']})")
     print("\nUpdate the page wording and then the price in "
           "appstore/tools/prices.json, and move the checked date.")
     return 1

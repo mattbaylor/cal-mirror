@@ -54,7 +54,7 @@ run and release each product is in its own directory.
 | [`apple/`](apple/README.md) | `CalMirrorKit` (the shared engine), the shared SwiftUI, the two App Store shells, and the tools that drive the request-page UI in a simulator |
 | [`appstore/`](appstore/README.md) | The App Store listing: its text, its screenshots, the tools that generate and check them, and the scripts that talk to App Store Connect |
 | [`askwhen/`](askwhen/README.md) | AskWhen.me — the request-page service, its web app, its own infrastructure, and its design record |
-| `docs/` | The marketing website, calendarmirror.com — not documentation |
+| [`site/`](infra/site/README.md) | The marketing website, calendarmirror.com — the pages themselves, in English and German |
 | [`infra/`](infra/site/README.md) | How the website and the DC edge are served |
 | [`notes/`](notes/README.md) | Working notes: about *now*, and stale on purpose |
 

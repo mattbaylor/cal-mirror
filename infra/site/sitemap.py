@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write docs/sitemap.xml from the pages in docs/.
+"""Write site/sitemap.xml from the pages in site/.
 
     python3 infra/site/sitemap.py
 
@@ -13,36 +13,36 @@ dates lied. It is a hint crawlers may ignore, and a wrong one is worse than
 none.
 
 The blog and the language directories come in through one recursive walk, so a
-new section or a new language needs no edit here. docs/i18n-check.py fails the
+new section or a new language needs no edit here. site/i18n-check.py fails the
 build if this file misses a page.
 """
 import glob, os, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
-DOCS = os.path.join(ROOT, "docs")
-SITE = "https://calendarmirror.com"
+SITE = os.path.join(ROOT, "site")
+BASE = "https://calendarmirror.com"
 
 def url_for(rel):
     rel = rel.replace(os.sep, "/")
     if rel == "index.html":
-        return SITE + "/"
+        return BASE + "/"
     if rel.endswith("/index.html"):
-        return SITE + "/" + rel[: -len("index.html")]
-    return SITE + "/" + rel
+        return BASE + "/" + rel[: -len("index.html")]
+    return BASE + "/" + rel
 
 def main():
     urls = []
-    for p in sorted(glob.glob(os.path.join(DOCS, "**", "*.html"), recursive=True)):
+    for p in sorted(glob.glob(os.path.join(SITE, "**", "*.html"), recursive=True)):
         if 'name="robots" content="noindex"' in open(p).read():
             continue
-        urls.append(url_for(os.path.relpath(p, DOCS)))
+        urls.append(url_for(os.path.relpath(p, SITE)))
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for u in sorted(set(urls)):
         lines.extend(["  <url>", f"    <loc>{u}</loc>", "  </url>"])
     lines.append("</urlset>")
     out = "\n".join(lines) + "\n"
-    dest = os.path.join(DOCS, "sitemap.xml")
+    dest = os.path.join(SITE, "sitemap.xml")
     open(dest, "w").write(out)
     print(f"wrote {os.path.relpath(dest, ROOT)} with {out.count('<url>')} pages")
     return 0

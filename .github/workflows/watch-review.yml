@@ -75,7 +75,7 @@ jobs:
           set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/changelog.html docs/index.html
+          git add site/changelog.html site/index.html
           git commit -m "Site: ${{ steps.check.outputs.version }} cleared review on ${{ steps.check.outputs.date }}
 
           App Store Connect reports ${{ steps.check.outputs.version }} live on every
@@ -94,7 +94,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BR"
-          git add docs/changelog.html docs/index.html
+          git add site/changelog.html site/index.html
           git commit -m "Site: ${{ steps.check.outputs.version }} cleared review on ${{ steps.check.outputs.date }}"
           git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" "$BR"
           if ! gh pr create --base main --head "$BR" \

@@ -9,8 +9,8 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ec, utils as asym_utils
 
 APP = "6787358036"
-PAGE = "docs/changelog.html"
-HOME = "docs/index.html"
+PAGE = "site/changelog.html"
+HOME = "site/index.html"
 LIVE = {"READY_FOR_DISTRIBUTION", "READY_FOR_SALE"}
 
 # Which version to watch is read off the changelog itself — whichever entry

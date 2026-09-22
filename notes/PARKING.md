@@ -13,14 +13,14 @@ it still applies.
 
 - **The AskWhen.me experience, brand and colours** across the app screens and
   the web request page. Matt's, in its own session (17 Sept 2026). The site's
-  presentation of it (`docs/askwhen.html`) went first and should follow whatever
+  presentation of it (`site/askwhen.html`) went first and should follow whatever
   that session decides.
 
-- **`docs/img/menubar.png` has no dark variant**, so in dark mode it sits as a
+- **`site/img/menubar.png` has no dark variant**, so in dark mode it sits as a
   light card. Parked 17 Sept 2026: needs a re-shoot with the fixture, not a
   filter.
 
-- **Eleven site images nothing references any more** — `docs/img/filters-*`,
+- **Eleven site images nothing references any more** — `site/img/filters-*`,
   `iphone-detail-*` (the list is used, the detail is not in every mode),
   `state-*.png` (superseded by `face-*.png`). Parked 17 Sept 2026: the filters
   shots would suit a README section if that copy moves there; delete the rest.

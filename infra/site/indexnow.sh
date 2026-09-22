@@ -5,7 +5,7 @@
 #
 # Runs on CT 112 after site-pull.service has reset /opt/site to origin/main.
 # The key is public by design: IndexNow verifies it by fetching the key file
-# from the site, so it lives in docs/ next to the pages it vouches for.
+# from the site, so it lives in site/ next to the pages it vouches for.
 #
 # Only pings when main actually moved, and only with the pages that changed
 # in that move, so a quiet timer sends nothing. No credential, no state
@@ -20,13 +20,13 @@ head=$(git -C "$SITE" rev-parse HEAD)
 last=$(cat "$STAMP" 2>/dev/null || true)
 [ "$head" = "$last" ] && exit 0
 
-# Every page under docs/, at any depth: the comparison pages, the blog, and
-# each language directory. It used to list 'docs/*.html' and 'docs/vs/*.html'
+# Every page under site/, at any depth: the comparison pages, the blog, and
+# each language directory. It used to list 'site/*.html' and 'site/vs/*.html'
 # by hand, which silently stopped pinging the moment the site grew a section.
 if [ -n "$last" ] && git -C "$SITE" cat-file -e "$last" 2>/dev/null; then
-  changed=$(git -C "$SITE" diff --name-only "$last" "$head" -- docs | grep '\.html$' || true)
+  changed=$(git -C "$SITE" diff --name-only "$last" "$head" -- site | grep '\.html$' || true)
 else
-  changed=$(cd "$SITE" && find docs -name '*.html' | sort)
+  changed=$(cd "$SITE" && find site -name '*.html' | sort)
 fi
 # A noindex page is not one to announce.
 changed=$(cd "$SITE" && for f in $changed; do
@@ -34,7 +34,7 @@ changed=$(cd "$SITE" && for f in $changed; do
   grep -q 'name="robots" content="noindex"' "$f" || printf '%s\n' "$f"
 done)
 if [ -z "$changed" ]; then mkdir -p "$(dirname "$STAMP")"; echo "$head" > "$STAMP"; exit 0; fi
-urls=$(printf '%s\n' $changed | sed -e 's#^docs/index.html$##' -e 's#^docs/\(.*\)/index.html$#\1/#' -e 's#^docs/##' -e "s#^#https://$HOST/#")
+urls=$(printf '%s\n' $changed | sed -e 's#^site/index.html$##' -e 's#^site/\(.*\)/index.html$#\1/#' -e 's#^site/##' -e "s#^#https://$HOST/#")
 
 list=$(printf '%s\n' $urls | sed 's/.*/"&"/' | paste -sd, -)
 curl -fsS -X POST https://api.indexnow.org/indexnow \
