@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../nav.js?v=20260922d"></script>
+<script src="../platform.js?v=20260922d"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The work calendar you can see but can&rsquo;t share &mdash; Calendar Mirror</title>
+<meta name="description" content="A subscribed work calendar is read-only: you cannot reshare it, recolour it, or add anything to it. A one-way copy in a calendar you own fixes all three.">
+<link rel="icon" href="../icon.png">
+<link rel="canonical" href="https://calendarmirror.com/blog/work-calendar-you-cant-share.html">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/blog/work-calendar-you-cant-share.html">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/blog/work-calendar-you-cant-share.html">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/blog/work-calendar-you-cant-share.html">
+<meta property="og:title" content="The work calendar you can see but can&rsquo;t share">
+<meta property="og:description" content="A subscribed work calendar is read-only: you cannot reshare it, recolour it, or add anything to it. A one-way copy in a calendar you own fixes all three.">
+<meta property="og:image" content="https://calendarmirror.com/icon.png">
+<meta property="og:type" content="article">
+<link rel="preload" href="../fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../site.css?v=20260922d">
+<link rel="stylesheet" href="blog.css?v=20260922a">
+</head>
+<body>
+<cm-nav current="blog"></cm-nav>
+<div class="wrap">
+
+  <article>
+  <h1>The work calendar you can see but can&rsquo;t share</h1>
+  <p class="dateline">4-minute read</p>
+  <p class="lede">A subscribed work calendar sits on your Mac and your phone, perfectly visible,
+    and refuses to do any of the three things you want from it: you can&rsquo;t reshare it, you
+    can&rsquo;t add to it, and you can&rsquo;t change how it looks.</p>
+
+  <p>This is the most ordinary calendar problem there is. Your employer publishes your schedule
+    as a feed &mdash; a subscription URL, a Google account you sign into but don&rsquo;t own, an
+    Exchange mailbox managed by someone else. The Calendar app shows it. And then every reasonable
+    next step is blocked, because a subscribed calendar is read-only by definition.</p>
+
+  <p>So your partner can&rsquo;t see when you&rsquo;re travelling. The family shared calendar
+    can&rsquo;t include your Thursday. You can&rsquo;t put &ldquo;leave 40 minutes early, traffic&rdquo;
+    next to the 4pm. You can&rsquo;t even give it a colour that stands out, because the feed
+    decides.</p>
+
+  <h2>The fixes people try first, and why they don&rsquo;t hold</h2>
+  <ul class="lose">
+    <li><b>Forwarding the subscription URL.</b> It hands over everything &mdash; every title, every
+      location, every note, forever, to anyone the link reaches. Many employers rotate or revoke
+      those URLs, and some consider sharing one a policy breach.</li>
+    <li><b>Copying events over by hand.</b> Works for a week. Then a meeting moves, and now you
+      have two schedules that disagree, and the wrong one is the one your household trusts.</li>
+    <li><b>Screenshotting Monday to your partner every Monday.</b> Be honest about how long this
+      lasted.</li>
+  </ul>
+
+  <h2>What Calendar Mirror does instead</h2>
+
+  <div class="verdict">
+    <p><strong>It keeps a one-way copy of the locked calendar inside a calendar you own.</strong>
+      The copy is an ordinary calendar in your own iCloud account &mdash; so it can be shared,
+      coloured, written into, and seen on every device you own. The original is never written to,
+      and nothing is uploaded anywhere: both calendars are already on your device, and the copy is
+      made there.</p>
+  </div>
+
+  <h3>The setup</h3>
+  <ol class="steps">
+    <li>In the Calendar app, make a new calendar in your <b>iCloud</b> account. Call it something
+      like <i>Work (copy)</i>.</li>
+    <li>In Calendar Mirror, add a pair: source is the subscribed work calendar, destination is the
+      new one.</li>
+    <li>Choose how much crosses over. <b>Copy details</b> carries the real title and location and
+      leaves the notes behind &mdash; the right default for a calendar other people will see.</li>
+    <li>Turn on the filters for <b>declined</b> and <b>canceled</b> events, so meetings you said no
+      to don&rsquo;t show up as solid blocks in your week.</li>
+    <li>Back in the Calendar app, share the new calendar with whoever needs it.</li>
+  </ol>
+
+  <p>From then on the copy follows the original. On a Mac it reacts to a change within moments,
+    with a five-minute pass underneath to catch anything a notification missed; on iPhone and iPad
+    it refreshes in the background when iOS allows, and a pull-down refreshes it now. How quickly
+    the copy then reaches your other devices is iCloud&rsquo;s business, not the app&rsquo;s.</p>
+
+  <h3>What you get that the feed wouldn&rsquo;t give you</h3>
+  <ul class="win">
+    <li>A calendar you can share with a partner, an assistant, or a second household.</li>
+    <li>Your own colour, your own alerts, your own place in the sidebar.</li>
+    <li>Room to add things beside the copies &mdash; travel time, a reminder to eat &mdash; which
+      the app leaves alone. It only ever touches its own copies.</li>
+    <li>A copy that reaches every device on your iCloud account without subscribing each of them
+      to anything.</li>
+  </ul>
+
+  <div class="note">
+    <b>If the mirror stops, you find out where you&rsquo;ll see it.</b> A broken pair writes an
+    all-day warning into the destination calendar &mdash; so it appears on your phone without you
+    opening anything &mdash; and clears itself the moment the pair recovers. A working pair writes
+    nothing but the copies.
+  </div>
+
+  <h2>What this doesn&rsquo;t fix</h2>
+  <p>Attendees never come across. Apple&rsquo;s calendar framework gives no way to set participants
+    on an event you create, so a copy carries the time, the title and whatever else you allow, but
+    never the guest list. The copy is one direction only: edits you make to a copy are not sent
+    back to your employer&rsquo;s calendar, which is usually the entire point, but worth saying out
+    loud. And if your source is a feed you subscribe to, tags in event notes won&rsquo;t work on it
+    &mdash; you can&rsquo;t edit a feed&rsquo;s events &mdash; so use the filters instead.</p>
+  </article>
+
+  <div class="cta">
+    <a class="button" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get Calendar Mirror &mdash; $2.99</a>
+    <a class="ghost" href="../">What it does</a>
+  </div>
+  <p class="src">One purchase covers iPhone, iPad and Mac. No accounts, no ads, nothing
+    collected. macOS 14 or iOS 17 and up. The Mac version is also free to
+    <a href="https://github.com/mattbaylor/cal-mirror">build from source</a>.</p>
+
+  <div class="others">
+    <h2>More use cases</h2>
+    <div class="chips">
+      <a class="chip" href="eight-calendars-one-answer.html">Eight into one</a>
+      <a class="chip" href="two-jobs-one-calendar.html">Two jobs</a>
+      <a class="chip" href="family-calendar-without-the-details.html">Family calendar</a>
+      <a class="chip" href="no-credentials-to-hand-over.html">No credentials</a>
+      <a class="chip" href="on-call-rotas.html">On-call rotas</a>
+      <a class="chip" href="availability-for-one-client.html">One client&rsquo;s view</a>
+      <a class="chip" href="icloud-is-invisible.html">iCloud is invisible</a>
+      <a class="chip" href="noisy-school-feeds.html">Noisy feeds</a>
+      <a class="chip" href="when-you-leave-the-job.html">Leaving the job</a>
+      <a class="chip" href="when-are-you-free.html">When are you free?</a>
+      <a class="chip" href="index.html">All posts</a>
+    </div>
+  </div>
+
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="../">Calendar Mirror</a>
+      <a href="https://apps.apple.com/us/app/cal-mirror/id6787358036">App Store</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <a href="../blog/">Blog</a>
+      <a href="../vs/">Compare</a>
+      <a href="../changelog.html">Release notes</a>
+      <a href="../privacy.html">Privacy</a>
+      <a href="../terms.html">Terms</a>
+    </nav>
+    <div>MIT &copy; Matt Baylor</div>
+  </footer>
+</div>
+</body>
+</html>

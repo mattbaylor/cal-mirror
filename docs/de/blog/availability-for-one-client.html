@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../../nav.js?v=20260922d"></script>
+<script src="../../platform.js?v=20260922d"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Einem Kunden nur den Teil deines Kalenders zeigen, der ihn angeht &mdash; Calendar Mirror</title>
+<meta name="description" content="Markiere die Termine, die ihm gehören, kopiere nur diese in einen geteilten Kalender, und lass die übrigen neunzig Prozent deiner Woche außen vor.">
+<link rel="icon" href="../../icon.png">
+<link rel="canonical" href="https://calendarmirror.com/de/blog/availability-for-one-client.html">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/blog/availability-for-one-client.html">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/blog/availability-for-one-client.html">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/blog/availability-for-one-client.html">
+<meta property="og:title" content="Einem Kunden nur den Teil deines Kalenders zeigen, der ihn angeht">
+<meta property="og:description" content="Markiere die Termine, die ihm gehören, kopiere nur diese in einen geteilten Kalender, und lass die übrigen neunzig Prozent deiner Woche außen vor.">
+<meta property="og:image" content="https://calendarmirror.com/icon.png">
+<meta property="og:locale" content="de_DE">
+<meta property="og:type" content="article">
+<link rel="preload" href="../../fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../site.css?v=20260918a">
+<link rel="stylesheet" href="../../blog/blog.css?v=20260922d">
+</head>
+<body>
+<cm-nav lang="de" current="blog" langs="en de"></cm-nav>
+<div class="wrap">
+
+  <article>
+  <h1>Einem Kunden nur den Teil deines Kalenders zeigen, der ihn angeht</h1>
+  <p class="dateline">5 Minuten Lesezeit</p>
+  <p class="lede">Du hast einen Kalender, weil ein Leben mit einem Kalender funktioniert. Aber die
+    Person, die nach deiner Verfügbarkeit fragt, hat nur mit einem Zehntel davon zu tun &mdash; und
+    die anderen neun würdest du lieber für dich behalten.</p>
+
+  <p>Ein Schiedsrichter möchte, dass der Ansetzer sieht, welche Samstage für Spiele frei sind, nicht
+    die Taufe. Ein Auftragnehmer möchte, dass ein Kunde die Tage sieht, die für sein Projekt
+    reserviert sind, nicht die Namen der anderen Kunden. Nachhilfe, Fotografie, Vertretungsdienst,
+    Übersetzung: jedes Mal dieselbe Form. Ein Ausschnitt deiner Woche gehört ihnen, der Rest
+    ausdrücklich nicht.</p>
+
+  <h2>Markiere, was ihnen gehört, und spiegle nur das</h2>
+
+  <div class="verdict">
+    <p><strong>Schreibe ein Schlagwort in die Notizen der Termine, die diese Person betreffen, und
+      gib dem Spiegel eine Regel, die nur markierte Termine kopiert.</strong> Alles andere in deinem
+      Kalender bleibt, wo es ist. Das Ziel ist ein Kalender, den du mit dieser einen Person teilst,
+      und er füllt sich mit genau den Blöcken, die sie sehen darf.</p>
+  </div>
+
+  <h3>Die Einrichtung</h3>
+  <ol class="steps">
+    <li>Wähle ein Schlagwort. Eine Raute und ein Wort: <code>#ref</code>, <code>#acme</code>,
+      <code>#praxis</code>. Schreibe es in die <b>Notizen</b> jedes Termins, der zu dieser Beziehung
+      gehört &mdash; nicht in den Titel.</li>
+    <li>Lege einen Kalender an, teile ihn mit dieser Person, und verbinde deinen Hauptkalender
+      damit.</li>
+    <li>Gib dem Paar eine Auswahlregel: <b>include</b>, Schlagwort <code>#acme</code>. Nur Termine
+      mit diesem Schlagwort werden kopiert. Ohne Regel wird alles kopiert, und das willst du hier
+      nicht.</li>
+    <li>Wähle die Projektion. <b>Busy only</b>, wenn nur der belegte Tag zählt; <b>Copy details</b>,
+      wenn es auf den Titel ankommt.</li>
+  </ol>
+
+  <p>Schlagwörter werden ohne Rücksicht auf Groß- und Kleinschreibung und als ganze Wörter
+    verglichen, <code>#ref</code> und <code>#ref-pokal</code> sind also zwei verschiedene &mdash;
+    genau so betreibst du mehrere davon nebeneinander. Ein Termin kann mehrere Schlagwörter tragen,
+    und ein zweiter Spiegel mit eigener Regel nimmt sich seinen eigenen Ausschnitt. Aus den Kopien
+    werden die Schlagwörter entfernt, sofern du sie nicht ausdrücklich behalten willst.</p>
+
+  <h3>Die Gegenrichtung: alles außer</h3>
+  <p>Manchmal ist die sinnvolle Regel die umgekehrte. Eine <b>reject</b>-Regel kopiert alles
+    <em>außer</em> den markierten Terminen &mdash; nützlich, wenn der geteilte Kalender im
+    Wesentlichen vollständig sein soll und nur eine Handvoll Dinge nie auftauchen dürfen. Und
+    <code>#nomirror</code> in den Notizen hält einen einzelnen Termin aus allen Spiegeln zugleich
+    heraus, inklusive dem Entfernen einer schon erstellten Kopie.</p>
+
+  <div class="note">
+    <b>Die Falle, in die alle einmal tappen.</b> Die Voreinstellung <b>Copy details</b> kopiert
+    keine Notizen &mdash; soll also das Schlagwort selbst am Ziel ankommen, wähle <b>Full copy</b>
+    oder die eigene Einstellung, die <i>nur die Schlagwörter</i> überträgt. Letztere schreibt
+    ausschließlich die Schlagwörter in die Notizen der Kopie und lässt deinen eigentlichen Text
+    zurück &mdash; meist genau das, was gemeint war.
+  </div>
+
+  <h2>Was das nicht löst</h2>
+  <p>Schlagwörter stehen in den Notizen von Terminen, die du bearbeiten kannst, funktionieren also
+    nur in deinen eigenen Kalendern &mdash; ein abonnierter Feed lässt sich nicht markieren, und
+    dort wählst du stattdessen über die Eigenschaften des Termins aus: ganztägig, abgelehnt, frei,
+    Dauer, ein Wort im Titel oder ein Zeitfenster. Und Markieren ist eine Gewohnheit: Ein Termin,
+    den du zu markieren vergisst, kommt nicht herüber. Für die meisten ist das die richtige
+    Fehlerrichtung &mdash; Schweigen statt Leck &mdash; aber man sollte wissen, in welche Richtung
+    es schiefgeht.</p>
+  </article>
+
+  <div class="cta">
+    <a class="button" href="https://apps.apple.com/de/app/cal-mirror/id6787358036">Calendar Mirror holen &mdash; 2,99 &euro;</a>
+    <a class="ghost" href="../">Was die App macht</a>
+  </div>
+  <p class="src">Ein Kauf gilt für iPhone, iPad und Mac. Keine Accounts, keine Werbung, keine
+    Datenerfassung. Ab macOS 14 oder iOS 17. Die Mac-Version lässt sich auch kostenlos
+    <a href="https://github.com/mattbaylor/cal-mirror">aus dem Quellcode bauen</a>.
+    Die App selbst ist auf Englisch.</p>
+
+  <div class="others">
+    <h2>Weitere Anwendungsfälle</h2>
+    <div class="chips">
+      <a class="chip" href="work-calendar-you-cant-share.html">Nicht teilbar</a>
+      <a class="chip" href="eight-calendars-one-answer.html">Acht auf einen</a>
+      <a class="chip" href="two-jobs-one-calendar.html">Zwei Jobs</a>
+      <a class="chip" href="family-calendar-without-the-details.html">Familienkalender</a>
+      <a class="chip" href="no-credentials-to-hand-over.html">Ohne Zugangsdaten</a>
+      <a class="chip" href="on-call-rotas.html">Bereitschaft</a>
+      <a class="chip" href="icloud-is-invisible.html">iCloud unsichtbar</a>
+      <a class="chip" href="noisy-school-feeds.html">Laute Feeds</a>
+      <a class="chip" href="when-you-leave-the-job.html">Jobwechsel</a>
+      <a class="chip" href="when-are-you-free.html">Wann hast du Zeit?</a>
+      <a class="chip" href="index.html">Alle Beiträge</a>
+    </div>
+  </div>
+
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="../">Calendar Mirror</a>
+      <a href="https://apps.apple.com/de/app/cal-mirror/id6787358036">App Store</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <a href="../blog/">Blog</a>
+      <a href="../vs/">Vergleich</a>
+      <a href="../changelog.html">Versionshinweise</a>
+      <a href="../privacy.html">Datenschutz</a>
+      <a href="../terms.html">AGB</a>
+    </nav>
+    <div>MIT &copy; Matt Baylor</div>
+  </footer>
+</div>
+</body>
+</html>

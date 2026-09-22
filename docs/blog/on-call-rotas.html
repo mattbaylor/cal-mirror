@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../nav.js?v=20260922d"></script>
+<script src="../platform.js?v=20260922d"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>On-call rotas that live in a feed you don&rsquo;t control &mdash; Calendar Mirror</title>
+<meta name="description" content="A published rota is a read-only feed that can go stale without telling you. Mirror it into a calendar you own, and find out in the calendar itself when it breaks.">
+<link rel="icon" href="../icon.png">
+<link rel="canonical" href="https://calendarmirror.com/blog/on-call-rotas.html">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/blog/on-call-rotas.html">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/blog/on-call-rotas.html">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/blog/on-call-rotas.html">
+<meta property="og:title" content="On-call rotas that live in a feed you don&rsquo;t control">
+<meta property="og:description" content="A published rota is a read-only feed that can go stale without telling you. Mirror it into a calendar you own, and find out in the calendar itself when it breaks.">
+<meta property="og:image" content="https://calendarmirror.com/icon.png">
+<meta property="og:type" content="article">
+<link rel="preload" href="../fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../site.css?v=20260922d">
+<link rel="stylesheet" href="blog.css?v=20260922a">
+</head>
+<body>
+<cm-nav current="blog"></cm-nav>
+<div class="wrap">
+
+  <article>
+  <h1>On-call rotas that live in a feed you don&rsquo;t control</h1>
+  <p class="dateline">4-minute read</p>
+  <p class="lede">The rota is published as a feed. You subscribed to it, it appeared, and now it
+    is one more read-only calendar you cannot reshare, cannot annotate, and cannot tell whether it
+    is still updating.</p>
+
+  <p>PagerDuty and Opsgenie publish one. So does every hospital scheduling system, most volunteer
+    fire services, ambulance trusts, airline crewing systems, referee and umpire assignors, and the
+    average university department. The feed is the modern answer to &ldquo;where is the rota&rdquo;,
+    and it has three sharp edges.</p>
+
+  <ul class="lose">
+    <li><b>It is read-only.</b> You can&rsquo;t share it onward to a partner who needs to know which
+      nights you are on, and you can&rsquo;t add your own notes beside a shift.</li>
+    <li><b>It refreshes on its own schedule, silently.</b> Nothing tells you it refreshed, and
+      nothing tells you when it stopped.</li>
+    <li><b>It can die quietly.</b> A rotated URL, an expired token, a system migration &mdash; and
+      the calendar simply stops changing. It still looks fine. That is the dangerous part: a stale
+      rota looks exactly like a quiet month.</li>
+  </ul>
+
+  <h2>Mirror it into something you own</h2>
+
+  <div class="verdict">
+    <p><strong>A copy in your own calendar is a copy you control.</strong> It can be shared with
+      the people who need to plan around your shifts, it can be coloured so on-call weeks are
+      visible at a glance, and &mdash; the part that matters at 3am &mdash; it can tell you when it
+      has stopped being true.</p>
+  </div>
+
+  <h3>The setup</h3>
+  <ol class="steps">
+    <li>Make a calendar in your own account called <i>On-call</i> and pair the rota feed to it.</li>
+    <li>Add a title prefix, <code>[On-call]</code>, so a shift is unmistakable next to your ordinary
+      meetings.</li>
+    <li>Leave the in-calendar warning on. If the pair breaks &mdash; the feed vanished, the source
+      calendar was renamed &mdash; an all-day warning appears in the <i>On-call</i> calendar, which
+      means it reaches your phone without you opening anything. It clears itself when the pair
+      recovers.</li>
+    <li>Share the <i>On-call</i> calendar with whoever plans around it.</li>
+  </ol>
+
+  <p>If your on-call feed and your ordinary work calendar both carry the same shift &mdash; which
+    happens constantly, because the rota system also writes into your work account &mdash; turn on
+    <b>dedupe destinations</b> and the duplicate block is skipped rather than stacked.</p>
+
+  <div class="note">
+    <b>Why a five-minute pass exists underneath the fast path.</b> On a Mac, Calendar Mirror reacts
+    to calendar changes as they happen. But a subscribed feed refreshes without announcing it, and
+    sleep drops notifications outright &mdash; so there is always a full pass at least every five
+    minutes as a backstop. It is also the healing pass: a copy someone deleted by hand comes back
+    on it.
+  </div>
+
+  <h2>What this doesn&rsquo;t fix</h2>
+  <p>Calendar Mirror copies what the feed says. If the rota system publishes a shift late, the copy
+    is late too &mdash; and how often the feed itself refreshes is set by your calendar account,
+    not by this app. It also can&rsquo;t reshare the feed&rsquo;s attendee list, because Apple
+    provides no way to set participants on a copied event. What it can do is make sure that the
+    moment the feed stops arriving, you are told in the one place you are guaranteed to look.</p>
+  </article>
+
+  <div class="cta">
+    <a class="button" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get Calendar Mirror &mdash; $2.99</a>
+    <a class="ghost" href="../">What it does</a>
+  </div>
+  <p class="src">One purchase covers iPhone, iPad and Mac. No accounts, no ads, nothing
+    collected. macOS 14 or iOS 17 and up. The Mac version is also free to
+    <a href="https://github.com/mattbaylor/cal-mirror">build from source</a>.</p>
+
+  <div class="others">
+    <h2>More use cases</h2>
+    <div class="chips">
+      <a class="chip" href="work-calendar-you-cant-share.html">Can&rsquo;t reshare work</a>
+      <a class="chip" href="eight-calendars-one-answer.html">Eight into one</a>
+      <a class="chip" href="two-jobs-one-calendar.html">Two jobs</a>
+      <a class="chip" href="family-calendar-without-the-details.html">Family calendar</a>
+      <a class="chip" href="no-credentials-to-hand-over.html">No credentials</a>
+      <a class="chip" href="availability-for-one-client.html">One client&rsquo;s view</a>
+      <a class="chip" href="icloud-is-invisible.html">iCloud is invisible</a>
+      <a class="chip" href="noisy-school-feeds.html">Noisy feeds</a>
+      <a class="chip" href="when-you-leave-the-job.html">Leaving the job</a>
+      <a class="chip" href="when-are-you-free.html">When are you free?</a>
+      <a class="chip" href="index.html">All posts</a>
+    </div>
+  </div>
+
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="../">Calendar Mirror</a>
+      <a href="https://apps.apple.com/us/app/cal-mirror/id6787358036">App Store</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <a href="../blog/">Blog</a>
+      <a href="../vs/">Compare</a>
+      <a href="../changelog.html">Release notes</a>
+      <a href="../privacy.html">Privacy</a>
+      <a href="../terms.html">Terms</a>
+    </nav>
+    <div>MIT &copy; Matt Baylor</div>
+  </footer>
+</div>
+</body>
+</html>

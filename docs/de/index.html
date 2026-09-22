@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar Mirror &mdash; ein Kalender, den du sehen, aber nicht teilen kannst</title>
+<meta name="description" content="Calendar Mirror hält eine Kopie eines Kalenders in einem anderen — auf iPhone, iPad und Mac. Eine Richtung. Beide Kalender liegen schon auf deinem Gerät, nichts verlässt es. 2,99 € einmalig, oder kostenlos aus dem Quellcode.">
+<link rel="preload" href="../fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../site.css?v=20260918a">
+<link rel="stylesheet" href="../home.css?v=20260922a">
+<link rel="icon" href="../icon.png">
+<link rel="canonical" href="https://calendarmirror.com/de/">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/">
+<meta property="og:title" content="Calendar Mirror">
+<meta property="og:description" content="Eine Kopie des Kalenders, den du sehen, aber nicht teilen kannst. Eine Richtung, nichts verlässt dein Gerät. iPhone, iPad und Mac.">
+<meta property="og:image" content="https://calendarmirror.com/icon.png">
+<meta property="og:locale" content="de_DE">
+<meta property="og:type" content="website">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../nav.js?v=20260922d"></script>
+<script src="../platform.js?v=20260922a"></script>
+</head>
+<body>
+<cm-nav lang="de" ></cm-nav>
+<div class="wrap">
+
+  <header class="hero wide">
+    <h1>Ein Kalender, den du sehen, aber nicht teilen&nbsp;kannst. <span class="fixed">Behoben.</span></h1>
+    <p class="lede">Calendar Mirror legt eine Kopie davon in einen Kalender, der dir gehört, und
+      hält sie aktuell. Eine Richtung. Nichts verlässt dein Gerät.</p>
+    <div class="cta centered">
+      <a class="button" href="https://apps.apple.com/de/app/cal-mirror/id6787358036">Im App Store laden</a>
+      <p class="small">2,99 € einmalig, für iPhone, iPad und Mac.</p>
+    </div>
+  </header>
+
+  <div class="field wide">
+    <div class="frame" id="frame">
+      <div class="notch ios-only"></div>
+      <div class="titlebar mac-only"><div class="lights"><i></i><i></i><i></i></div><span>Kalender</span></div>
+      <div class="screen">
+    <div class="demo" id="demo">
+      <div class="demo-bar">
+        <div class="modes" role="group" aria-label="Wie viel die Kopie übernimmt">
+          <button type="button" data-mode="full">Alles kopieren</button>
+          <button type="button" data-mode="basics" aria-pressed="true">Nur das Nötigste</button>
+          <button type="button" data-mode="busy">Nur belegt</button>
+        </div>
+        <div class="demo-face mac-only"><i class="face" style="--face:url(../img/face-ok.png)"></i><span>Alles in Ordnung</span></div>
+      </div>
+      <div class="cals">
+        <div class="cal">
+          <div class="cal-head"><b>Arbeit</b><span>abonniert, schreibgeschützt</span></div>
+          <div class="day" id="work"></div>
+        </div>
+        <div class="cal">
+          <div class="cal-head"><b>Privat</b><span>deiner, in der iCloud</span></div>
+          <div class="day" id="personal"></div>
+        </div>
+      </div>
+    </div>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2 class="centered">Die Kopie, mit der du wirklich arbeiten kannst</h2>
+    <p class="lede centered">Ein abonnierter Kalender lässt sich nicht weitergeben, nicht umfärben
+      und nicht beschreiben. Eine Kopie in deinem eigenen Account kann das alles &mdash; und sie
+      erreicht deine übrigen Geräte von selbst.</p>
+    <figure class="wide mac-only">
+      <picture>
+        <source srcset="../img/manage-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="../img/manage-light.png" width="900" height="572"
+             alt="Das Calendar-Mirror-Fenster auf dem Mac. Links drei Paare, gruppiert nach dem Zielkalender; rechts Quelle, Ziel und die eingeklappten Einstellungen eines Paares.">
+      </picture>
+      <figcaption>Drei Paare auf einem Mac. Jedes nennt einen Kalender, aus dem kopiert wird, und einen, in den kopiert wird.</figcaption>
+    </figure>
+    <figure class="wide ios-only phones">
+      <picture>
+        <source srcset="../img/iphone-detail-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="../img/iphone-detail-light.png" width="285" height="620"
+             alt="Die Einstellungen eines Paares auf dem iPhone: Quell- und Zielkalender, ein Schalter, und eingeklappte Zeilen dazu, was übernommen wird.">
+      </picture>
+      <figcaption>Ein Paar auf einem iPhone: ein Kalender zum Kopieren, einer zum Hineinkopieren, und was übernommen wird.</figcaption>
+    </figure>
+    <p>Was die Kalender-App sehen kann, kann Calendar Mirror kopieren: iCloud, Google, Microsoft 365,
+      Exchange, jedes abonnierte Abo-Kalenderformat. Kein Firmen-Login, keine Freigabe der
+      IT-Abteilung. Wiederholungen kommen mit, was du in der Kopie ergänzt, bleibt stehen, und wenn
+      du ein Paar löschst, bleiben die Kopien als ganz normale Termine bei dir.</p>
+  </section>
+
+  <section>
+    <h2 class="centered">Still, wenn es läuft. Laut, wenn es aufhört.</h2>
+    <p class="lede centered">Ein funktionierendes Paar schreibt nichts in deinen Kalender außer den
+      Kopien. Bleibt eines stehen, erscheint im Zielkalender eine ganztägige Warnung &mdash; du
+      erfährst es also auf dem iPhone, ohne irgendetwas zu öffnen. Sie verschwindet von selbst,
+      sobald das Paar wieder läuft.</p>
+    <ul class="faces wide mac-only" aria-label="Die fünf Gesichter des Menüleisten-Symbols">
+      <li><i style="--face:url(../img/face-ok.png)" role="img" aria-label="Ein Lächeln"></i><span>Alles gut</span></li>
+      <li><i style="--face:url(../img/face-degraded.png)" role="img" aria-label="Hochgezogene Augenbrauen"></i><span>Hinterher</span></li>
+      <li><i style="--face:url(../img/face-failing.png)" role="img" aria-label="Durchgestrichene Augen"></i><span>Kaputt</span></li>
+      <li><i style="--face:url(../img/face-paused.png)" role="img" aria-label="Geschlossene Augen"></i><span>Pausiert</span></li>
+      <li><i style="--face:url(../img/face-unconfigured.png)" role="img" aria-label="Ein Pluszeichen"></i><span>Nicht eingerichtet</span></li>
+    </ul>
+    <div class="two wide">
+      <figure class="mac-only">
+        <img class="plain" src="../img/menubar.png" width="301" height="331"
+             alt="Das Calendar-Mirror-Menü auf dem Mac mit drei Paaren, darüber Jetzt synchronisieren, Pausieren, Spiegel verwalten, Kalender öffnen, Protokoll öffnen und Beenden.">
+      </figure>
+      <figure class="ios-only phones">
+        <picture>
+          <source srcset="../img/iphone-list-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="../img/iphone-list-light.png" width="285" height="620"
+               alt="Die iPhone-App mit drei Paaren, jeweils mit grünem Haken und Anzahl der Termine.">
+        </picture>
+      </figure>
+      <div>
+        <p class="mac-only">Auf dem Mac trägt das Symbol in der Menüleiste das Gesicht, das gerade
+          passt: ein Lächeln, solange jede Kopie aktuell ist, und etwas anderes nur dann, wenn es
+          etwas zu sagen gibt. Die Kopie folgt einer Änderung innerhalb von Momenten; darunter läuft
+          alle fünf Minuten ein vollständiger Durchgang, der auffängt, was durchgerutscht ist.</p>
+        <p class="ios-only">Auf iPhone und iPad zeigt die App jedes Paar mit seinem Zustand und der
+          Anzahl der Termine, um die es sich kümmert. Sie aktualisiert im Hintergrund, wenn iOS es
+          erlaubt, und ein Ziehen nach unten aktualisiert sofort.</p>
+        <p>Wie schnell eine Kopie danach deine anderen Geräte erreicht, entscheidet die iCloud.</p>
+        <p>Ein Paar kann auch Termine auslassen: abgesagte, ganztägige, alles außerhalb deiner
+          Arbeitszeiten. Die <a href="https://github.com/mattbaylor/cal-mirror#readme">README</a> listet jede Regel. Schlagwörter in den Notizen eines Termins funktionieren
+          nur bei Terminen, die du bearbeiten kannst &mdash; ein abonnierter Kalender gehört nicht
+          dazu.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="centered">Zehn Situationen, und wie du sie löst</h2>
+    <p class="lede centered">Der gesperrte Arbeitskalender, zwei Jobs, der Familienkalender, der
+      Bereitschaftsplan, der Schulkalender mit 340 Terminen. Zu jeder Situation steht dort die
+      konkrete Einrichtung &mdash; und was sie nicht abdeckt.</p>
+    <div class="cta centered">
+      <a class="ghost" href="blog/">Zum Blog</a>
+    </div>
+  </section>
+
+  <section>
+    <div class="askwhen">
+      <img src="../img/askwhen-mark.png" width="64" height="64" alt="">
+      <h2>AskWhen.me, wenn man dich fragen soll</h2>
+      <p class="lede">Ein Abonnement, das du in Calendar Mirror einschaltest. Dein Gerät
+        veröffentlicht ein paar Zeiten auf askwhen.me/deineseite; jemand wählt eine aus und fragt;
+        nichts landet in deinem Kalender, bevor du zustimmst. Der Server sieht deinen Kalender nie.</p>
+      <p><a href="askwhen.html">Die ganze Geschichte, auf einer eigenen Seite.</a></p>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="centered">Holen</h2>
+    <p class="lede centered">2,99 €, einmalig. Ein Kauf gilt für iPhone, iPad und Mac. Keine Werbung,
+      keine Accounts, keine Datenerfassung. Es braucht macOS 14 oder iOS 17.</p>
+    <div class="cta centered">
+      <a class="button" href="https://apps.apple.com/de/app/cal-mirror/id6787358036">Im App Store laden</a>
+    </div>
+    <h3 class="centered">Nimm mich nicht beim Wort</h3>
+    <p class="centered">Der Quellcode ist öffentlich und MIT-lizenziert. Lies nach, wie eine Kopie
+      entsteht, prüfe selbst, was dein Gerät verlässt, oder baue die Mac-Version kostenlos:</p>
+<pre>git clone https://github.com/mattbaylor/cal-mirror.git
+cd cal-mirror
+./install.sh</pre>
+    <p class="small centered">Das Repository heißt <code>cal-mirror</code>, die App heißt Calendar
+      Mirror. Gleicher Code, gleiche Engine.</p>
+    <p class="small centered">Diese Seite ist auf Deutsch, die App selbst ist auf Englisch &mdash;
+      die Bildschirmfotos oben zeigen sie so, wie sie läuft.</p>
+    <p class="centered"><a href="vs/">Dreizehn Vergleiche</a>. Jeder Preis auf der
+      Seite des jeweiligen Anbieters geprüft, mit Datum und Link.</p>
+  </section>
+
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="https://apps.apple.com/de/app/cal-mirror/id6787358036">App Store</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <a href="blog/">Blog</a>
+      <a href="vs/">Vergleich</a>
+      <a href="changelog.html">Versionshinweise</a>
+      <a href="privacy.html">Datenschutz</a>
+      <a href="terms.html">AGB</a>
+    </nav>
+    <div>MIT &copy; Matt Baylor</div>
+  </footer>
+
+</div>
+
+<script type="module" src="../demo-home.js?v=20260922a"></script>
+</body>
+</html>

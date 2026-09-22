@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../nav.js?v=20260922d"></script>
+<script src="../platform.js?v=20260922d"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Showing one client only the part of your calendar that concerns them &mdash; Calendar Mirror</title>
+<meta name="description" content="Tag the events that are theirs, mirror just those into a calendar you share, and leave the other ninety percent of your week out of it.">
+<link rel="icon" href="../icon.png">
+<link rel="canonical" href="https://calendarmirror.com/blog/availability-for-one-client.html">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/blog/availability-for-one-client.html">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/blog/availability-for-one-client.html">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/blog/availability-for-one-client.html">
+<meta property="og:title" content="Showing one client only the part of your calendar that concerns them">
+<meta property="og:description" content="Tag the events that are theirs, mirror just those into a calendar you share, and leave the other ninety percent of your week out of it.">
+<meta property="og:image" content="https://calendarmirror.com/icon.png">
+<meta property="og:type" content="article">
+<link rel="preload" href="../fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../site.css?v=20260922d">
+<link rel="stylesheet" href="blog.css?v=20260922a">
+</head>
+<body>
+<cm-nav current="blog"></cm-nav>
+<div class="wrap">
+
+  <article>
+  <h1>Showing one client only the part of your calendar that concerns them</h1>
+  <p class="dateline">5-minute read</p>
+  <p class="lede">You have one calendar, because one calendar is how a life works. But the person
+    asking for your availability only has business with a tenth of it &mdash; and you would rather
+    not hand over the other nine.</p>
+
+  <p>A referee wants an assignor to see which Saturdays are open for matches, not the christening.
+    A contractor wants one client to see the days booked for their project, not the other
+    clients&rsquo; names. A tutor, a photographer, a locum, a translator: same shape every time.
+    Some slice of your week is theirs, and the rest is emphatically not.</p>
+
+  <h2>Tag what is theirs, mirror only that</h2>
+
+  <div class="verdict">
+    <p><strong>Put a tag in the notes of the events that concern them, and give the mirror a rule
+      that copies only tagged events.</strong> Everything else in your calendar stays where it is.
+      The destination is a calendar you share with that one person, and it fills up with exactly
+      the blocks they are entitled to see.</p>
+  </div>
+
+  <h3>The setup</h3>
+  <ol class="steps">
+    <li>Pick a tag. A hash and a word: <code>#ref</code>, <code>#acme</code>,
+      <code>#clinic</code>. Type it into the <b>notes</b> of each event that belongs to that
+      relationship &mdash; not the title.</li>
+    <li>Make a calendar, share it with that person, and pair your main calendar to it.</li>
+    <li>Give the pair a selective-copy rule: <b>include</b>, tag <code>#acme</code>. Only events
+      carrying that tag are copied. No rule at all copies everything, which is not what you want
+      here.</li>
+    <li>Choose the projection. <b>Busy only</b> if they just need to know the day is taken;
+      <b>Copy details</b> if the title is the point.</li>
+  </ol>
+
+  <p>Tags are matched case-insensitively and as whole words, so <code>#ref</code> and
+    <code>#ref-cup</code> are two different tags &mdash; which is how you run several of these side
+    by side. One event can carry several tags, and a second mirror with its own rule picks up its
+    own subset. The tags themselves are stripped from the copies unless you ask to keep them.</p>
+
+  <h3>The other direction: everything except</h3>
+  <p>Sometimes the sensible rule is the inverse. A <b>reject</b> rule copies everything
+    <em>except</em> the events you tagged &mdash; useful when the shared calendar is mostly
+    complete and a handful of things must never appear. And <code>#nomirror</code> in an
+    event&rsquo;s notes keeps a single event out of every mirror at once, including removing a copy
+    it already made.</p>
+
+  <div class="note">
+    <b>The gotcha everyone hits once.</b> The <b>Copy details</b> preset does not copy notes &mdash;
+    so if you also want the tag itself to arrive at the destination, choose <b>Full copy</b>, or
+    the custom setting that sends <i>tags only</i>. That last one puts just the tags in the
+    copy&rsquo;s notes and leaves your actual prose behind, which is usually what you meant.
+  </div>
+
+  <h2>What this doesn&rsquo;t fix</h2>
+  <p>Tags live in the notes of events you can edit, so they only work on your own calendars &mdash;
+    a subscribed feed can&rsquo;t be tagged, and for those you select on the event&rsquo;s own
+    properties instead: all-day, declined, free, duration, a word in the title, or a time-of-day
+    window. And tagging is a habit: an event you forget to tag doesn&rsquo;t cross over. For most
+    people that is the right failure &mdash; silence rather than a leak &mdash; but it is worth
+    knowing which way it fails.</p>
+  </article>
+
+  <div class="cta">
+    <a class="button" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get Calendar Mirror &mdash; $2.99</a>
+    <a class="ghost" href="../">What it does</a>
+  </div>
+  <p class="src">One purchase covers iPhone, iPad and Mac. No accounts, no ads, nothing
+    collected. macOS 14 or iOS 17 and up. The Mac version is also free to
+    <a href="https://github.com/mattbaylor/cal-mirror">build from source</a>.</p>
+
+  <div class="others">
+    <h2>More use cases</h2>
+    <div class="chips">
+      <a class="chip" href="work-calendar-you-cant-share.html">Can&rsquo;t reshare work</a>
+      <a class="chip" href="eight-calendars-one-answer.html">Eight into one</a>
+      <a class="chip" href="two-jobs-one-calendar.html">Two jobs</a>
+      <a class="chip" href="family-calendar-without-the-details.html">Family calendar</a>
+      <a class="chip" href="no-credentials-to-hand-over.html">No credentials</a>
+      <a class="chip" href="on-call-rotas.html">On-call rotas</a>
+      <a class="chip" href="icloud-is-invisible.html">iCloud is invisible</a>
+      <a class="chip" href="noisy-school-feeds.html">Noisy feeds</a>
+      <a class="chip" href="when-you-leave-the-job.html">Leaving the job</a>
+      <a class="chip" href="when-are-you-free.html">When are you free?</a>
+      <a class="chip" href="index.html">All posts</a>
+    </div>
+  </div>
+
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="../">Calendar Mirror</a>
+      <a href="https://apps.apple.com/us/app/cal-mirror/id6787358036">App Store</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <a href="../blog/">Blog</a>
+      <a href="../vs/">Compare</a>
+      <a href="../changelog.html">Release notes</a>
+      <a href="../privacy.html">Privacy</a>
+      <a href="../terms.html">Terms</a>
+    </nav>
+    <div>MIT &copy; Matt Baylor</div>
+  </footer>
+</div>
+</body>
+</html>

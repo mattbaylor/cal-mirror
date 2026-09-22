@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../../nav.js?v=20260922d"></script>
+<script src="../../platform.js?v=20260922d"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bereitschaftspläne, die in einem Feed liegen, der dir nicht gehört &mdash; Calendar Mirror</title>
+<meta name="description" content="Ein veröffentlichter Dienstplan ist ein schreibgeschützter Feed, der veralten kann, ohne es zu sagen. Kopiere ihn in einen eigenen Kalender — und erfahre im Kalender selbst, wenn er stehen bleibt.">
+<link rel="icon" href="../../icon.png">
+<link rel="canonical" href="https://calendarmirror.com/de/blog/on-call-rotas.html">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/blog/on-call-rotas.html">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/blog/on-call-rotas.html">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/blog/on-call-rotas.html">
+<meta property="og:title" content="Bereitschaftspläne, die in einem Feed liegen, der dir nicht gehört">
+<meta property="og:description" content="Ein veröffentlichter Dienstplan ist ein schreibgeschützter Feed, der veralten kann, ohne es zu sagen. Kopiere ihn in einen eigenen Kalender — und erfahre im Kalender selbst, wenn er stehen bleibt.">
+<meta property="og:image" content="https://calendarmirror.com/icon.png">
+<meta property="og:locale" content="de_DE">
+<meta property="og:type" content="article">
+<link rel="preload" href="../../fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../site.css?v=20260918a">
+<link rel="stylesheet" href="../../blog/blog.css?v=20260922d">
+</head>
+<body>
+<cm-nav lang="de" current="blog" langs="en de"></cm-nav>
+<div class="wrap">
+
+  <article>
+  <h1>Bereitschaftspläne, die in einem Feed liegen, der dir nicht gehört</h1>
+  <p class="dateline">4 Minuten Lesezeit</p>
+  <p class="lede">Der Dienstplan wird als Feed veröffentlicht. Du hast ihn abonniert, er ist
+    aufgetaucht, und jetzt ist er ein weiterer schreibgeschützter Kalender, den du nicht weitergeben,
+    nicht kommentieren und von dem du nicht wissen kannst, ob er noch aktualisiert wird.</p>
+
+  <p>PagerDuty und Opsgenie veröffentlichen einen. Ebenso jedes Klinik-Dienstplansystem, die meisten
+    Freiwilligen Feuerwehren, Rettungsdienste, Crew-Systeme von Fluggesellschaften, Schiedsrichter-
+    und Kampfrichteransetzungen und der durchschnittliche Universitätsfachbereich. Der Feed ist die
+    moderne Antwort auf &bdquo;wo ist der Dienstplan&ldquo;, und er hat drei scharfe Kanten.</p>
+
+  <ul class="lose">
+    <li><b>Er ist schreibgeschützt.</b> Du kannst ihn nicht an die Person weitergeben, die wissen
+      muss, in welchen Nächten du Dienst hast, und du kannst neben eine Schicht keine eigene Notiz
+      schreiben.</li>
+    <li><b>Er aktualisiert nach eigenem Rhythmus, lautlos.</b> Nichts sagt dir, dass er aktualisiert
+      hat, und nichts sagt dir, wann er damit aufgehört hat.</li>
+    <li><b>Er kann leise sterben.</b> Eine gewechselte Adresse, ein abgelaufenes Token, eine
+      Systemumstellung &mdash; und der Kalender ändert sich einfach nicht mehr. Er sieht trotzdem
+      gut aus. Das ist der gefährliche Teil: Ein veralteter Dienstplan sieht genauso aus wie ein
+      ruhiger Monat.</li>
+  </ul>
+
+  <h2>Spiegle ihn in etwas, das dir gehört</h2>
+
+  <div class="verdict">
+    <p><strong>Eine Kopie in deinem eigenen Kalender ist eine Kopie, über die du bestimmst.</strong>
+      Du kannst sie mit den Menschen teilen, die um deine Schichten herum planen, du kannst sie so
+      einfärben, dass Bereitschaftswochen sofort auffallen &mdash; und, der Teil, der um drei Uhr
+      nachts zählt: Sie kann dir sagen, wenn sie nicht mehr stimmt.</p>
+  </div>
+
+  <h3>Die Einrichtung</h3>
+  <ol class="steps">
+    <li>Lege in deinem eigenen Account einen Kalender <i>Bereitschaft</i> an und verbinde den
+      Dienstplan-Feed damit.</li>
+    <li>Setze ein Titelpräfix, <code>[Dienst]</code>, damit eine Schicht neben gewöhnlichen Terminen
+      unverwechselbar ist.</li>
+    <li>Lass die Warnung im Kalender eingeschaltet. Geht das Paar kaputt &mdash; der Feed ist weg,
+      der Quellkalender wurde umbenannt &mdash; erscheint im Kalender <i>Bereitschaft</i> eine
+      ganztägige Warnung, und damit auf deinem iPhone, ohne dass du etwas öffnest. Sie verschwindet
+      von selbst, sobald das Paar wieder läuft.</li>
+    <li>Teile den Kalender <i>Bereitschaft</i> mit allen, die danach planen.</li>
+  </ol>
+
+  <p>Tragen dein Dienstplan-Feed und dein normaler Arbeitskalender dieselbe Schicht &mdash; was
+    ständig vorkommt, weil das Dienstplansystem auch in deinen Arbeitsaccount schreibt &mdash;
+    schalte <b>dedupe destinations</b> ein, und der doppelte Block wird übersprungen statt
+    gestapelt.</p>
+
+  <div class="note">
+    <b>Warum unter dem schnellen Weg ein Fünf-Minuten-Durchgang liegt.</b> Auf einem Mac reagiert
+    Calendar Mirror auf Kalenderänderungen, sobald sie passieren. Aber ein abonnierter Feed
+    aktualisiert, ohne es anzukündigen, und Ruhezustand verschluckt Benachrichtigungen ganz &mdash;
+    deshalb läuft mindestens alle fünf Minuten ein vollständiger Durchgang als Rückfallebene. Er ist
+    zugleich der heilende Durchgang: Eine von Hand gelöschte Kopie kommt darüber zurück.
+  </div>
+
+  <h2>Was das nicht löst</h2>
+  <p>Calendar Mirror kopiert, was der Feed sagt. Veröffentlicht das Dienstplansystem eine Schicht
+    spät, ist auch die Kopie spät &mdash; und wie oft der Feed selbst aktualisiert, bestimmt dein
+    Kalender-Account, nicht diese App. Die Teilnehmerliste des Feeds kann sie ebenfalls nicht
+    weitergeben, weil Apple keine Möglichkeit bietet, Teilnehmer an einer Kopie zu setzen. Was sie
+    kann: dafür sorgen, dass du in dem Moment, in dem der Feed nicht mehr ankommt, an der einen
+    Stelle davon erfährst, auf die du garantiert schaust.</p>
+  </article>
+
+  <div class="cta">
+    <a class="button" href="https://apps.apple.com/de/app/cal-mirror/id6787358036">Calendar Mirror holen &mdash; 2,99 &euro;</a>
+    <a class="ghost" href="../">Was die App macht</a>
+  </div>
+  <p class="src">Ein Kauf gilt für iPhone, iPad und Mac. Keine Accounts, keine Werbung, keine
+    Datenerfassung. Ab macOS 14 oder iOS 17. Die Mac-Version lässt sich auch kostenlos
+    <a href="https://github.com/mattbaylor/cal-mirror">aus dem Quellcode bauen</a>.
+    Die App selbst ist auf Englisch.</p>
+
+  <div class="others">
+    <h2>Weitere Anwendungsfälle</h2>
+    <div class="chips">
+      <a class="chip" href="work-calendar-you-cant-share.html">Nicht teilbar</a>
+      <a class="chip" href="eight-calendars-one-answer.html">Acht auf einen</a>
+      <a class="chip" href="two-jobs-one-calendar.html">Zwei Jobs</a>
+      <a class="chip" href="family-calendar-without-the-details.html">Familienkalender</a>
+      <a class="chip" href="no-credentials-to-hand-over.html">Ohne Zugangsdaten</a>
+      <a class="chip" href="availability-for-one-client.html">Ein Kunde</a>
+      <a class="chip" href="icloud-is-invisible.html">iCloud unsichtbar</a>
+      <a class="chip" href="noisy-school-feeds.html">Laute Feeds</a>
+      <a class="chip" href="when-you-leave-the-job.html">Jobwechsel</a>
+      <a class="chip" href="when-are-you-free.html">Wann hast du Zeit?</a>
+      <a class="chip" href="index.html">Alle Beiträge</a>
+    </div>
+  </div>
+
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="../">Calendar Mirror</a>
+      <a href="https://apps.apple.com/de/app/cal-mirror/id6787358036">App Store</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <a href="../blog/">Blog</a>
+      <a href="../vs/">Vergleich</a>
+      <a href="../changelog.html">Versionshinweise</a>
+      <a href="../privacy.html">Datenschutz</a>
+      <a href="../terms.html">AGB</a>
+    </nav>
+    <div>MIT &copy; Matt Baylor</div>
+  </footer>
+</div>
+</body>
+</html>

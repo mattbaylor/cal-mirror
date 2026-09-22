@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../nav.js?v=20260922d"></script>
+<script src="../platform.js?v=20260922d"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your scheduling tool can&rsquo;t see your iCloud calendar &mdash; Calendar Mirror</title>
+<meta name="description" content="Hosted schedulers poll iCloud every five to ten minutes, or not at all. Mirror the iCloud calendar into one they read properly, on your own Mac.">
+<link rel="icon" href="../icon.png">
+<link rel="canonical" href="https://calendarmirror.com/blog/icloud-is-invisible.html">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/blog/icloud-is-invisible.html">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/blog/icloud-is-invisible.html">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/blog/icloud-is-invisible.html">
+<meta property="og:title" content="Your scheduling tool can&rsquo;t see your iCloud calendar">
+<meta property="og:description" content="Hosted schedulers poll iCloud every five to ten minutes, or not at all. Mirror the iCloud calendar into one they read properly, on your own Mac.">
+<meta property="og:image" content="https://calendarmirror.com/icon.png">
+<meta property="og:type" content="article">
+<link rel="preload" href="../fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../site.css?v=20260922d">
+<link rel="stylesheet" href="blog.css?v=20260922a">
+</head>
+<body>
+<cm-nav current="blog"></cm-nav>
+<div class="wrap">
+
+  <article>
+  <h1>Your scheduling tool can&rsquo;t see your iCloud calendar</h1>
+  <p class="dateline">4-minute read</p>
+  <p class="lede">You pay for a scheduling tool. It defends your focus time, or it hands out a
+    booking link, or it merges your calendars into one clean view. And it cannot see the calendar
+    where your actual life is, because your actual life is in iCloud.</p>
+
+  <p>This is not the tools being lazy. Apple gives third parties no push notification for calendar
+    changes, so a hosted service has to poll &mdash; and polling iCloud is slow and rate-limited
+    enough that most vendors publish a five-to-ten minute interval for it, if they support it at
+    all. Several support Google and Microsoft only, and say so on their pricing page.</p>
+
+  <p>The result is an AI scheduler that books over the dentist, a booking page that offers a slot
+    you gave away yesterday, and a unified view that is missing the half you most needed
+    unified.</p>
+
+  <h2>Give the tool a calendar it reads properly</h2>
+
+  <div class="verdict">
+    <p><strong>Mirror the iCloud calendar into a Google or Microsoft calendar on your own Mac, and
+      point the hosted tool at the copy.</strong> Your Mac already has both accounts. It follows the
+      iCloud change soon after it happens and writes the copy into the Google calendar, which the
+      hosted service reads on its fast, real-time path &mdash; because as far as it is concerned, this is
+      simply a Google calendar with events in it.</p>
+  </div>
+
+  <h3>The setup</h3>
+  <ol class="steps">
+    <li>Make sure both accounts are added in the Calendar app on your Mac: your iCloud account and
+      the Google or Microsoft one the scheduler reads.</li>
+    <li>Create an empty calendar in the Google or Microsoft account &mdash; call it <i>Personal
+      (mirrored)</i> &mdash; so the copies never mix with events that account owns.</li>
+    <li>Pair iCloud &rarr; that calendar. Choose <b>Busy only</b> unless the tool genuinely needs
+      titles; it usually doesn&rsquo;t, and this way your dentist stays yours.</li>
+    <li>In the scheduling tool, add that calendar as a source of conflicts &mdash; not as somewhere
+      to book into.</li>
+  </ol>
+
+  <p>This turns the slow half of the pipeline into the fast half. The comparison pages spell out
+    the effect per tool: <a href="../vs/reclaim.html">Reclaim</a> gets a week it otherwise
+    can&rsquo;t defend, <a href="../vs/onecal.html">OneCal</a> and
+    <a href="../vs/calendarbridge.html">CalendarBridge</a> get iCloud events on their real-time
+    path instead of a poll, and <a href="../vs/calendarsync.html">CalendarSync</a> gets an Apple
+    source it has no adapter for at all.</p>
+
+  <div class="note">
+    <b>Bridging adds a hop.</b> Calendar Mirror writes the copy on your device; the other service
+    then reads that copy on its own schedule. The chain is only as fast as its slowest link, and it
+    needs a Mac that is switched on. What it removes is the <em>slowest</em> link.
+  </div>
+
+  <h2>What this doesn&rsquo;t fix</h2>
+  <p>The copy is one-way. If the scheduling tool books a meeting, it books it into the Google
+    calendar, not into iCloud &mdash; so decide which account is the one you actually keep
+    appointments in, and let the other be the mirror. Attendees are never carried across. And if
+    the tool you are paying for supports nothing but Google and Outlook, this makes it usable, not
+    native: you are handing it a faithful shadow of your iCloud week, not iCloud itself.</p>
+  </article>
+
+  <div class="cta">
+    <a class="button" href="https://apps.apple.com/us/app/cal-mirror/id6787358036">Get Calendar Mirror &mdash; $2.99</a>
+    <a class="ghost" href="../">What it does</a>
+  </div>
+  <p class="src">One purchase covers iPhone, iPad and Mac. No accounts, no ads, nothing
+    collected. macOS 14 or iOS 17 and up. The Mac version is also free to
+    <a href="https://github.com/mattbaylor/cal-mirror">build from source</a>.</p>
+
+  <div class="others">
+    <h2>More use cases</h2>
+    <div class="chips">
+      <a class="chip" href="work-calendar-you-cant-share.html">Can&rsquo;t reshare work</a>
+      <a class="chip" href="eight-calendars-one-answer.html">Eight into one</a>
+      <a class="chip" href="two-jobs-one-calendar.html">Two jobs</a>
+      <a class="chip" href="family-calendar-without-the-details.html">Family calendar</a>
+      <a class="chip" href="no-credentials-to-hand-over.html">No credentials</a>
+      <a class="chip" href="on-call-rotas.html">On-call rotas</a>
+      <a class="chip" href="availability-for-one-client.html">One client&rsquo;s view</a>
+      <a class="chip" href="noisy-school-feeds.html">Noisy feeds</a>
+      <a class="chip" href="when-you-leave-the-job.html">Leaving the job</a>
+      <a class="chip" href="when-are-you-free.html">When are you free?</a>
+      <a class="chip" href="index.html">All posts</a>
+    </div>
+  </div>
+
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="../">Calendar Mirror</a>
+      <a href="https://apps.apple.com/us/app/cal-mirror/id6787358036">App Store</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <a href="../blog/">Blog</a>
+      <a href="../vs/">Compare</a>
+      <a href="../changelog.html">Release notes</a>
+      <a href="../privacy.html">Privacy</a>
+      <a href="../terms.html">Terms</a>
+    </nav>
+    <div>MIT &copy; Matt Baylor</div>
+  </footer>
+</div>
+</body>
+</html>

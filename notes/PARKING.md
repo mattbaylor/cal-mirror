@@ -28,10 +28,6 @@ it still applies.
 - **The README has no Shortcuts / Siri section.** The site used to carry it;
   now only the release notes do. Parked 17 Sept 2026.
 
-- **`docs/coming.html` is orphaned.** Nothing links to it since the site stopped
-  saying 2.0 is coming (17 Sept 2026). Delete it, or turn it into a roadmap page
-  and link it from the footer.
-
 - **The changelog's `In review` pill on 2.0** is the one place the site still
   says so, because `watch-review.yml` keys on it to stamp the release date.
   Fine to leave; noted here in case the pill is ever read as marketing.

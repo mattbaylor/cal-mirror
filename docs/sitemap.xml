@@ -1,79 +1,189 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://calendarmirror.com/</loc>
+  </url>
+  <url>
     <loc>https://calendarmirror.com/askwhen.html</loc>
-    <lastmod>2026-09-17</lastmod>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/availability-for-one-client.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/eight-calendars-one-answer.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/family-calendar-without-the-details.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/icloud-is-invisible.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/no-credentials-to-hand-over.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/noisy-school-feeds.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/on-call-rotas.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/two-jobs-one-calendar.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/when-are-you-free.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/when-you-leave-the-job.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/blog/work-calendar-you-cant-share.html</loc>
   </url>
   <url>
     <loc>https://calendarmirror.com/changelog.html</loc>
-    <lastmod>2026-09-17</lastmod>
   </url>
   <url>
-    <loc>https://calendarmirror.com/</loc>
-    <lastmod>2026-09-17</lastmod>
+    <loc>https://calendarmirror.com/de/</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/askwhen.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/availability-for-one-client.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/eight-calendars-one-answer.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/family-calendar-without-the-details.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/icloud-is-invisible.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/no-credentials-to-hand-over.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/noisy-school-feeds.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/on-call-rotas.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/two-jobs-one-calendar.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/when-are-you-free.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/when-you-leave-the-job.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/blog/work-calendar-you-cant-share.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/changelog.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/privacy.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/terms.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/calendarbridge.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/calendarbusysync.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/calendarsync.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/calends.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/calmirror.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/clockwise.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/fantastical.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/localcalendarsync.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/onecal.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/reciprocal.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/reclaim.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/syncdate.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/de/vs/syncthemcalendars.html</loc>
   </url>
   <url>
     <loc>https://calendarmirror.com/privacy.html</loc>
-    <lastmod>2026-09-17</lastmod>
   </url>
   <url>
     <loc>https://calendarmirror.com/terms.html</loc>
-    <lastmod>2026-09-17</lastmod>
-  </url>
-  <url>
-    <loc>https://calendarmirror.com/vs/calendarbridge.html</loc>
-    <lastmod>2026-09-17</lastmod>
-  </url>
-  <url>
-    <loc>https://calendarmirror.com/vs/calendarbusysync.html</loc>
-    <lastmod>2026-09-17</lastmod>
-  </url>
-  <url>
-    <loc>https://calendarmirror.com/vs/calendarsync.html</loc>
-    <lastmod>2026-09-17</lastmod>
-  </url>
-  <url>
-    <loc>https://calendarmirror.com/vs/calends.html</loc>
-    <lastmod>2026-09-17</lastmod>
-  </url>
-  <url>
-    <loc>https://calendarmirror.com/vs/calmirror.html</loc>
-    <lastmod>2026-09-17</lastmod>
-  </url>
-  <url>
-    <loc>https://calendarmirror.com/vs/clockwise.html</loc>
-    <lastmod>2026-09-17</lastmod>
-  </url>
-  <url>
-    <loc>https://calendarmirror.com/vs/fantastical.html</loc>
-    <lastmod>2026-09-17</lastmod>
   </url>
   <url>
     <loc>https://calendarmirror.com/vs/</loc>
-    <lastmod>2026-09-17</lastmod>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/vs/calendarbridge.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/vs/calendarbusysync.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/vs/calendarsync.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/vs/calends.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/vs/calmirror.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/vs/clockwise.html</loc>
+  </url>
+  <url>
+    <loc>https://calendarmirror.com/vs/fantastical.html</loc>
   </url>
   <url>
     <loc>https://calendarmirror.com/vs/localcalendarsync.html</loc>
-    <lastmod>2026-09-17</lastmod>
   </url>
   <url>
     <loc>https://calendarmirror.com/vs/onecal.html</loc>
-    <lastmod>2026-09-17</lastmod>
   </url>
   <url>
     <loc>https://calendarmirror.com/vs/reciprocal.html</loc>
-    <lastmod>2026-09-17</lastmod>
   </url>
   <url>
     <loc>https://calendarmirror.com/vs/reclaim.html</loc>
-    <lastmod>2026-09-17</lastmod>
   </url>
   <url>
     <loc>https://calendarmirror.com/vs/syncdate.html</loc>
-    <lastmod>2026-09-17</lastmod>
   </url>
   <url>
     <loc>https://calendarmirror.com/vs/syncthemcalendars.html</loc>
-    <lastmod>2026-09-17</lastmod>
   </url>
 </urlset>

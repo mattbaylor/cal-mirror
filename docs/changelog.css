@@ -1,0 +1,12 @@
+/* calendarmirror.com/changelog — the release-notes page, in every language
+ * (/changelog.html, /de/changelog.html). */
+
+  h1{font-size:clamp(32px,4.6vw,48px);margin-top:1.5rem}
+  .sub{color:var(--muted);margin:0 0 2rem}
+  .rel{border-top:1px solid var(--rule);padding-top:1.6rem;margin-top:2.2rem}
+  .rel:first-of-type{border-top:0;padding-top:0;margin-top:0}
+  .relhead{display:flex;align-items:baseline;gap:.9rem;flex-wrap:wrap}
+  .relhead h2{margin:0}
+  .date,.tag{font-size:14.5px;color:var(--muted)}
+  .rel h3{font-size:16px;font-weight:550;color:var(--muted);margin:1.3rem 0 .3rem}
+  .note{color:var(--muted);font-size:14.5px;margin-top:1.6rem}
