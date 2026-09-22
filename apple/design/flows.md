@@ -1,7 +1,7 @@
 # The app flows, as built
 
 Written 16 September 2026, from the code — `apple/ios/CalMirror/`,
-`apple/mac/CalMirrorMac/`, `apple/Shared/`, and the standalone `menu.swift` at
+`apple/mac/CalMirrorMac/`, `apple/Shared/`, and the standalone `standalone/menu.swift`
 the repo root — and from the CI frames (`screenshots.yml`) and the App Store
 captures in `appstore/sources/`. Nothing here is a proposal; this is what
 runs. The audit of how it *looks* is `native.md`.
@@ -13,11 +13,11 @@ not the same app:
 |---|---|---|---|
 | iPhone / iPad | `CalMirror.app` | `apple/ios/` + `apple/Shared/` | App Store |
 | Mac, App Store | `CalMirrorMac.app` | `apple/mac/` + `apple/Shared/` | App Store, sandboxed |
-| Mac, standalone | `CalMirrorMenu.app` | `menu.swift` (root) | `./install.sh`, MIT |
+| Mac, standalone | `CalMirrorMenu.app` | `standalone/menu.swift` | `./standalone/install.sh`, MIT |
 
 **The Mac App Store screenshots are of the standalone app.** `genstore.py`
 reads `mac-manage-light.png` for every Mac slot, and that capture shows the
-`NavigationSplitView` sidebar that only `menu.swift` has. `CalMirrorMac`'s
+`NavigationSplitView` sidebar that only `standalone/menu.swift` has. `CalMirrorMac`'s
 window is a single grouped `Form` with the mirrors stacked as sections. A
 buyer of the store app does not get the window in the store listing.
 
@@ -144,7 +144,7 @@ actions.
 
 ---
 
-## Mac, standalone — `CalMirrorMenu` (`menu.swift`)
+## Mac, standalone — `CalMirrorMenu` (`standalone/menu.swift`)
 
 The build-from-source app. Its **Manage Mirrors** window is a
 `NavigationSplitView`: a sidebar listing mirrors grouped by destination
@@ -160,7 +160,7 @@ mirror, Sync now, Pause, Sync interval, Manage mirrors…, Open Calendar, Open
 log, Quit. It has **no request page** — AskWhen.me is App Store only, since
 it is sold through StoreKit.
 
-The standalone engine is `cal-mirror.app` under launchd (`main.swift`, a thin
+The standalone engine is `cal-mirror.app` under launchd (`standalone/main.swift`, a thin
 wrapper over `CalMirrorKit`); the menu app only reads `status.json` and
 writes `config.json`.
 

@@ -2,6 +2,9 @@
 # Build CalMirrorMenu.app (the menu-bar UI) from source, in place.
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The shared engine and the icon live at the repo root; everything else this
+# script touches is beside it in standalone/.
+ROOT="$(cd "$DIR/.." && pwd)"
 APP="$DIR/CalMirrorMenu.app"
 
 echo "==> Compiling menu app"
@@ -12,12 +15,12 @@ echo "==> Compiling menu app"
 # second copy that silently drops any key it doesn't know about — while keeping
 # this app free of EventKit, which it deliberately never touches (it reads
 # calendars.json instead).
-KIT=("$DIR/apple/Shared/MenuBarIcon.swift")
+KIT=("$ROOT/apple/Shared/MenuBarIcon.swift")
 while IFS= read -r f; do
   [ "$(basename "$f")" = "MirrorEngine.swift" ] || KIT+=("$f")
 # Recursive for the same reason build.sh is: Booking/ is pure and belongs in the
 # UI target too, and a non-recursive glob would drop it without saying so.
-done < <(find "$DIR/apple/Sources/CalMirrorKit" -name '*.swift')
+done < <(find "$ROOT/apple/Sources/CalMirrorKit" -name '*.swift')
 # Pin the deployment target explicitly. Left to itself, swiftc infers one from
 # the host OS, and on a beta host that inference has come out a whole major
 # ABOVE both the running system and the SDK -- stamping minos 28.0 into a binary
@@ -33,7 +36,7 @@ cp "$DIR/Info-ui.plist" "$APP/Contents/Info.plist"
 cp /tmp/CalMirrorMenu.bin "$APP/Contents/MacOS/CalMirrorMenu"; chmod +x "$APP/Contents/MacOS/CalMirrorMenu"
 rm -f /tmp/CalMirrorMenu.bin
 mkdir -p "$APP/Contents/Resources"
-[ -f "$DIR/assets/AppIcon.icns" ] && cp "$DIR/assets/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+[ -f "$ROOT/assets/AppIcon.icns" ] && cp "$ROOT/assets/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
 echo "==> Signing"
 SIGN_ID="${CM_SIGN_ID:--}"

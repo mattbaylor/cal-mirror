@@ -38,4 +38,4 @@ echo
 echo "Done. Verify Gatekeeper acceptance:"
 echo "  spctl -a -vvv --type execute \"$DIR/cal-mirror.app\""
 echo "Create the GitHub release:"
-echo "  gh release create $VERSION dist/*-$VERSION.zip -t \"$VERSION\" -n \"Signed & notarized build.\""
+echo "  gh release create $VERSION standalone/dist/*-$VERSION.zip -t \"$VERSION\" -n \"Signed & notarized build.\""

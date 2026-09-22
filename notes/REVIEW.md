@@ -92,7 +92,7 @@ Real, verified, and not yet dealt with. Ordered by what a user would hit.
 
 | # | Defect | Where |
 |---|---|---|
-| U1 | **The Mac App Store screenshots are of the standalone app.** The sidebar in `mac-manage-light.png` is `menu.swift`'s; the store app is a flat `Form`. | `appstore/tools/genstore.py`, `apple/mac/CalMirrorMac/MacUI.swift` |
+| U1 | **The Mac App Store screenshots are of the standalone app.** The sidebar in `mac-manage-light.png` is `standalone/menu.swift`'s; the store app is a flat `Form`. | `appstore/tools/genstore.py`, `apple/mac/CalMirrorMac/MacUI.swift` |
 | U2 | **Two Mac captures were taken with the window inactive** — grey traffic lights and toggles. | `appstore/sources/mac-projection-*.png`, `mac-selection-*.png` |
 | U3 | **Captions inside cards, headers repeating titles, Continue as a row, an explainer that is a document, three button styles on one screen.** The full list is `apple/design/native.md`. | `apple/Shared/RequestPage/` |
 | U4 | **The store Mac app has no sidebar, no toolbar, and no `Settings` scene**; app settings are toggles in the status menu. | `MacUI.swift` |
