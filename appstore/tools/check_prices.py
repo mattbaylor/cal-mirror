@@ -11,7 +11,7 @@ fails loudly on drift. It is read-only: it never edits a page, because the right
 correction is a judgement (a price change may want new wording, not just a new
 number).
 
-    python3 .github/scripts/check_prices.py
+    python3 appstore/tools/check_prices.py
 """
 import json, os, sys, urllib.request
 
@@ -63,7 +63,7 @@ def main():
         print(f"::warning::{a['name']} returned no App Store result — delisted? "
               f"(docs/vs/{a['page']})")
     print("\nUpdate the page wording and then the price in "
-          ".github/scripts/prices.json, and move the checked date.")
+          "appstore/tools/prices.json, and move the checked date.")
     return 1
 
 

@@ -31,7 +31,7 @@ normal account, macOS then pushes it wherever that account syncs.
 
 | | Built from | Runs as |
 |---|---|---|
-| **Standalone macOS** (this README) | `./standalone/install.sh` — free, MIT | A launchd daemon + `CalMirrorMenu.app` in the menu bar |
+| **Standalone macOS** ([`standalone/`](standalone/README.md)) | `./standalone/install.sh` — free, MIT | A launchd daemon + `CalMirrorMenu.app` in the menu bar |
 | **App Store apps** ([`apple/`](apple/README.md)) | Xcode / `release-appstore.sh` — $2.99 universal | Sandboxed apps on iPhone, iPad and Mac; no LaunchAgent |
 
 > **Two names, one product.** The App Store listing is **Calendar Mirror**, and
@@ -43,7 +43,20 @@ normal account, macOS then pushes it wherever that account syncs.
 
 Both run the **same** sync engine, [`CalMirrorKit`](apple/README.md#shared-package--calmirrorkit) —
 `standalone/main.swift` is a thin daemon wrapper around it. Everything below about configuration,
-projection and tags applies to both, since they read the same `config.json` shape.
+projection and tags applies to both, since they read the same `config.json` shape. How to build,
+run and release each product is in its own directory.
+
+### Where things live
+
+| | |
+|---|---|
+| [`standalone/`](standalone/README.md) | The free macOS pair — sources, scripts, LaunchAgents, and how to install and release them |
+| [`apple/`](apple/README.md) | `CalMirrorKit` (the shared engine), the shared SwiftUI, the two App Store shells, and the tools that drive the request-page UI in a simulator |
+| [`appstore/`](appstore/README.md) | The App Store listing: its text, its screenshots, the tools that generate and check them, and the scripts that talk to App Store Connect |
+| [`askwhen/`](askwhen/README.md) | AskWhen.me — the request-page service, its web app, its own infrastructure, and its design record |
+| `docs/` | The marketing website, calendarmirror.com — not documentation |
+| [`infra/`](infra/site/README.md) | How the website and the DC edge are served |
+| [`notes/`](notes/README.md) | Working notes: about *now*, and stale on purpose |
 
 ## 🎯 Features
 
@@ -86,27 +99,6 @@ tagged with a per-mirror marker (`x-calmirror:<id>~<key>`) so its delete-sweep
 only ever touches its own copies. The **UI** is a thin window onto `status.json`
 and an editor for `config.json` — it never touches the calendar itself beyond
 listing them for the pickers.
-
-## 🚀 Install
-
-> Requires macOS 14+ and the Xcode Command Line Tools (`xcode-select --install`).
-
-```sh
-git clone https://github.com/mattbaylor/cal-mirror.git
-cd cal-mirror
-./standalone/install.sh   # builds both apps, installs the LaunchAgents
-```
-
-On first run macOS prompts for **Calendar access** — click **Allow**. The apps are
-ad-hoc signed by default; to keep the grant across rebuilds, sign with your own
-Developer ID:
-
-```sh
-CM_SIGN_ID="Developer ID Application: Your Name (TEAMID)" ./standalone/install.sh
-```
-
-Then configure a pair — either in the menu bar (**Manage mirrors…**) or by editing
-`~/.local/cal-mirror/config.json`.
 
 ## ⚙️ Configure
 
@@ -393,81 +385,14 @@ which is what you want on a shared availability calendar.
 Off by default: it changes what ends up in a calendar, and upgrading should never
 do that on its own. The log says `deduped×N` when it skips anything.
 
-## 🖥️ Menu bar
-
-```
- Calendar Mirror — Last sync 2 min ago
- ────────────────────────────────
- ✓ Work → Personal        ▸  439 events (+0 ~0 −0)
- ────────────────────────────────
- Sync now
- Pause syncing
- Sync interval            ▸  5 / 15 ✓ / 30 / 60 min
- ────────────────────────────────
- Manage mirrors…          (add/edit pairs with calendar pickers)
- Open Calendar · Open log · Quit
-```
-
-Icon = worst mirror: ✓ ok · ⚠︎ stale (last run > 2× interval) · ✗ error · ⏸ paused.
-
-**If the icon is clipped off the menu bar** (a narrow display plus many extras),
-the management window is still reachable — the icon is not the only way in:
-
-```bash
-open -a CalMirrorMenu
-```
-
-That reopens the running app straight to **Manage Mirrors**. Only if the app is
-*not* already running does the flag form matter (`open -a CalMirrorMenu --args
---manage`); LaunchServices drops `--args` for an app that is already up, and the
-LaunchAgent keeps this one up.
-
-## 🛠️ Commands
-
-| Command | Does |
-|---------|------|
-| `./standalone/install.sh` | Build both apps, (re)load the LaunchAgents |
-| `./standalone/run.sh` | Sync now (kickstarts the engine) |
-| `./standalone/run.sh --list` | List every Mac calendar (title + account) to the log |
-| `./standalone/run.sh --purge` | Remove **all** mirror-tagged events from configured destinations |
-| `open -a CalMirrorMenu` | Open **Manage Mirrors** without the menu-bar icon |
-| `./release-appstore.sh` | Build + validate the App Store artifacts (see Releases) |
-| `./standalone/uninstall.sh` | Unload the LaunchAgents (keeps apps + events) |
-| `tail -f ~/.local/cal-mirror/mirror.log` | Watch the engine log |
-
-## 🔐 Permissions & signing
-
-- The engine needs **Calendar** access (read + write); the UI needs read (for the pickers). Each is a one-time macOS prompt.
-- On recent macOS a CLI binary can't obtain a Calendar prompt — that's why each tool ships as a tiny signed `.app` bundle.
-- A stable code-signing identity ties the grant to the app so it **survives rebuilds**. Ad-hoc signatures change every build and re-prompt; set `CM_SIGN_ID` to a Developer ID to avoid that.
-- **TCC tip:** if a prompt won't appear, macOS has muted it (usually from rapid repeat requests). Reset with `killall tccd; tccutil reset Calendar <bundle-id>`, unload the agents, then launch **one** instance via `open`. Verify via a scheduled (launchd) run — a direct shell exec is attributed to the shell and shows a false “denied”.
-
 ## 📦 Releases (maintainers)
 
 Two products, two paths. Both live at the same version — bump
 `standalone/Info.plist` + `standalone/Info-ui.plist` and both `apple/*/project.yml`
 (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`) together.
 
-### Standalone — Developer ID + notarize
-
-Signed **and notarized** builds pass Gatekeeper with no warning. One-time, store
-a notary credential (an [app-specific password](https://support.apple.com/en-us/102654)):
-
-```sh
-xcrun notarytool store-credentials cal-mirror-notary \
-  --apple-id "you@example.com" --team-id "YOURTEAMID" --password "xxxx-xxxx-xxxx-xxxx"
-```
-
-Then build → notarize → staple → package, and publish:
-
-```sh
-CM_SIGN_ID="Developer ID Application: Your Name (TEAMID)" ./standalone/release.sh v1.3.0
-gh release create v1.3.0 dist/*-v1.3.0.zip -t v1.3.0 -n "Signed & notarized build."
-```
-
-`standalone/release.sh` signs with hardened runtime + secure timestamp, submits each app to
-Apple, staples the ticket, and drops zips in `./dist`. Note it uses its version
-argument only for the zip filenames and the tag — it never touches the plists.
+The standalone side — Developer ID, notarize, staple, publish — is in
+[`standalone/README.md`](standalone/README.md#-releasing). This is the App Store side.
 
 ### App Store — build in CI, not locally
 
@@ -498,31 +423,6 @@ API key (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`).
 
 Note that `altool --validate-app` returns *VERIFY SUCCEEDED* on binaries Apple
 later rejects, so a clean validate is necessary, not sufficient.
-
-## 🧑‍💻 Development
-
-The standalone apps are two `swiftc` targets; the shared engine is a Swift package.
-
-| Path | What |
-|------|------|
-| `standalone/` | The free macOS pair: `main.swift`, `menu.swift`, the build and install scripts, and the LaunchAgent templates |
-| `apple/Sources/CalMirrorKit/` | The engine both products share — config, projection, tags, reconciler |
-| `apple/Sources/cmk-check/` | Pure-logic self-check; gates CI, needs no Xcode |
-| `apple/Shared/` | SwiftUI shared by the iOS and macOS App Store apps |
-| `apple/{ios,mac}/` | The two App Store shells — see [`apple/README.md`](apple/README.md) |
-
-`standalone/build.sh` / `standalone/build-ui.sh` compile, bundle, and sign the
-pair — `build.sh` compiles `standalone/main.swift` **together with**
-`CalMirrorKit`, so there is one engine implementation, not two. Each script
-resolves the repository root from its own location, so they run from anywhere.
-LaunchAgent templates live in `standalone/launchd/`; `install.sh` fills in paths
-at install time.
-
-Run the self-check before pushing — CI runs exactly this:
-
-```sh
-cd apple && swift run cmk-check
-```
 
 ## 📄 License
 

@@ -144,7 +144,7 @@ from `REVIEW_NOTES` in `genmeta.py`. The sandbox tester is not in them: `asc_app
 puts it in the review details' demo-account fields from the `ASC_DEMO_USER` /
 `ASC_DEMO_PASS` repository secrets, so it is never in the repository.
 
-**The Mac captures come from `apple/tools/shoot-mac.sh`** (16 Sept 2026 on).
+**The Mac captures come from `appstore/tools/shoot-mac.sh`** (16 Sept 2026 on).
 It builds the App Store app and launches it under `-CalMirrorFixture`, a
 debug-only mode in which the store app never asks EventKit — the calendars,
 mirrors and statuses are the invented set in `apple/Shared/MacFixture.swift`,
