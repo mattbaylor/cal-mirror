@@ -65,7 +65,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-        run: python3 .github/scripts/check_review.py
+        run: python3 appstore/tools/check_review.py
 
       - name: Commit to main (needs CM_RELEASE_TOKEN)
         if: steps.check.outputs.released == 'true' && steps.cfg.outputs.has_token == 'true'

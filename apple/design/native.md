@@ -210,7 +210,7 @@ Three things about the screenshots make the app look worse than it is:
 The order that changes the most for the least. **All six landed 16
 September** — 1–4 in the native pass (`decisions.md`, *The native pass, as
 built*), 5 and 6 as the Mac store app's sidebar, toolbar and Settings scene.
-The Mac captures are re-shot by `apple/tools/shoot-mac.sh` from the store
+The Mac captures are re-shot by `appstore/tools/shoot-mac.sh` from the store
 app, from the key window, from a synthetic Mac that never asks EventKit
 (`Shared/MacFixture.swift`).
 

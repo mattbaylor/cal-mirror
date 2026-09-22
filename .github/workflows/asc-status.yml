@@ -26,4 +26,4 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           CM_VERSION: ${{ inputs.version }}
-        run: python3 .github/scripts/asc_status.py
+        run: python3 appstore/tools/asc_status.py

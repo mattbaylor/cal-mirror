@@ -51,4 +51,4 @@ jobs:
           CM_DEMO_PASS: ${{ secrets.ASC_DEMO_PASS }}
           CM_APPLY: ${{ inputs.apply && '1' || '0' }}
           CM_SUBMIT: ${{ inputs.submit && '1' || '0' }}
-        run: python3 .github/scripts/asc_apply.py
+        run: python3 appstore/tools/asc_apply.py

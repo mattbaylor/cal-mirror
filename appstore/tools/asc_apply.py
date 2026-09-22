@@ -11,8 +11,8 @@ submits for review.
 Everything is idempotent and everything is checked before it is written: a field
 that already matches is skipped and says so, so a second run is quiet and safe.
 
-    CM_VERSION=1.4.1 CM_BUILD=10 python3 .github/scripts/asc_apply.py            # plan only
-    CM_VERSION=1.4.1 CM_BUILD=10 CM_APPLY=1 python3 .github/scripts/asc_apply.py # write
+    CM_VERSION=1.4.1 CM_BUILD=10 python3 appstore/tools/asc_apply.py            # plan only
+    CM_VERSION=1.4.1 CM_BUILD=10 CM_APPLY=1 python3 appstore/tools/asc_apply.py # write
     ... CM_APPLY=1 CM_SUBMIT=1 ...                                               # and submit
 """
 import base64, hashlib, json, os, sys, time, urllib.request, urllib.error

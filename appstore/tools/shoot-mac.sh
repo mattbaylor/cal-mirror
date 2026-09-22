@@ -1,7 +1,7 @@
 #!/bin/bash
 # Photograph the App Store Mac app's windows from a synthetic Mac.
 #
-#   ./apple/tools/shoot-mac.sh [out dir]
+#   ./appstore/tools/shoot-mac.sh [out dir]
 #
 # Builds CalMirrorMac (Debug), then launches it under -CalMirrorFixture so
 # EventKit is never asked and nothing is saved (see Shared/MacFixture.swift),
@@ -32,7 +32,7 @@ shot() {                    # shot <name> <args...>
   local id=""
   for _ in $(seq 1 40); do
     sleep 0.5
-    id=$(swift "$DIR/apple/tools/window-id.swift" "Calendar Mirror" "Manage Mirrors" 2>/dev/null || true)
+    id=$(swift "$DIR/appstore/tools/window-id.swift" "Calendar Mirror" "Manage Mirrors" 2>/dev/null || true)
     [ -n "$id" ] && break
   done
   [ -n "$id" ] || { echo "no window for $name"; kill $pid; return 1; }

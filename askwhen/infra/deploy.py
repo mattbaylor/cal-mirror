@@ -11,7 +11,7 @@ It cannot touch DNS either. Every record in dns.md is created by hand, once, by
 someone reading what they are typing.
 
 Plans by default and writes nothing. `--apply` is the only thing that acts, the
-same posture as .github/scripts/asc_apply.py, and for the same reason: a step
+same posture as appstore/tools/asc_apply.py, and for the same reason: a step
 that already matches is skipped and says so, so a second run is quiet and safe.
 
     python3 infra/deploy.py                 # plan every step, write nothing

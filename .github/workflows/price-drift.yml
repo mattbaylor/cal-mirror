@@ -20,4 +20,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: python3 .github/scripts/check_prices.py
+      - run: python3 appstore/tools/check_prices.py

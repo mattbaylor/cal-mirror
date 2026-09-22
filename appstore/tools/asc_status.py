@@ -4,7 +4,7 @@
 Read-only. Nothing here creates, changes or submits anything — it exists so a
 release can be checked before it is touched, rather than after.
 
-    CM_VERSION=1.4.1 python3 .github/scripts/asc_status.py
+    CM_VERSION=1.4.1 python3 appstore/tools/asc_status.py
 """
 import base64, json, os, sys, time, urllib.request, urllib.error
 from cryptography.hazmat.primitives import serialization, hashes
