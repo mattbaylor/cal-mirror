@@ -40,7 +40,7 @@ public enum AcceptOutcome: Equatable, Sendable {
 /// What the coordinator needs from a calendar, and all it may see of one.
 /// `MirrorEngine` conforms; this protocol exists so the coordinator stays
 /// EventKit-free and builds into the menu-bar app with the rest of the pure
-/// Kit (see build-ui.sh, which compiles everything but `MirrorEngine.swift`).
+/// Kit (see standalone/build-ui.sh, which compiles everything but `MirrorEngine.swift`).
 public protocol CalendarAccess: AnyObject {
     func busyIntervals(in calendars: [CalRef], from: Date, to: Date) -> [BusyInterval]
     func writeAcceptedEvent(requestID: String, title: String, location: String?, notes: String?,

@@ -4,6 +4,9 @@
 # rebuilds; otherwise the app is ad-hoc signed (re-approve access after builds).
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The shared engine and the icon live at the repo root; everything else this
+# script touches is beside it in standalone/.
+ROOT="$(cd "$DIR/.." && pwd)"
 APP="$DIR/cal-mirror.app"
 
 echo "==> Compiling engine"
@@ -14,7 +17,7 @@ echo "==> Compiling engine"
 # of it. Nothing referenced it yet, so it would have surfaced as a link error
 # later rather than here.
 KIT=()
-while IFS= read -r f; do KIT+=("$f"); done < <(find "$DIR/apple/Sources/CalMirrorKit" -name '*.swift')
+while IFS= read -r f; do KIT+=("$f"); done < <(find "$ROOT/apple/Sources/CalMirrorKit" -name '*.swift')
 # Pin the deployment target explicitly. Left to itself, swiftc infers one from
 # the host OS, and on a beta host that inference has come out a whole major
 # ABOVE both the running system and the SDK -- stamping minos 28.0 into a binary
@@ -30,7 +33,7 @@ cp "$DIR/Info.plist" "$APP/Contents/Info.plist"
 cp /tmp/cal-mirror.bin "$APP/Contents/MacOS/cal-mirror"; chmod +x "$APP/Contents/MacOS/cal-mirror"
 rm -f /tmp/cal-mirror.bin
 mkdir -p "$APP/Contents/Resources"
-[ -f "$DIR/assets/AppIcon.icns" ] && cp "$DIR/assets/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+[ -f "$ROOT/assets/AppIcon.icns" ] && cp "$ROOT/assets/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
 echo "==> Signing"
 SIGN_ID="${CM_SIGN_ID:--}"

@@ -156,7 +156,7 @@ a sheet and not a full screen.
 The window the buyer actually gets is the plainest of the three and has no
 capture in the listing. In order:
 
-1. **Give it the sidebar.** Move `menu.swift`'s `NavigationSplitView` into
+1. **Give it the sidebar.** Move `standalone/menu.swift`'s `NavigationSplitView` into
    `Shared/` and use it from both Mac apps: mirrors grouped by destination
    on the left, the selected mirror's editor on the right. The store app
    then matches its own screenshots.
