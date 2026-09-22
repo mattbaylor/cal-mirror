@@ -130,10 +130,12 @@ struct RequestOfferView: View {
                 }
             }
 
-            // Shown, never sold here. decisions.md: the offer screen sells the
-            // Request Page trial, and these two are upgrades the owner meets
-            // when they want one — a nicer address is worth nothing before
-            // there is a page at it.
+            // The Request Page trial stays the one prominent action
+            // (decisions.md), but these two are buyable here as well, not only
+            // from the address screen after a page exists. App Review rejected
+            // 2.0 under 2.1(b) because it could not find them in the binary: a
+            // product that can only be bought once another has been bought and
+            // a server has answered is, to a reviewer, not there.
             Section {
                 ForEach(offers.filter { $0.tier != .page }, id: \.tier) { offer in
                     VStack(alignment: .leading, spacing: 3) {
@@ -145,6 +147,8 @@ struct RequestOfferView: View {
                         Text(offer.description).font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    Button(RequestCopy.Offer.buyWithoutTrial) { Task { await buy(offer.tier) } }
+                        .accessibilityLabel("\(RequestCopy.Offer.buyWithoutTrial), \(offer.displayName)")
                 }
             } header: {
                 Text(RequestCopy.Offer.upgradesHeading)

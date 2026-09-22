@@ -13,13 +13,27 @@ a separate product turned on from inside the app; until the owner turns it
 on, the app makes no network request of any kind — the first request of the
 app's life is StoreKit loading the price, on the screen that shows it.
 
-How to reach it: the "Request page" row → Continue on the sheet → the app
-infers calendars and shows a preview of the owner's own week → "See what it
-costs" → the offer. Products: me.askwhen.page.annual ($19.99/yr, 3-month
-free introductory offer), me.askwhen.subdomain.annual ($34.99/yr) and
-me.askwhen.domain.annual ($69.99/yr); the offer screen sells the first, the
-other two are upgrades on the address screen. "Restore Purchases" is on the
-offer screen.
+WHERE THE IN-APP PURCHASES ARE. All three subscriptions are bought on one
+screen, reached like this from a fresh install:
+  1. Open the app; allow Calendar access (Full Access) when asked.
+  2. On the main list, scroll to the "Request page" row and tap it.
+  3. Tap Continue on the sheet that explains AskWhen.me.
+  4. "What people see": type any name in the Name field at the top (the
+     page needs one), then tap "See what it costs" at the bottom.
+  5. The offer screen loads the three products from the App Store:
+     - AskWhen.me Request Page, me.askwhen.page.annual, $19.99/yr with a
+       3-month free trial — "Start the free trial"
+     - AskWhen.me Custom Subdomain, me.askwhen.subdomain.annual, $34.99/yr
+       — "Subscribe" under it
+     - AskWhen.me Custom Domain, me.askwhen.domain.annual, $69.99/yr
+       — "Subscribe" under it
+     "Restore Purchases" is at the bottom of the same screen.
+Once a page exists, the two higher tiers are also offered as upgrades on
+that page's screen, under "Your own name on AskWhen.me" and "A domain you
+own". On the Mac the same row is last in the window's sidebar, under
+"AskWhen.me", and the steps are the same inside the sheet it opens. All
+three are in one subscription group, so buying a higher tier after a lower
+one is an upgrade, prorated by Apple.
 
 SANDBOX TESTER: in the demo-account fields of this submission. Sign into it
 under Settings › App Store › Sandbox Account on the test device before
