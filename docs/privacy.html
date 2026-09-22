@@ -172,7 +172,9 @@
      cannot reach the service behind it, or a connection fails before it becomes a request, it
      records what happened &mdash; and such an entry can contain the address the request came from
      and the path it asked for. Those entries are read when something is broken, are never
-     analysed, counted or joined to anything else, and are discarded when the proxy is rebuilt.</p>
+     analysed, counted or joined to anything else, and are never kept for long: they go into a
+     small log that rotates as it fills, and what is left of it is discarded whenever the proxy is
+     rebuilt.</p>
 
   <h2>This website</h2>
   <p>calendarmirror.com uses a self-hosted, cookieless page counter on our own
