@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../../nav.js?v=20260922d"></script>
+<script src="../../platform.js?v=20260922a"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar Mirror vs CalendarSync &mdash; Calendar Mirror</title>
+<meta name="description" content="Calendar Mirror im Vergleich mit inovex/CalendarSync — quelloffenes Go-CLI, kein Server, aber nur Google und Outlook.">
+<link rel="icon" href="../../icon.png">
+<link rel="canonical" href="https://calendarmirror.com/de/vs/calendarsync.html">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/vs/calendarsync.html">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/vs/calendarsync.html">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/vs/calendarsync.html">
+<meta property="og:title" content="Calendar Mirror vs CalendarSync">
+<meta property="og:description" content="Calendar Mirror im Vergleich mit inovex/CalendarSync — quelloffenes Go-CLI, kein Server, aber nur Google und Outlook.">
+<meta property="og:locale" content="de_DE">
+<meta property="og:type" content="article">
+<link rel="preload" href="../../fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../site.css?v=20260918a">
+<link rel="stylesheet" href="../../vs/vs.css?v=20260922a">
+</head>
+<body>
+<cm-nav lang="de" current="compare"></cm-nav>
+<div class="wrap">
+
+  <h1>Calendar Mirror vs inovex/CalendarSync</h1>
+  <p class="dateline">Verglichen im August 2026. Jeder Preis und jede Angabe unten wurde am
+    17. September 2026 auf der eigenen Seite von inovex/CalendarSync geprüft. Das ändert sich
+    &mdash; sieh auf der <a href="https://github.com/inovex/CalendarSync">Seite von
+    inovex/CalendarSync</a> nach, bevor du entscheidest.</p>
+
+  <p class="lede">Ein kostenloses, quelloffenes Go-CLI, das deine Kalenderdaten von fremden Servern
+    fernhält.</p>
+
+  <div class="verdict">
+    <p><strong>CalendarSync hält deine Kalenderdaten von fremden Servern fern</strong> &mdash; wie
+      die hier verglichenen Apple-Apps, die auf dem Gerät laufen. Ungewöhnlich in dieser Gruppe ist,
+      dass es ein zustandsloses, MIT-lizenziertes Go-CLI ist: Du schreibst eine
+      <code>sync.yaml</code>, startest das Programm, und es läuft überall dort, wo Go läuft.</p>
+    <p><strong>Die Trennlinie heißt Apple.</strong> CalendarSyncs Adapter sind Google, Outlook und
+      ZEP als Quellen sowie Google und Outlook als Ziele. Es gibt keinen iCloud- und keinen
+      CalDAV-Adapter. Ist der Kalender, den du spiegeln willst, ein iCloud-Kalender oder ein
+      abonnierter ICS-Feed, kommt CalendarSync nicht heran &mdash; und Calendar Mirror ist für
+      nichts anderes gebaut.</p>
+  </div>
+
+  <h2>Nebeneinander</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>Calendar Mirror</th><th>inovex/CalendarSync</th></tr></thead>
+    <tbody>
+      <tr><td>Preis</td><td>2,99 € einmalig, oder kostenlos aus dem Quellcode</td><td>Kostenlos</td></tr>
+      <tr><td>Lizenz</td><td>MIT</td><td>MIT</td></tr>
+      <tr><td>Wohin dein Kalender geht</td><td>Nirgendwohin. Er verlässt das Gerät nie.</td><td>Nirgendwohin &mdash; es läuft lokal</td></tr>
+      <tr><td>Zugangsdaten</td><td>Keine &mdash; es liest Kalender, die das System schon eingerichtet hat</td><td>OAuth-Tokens für Google / Microsoft, lokal gehalten</td></tr>
+      <tr><td>Quellen</td><td>Alles, was das Gerät sehen kann &mdash; iCloud, Google, Exchange, CalDAV, abonnierte ICS-Feeds</td><td>Google, Outlook, ZEP</td></tr>
+      <tr><td>Ziele</td><td>Jeder Kalender, in den das Gerät schreiben kann</td><td>Google, Outlook</td></tr>
+      <tr><td>Apple / iCloud</td><td>Ja &mdash; das ist der Sinn</td><td>Kein Adapter</td></tr>
+      <tr><td>Oberfläche</td><td>Menüleisten-App auf dem Mac, normale App auf iPhone und iPad</td><td>Kommandozeile, konfiguriert in <code>sync.yaml</code></td></tr>
+      <tr><td>Zeitplanung</td><td>Eingebaut &mdash; ein Hintergrunddienst unter macOS, oder Echtzeit</td><td>Nicht eingebaut; nimm cron oder einen Timer</td></tr>
+      <tr><td>Titelpräfix</td><td>Ja</td><td>Ja &mdash; der <code>PrefixTitle</code>-Transformer</td></tr>
+      <tr><td>Filter</td><td>Abgelehnt, unbeantwortet, abgesagt, ganztägig, frei, Dauergrenzen, Titel, Tageszeit- und Wochentagsfenster</td><td>Abgelehnte Termine, ganztägig, zeitbasiert, Titel per regulärem Ausdruck</td></tr>
+      <tr><td>Dauerfilter</td><td>Ja</td><td>Nicht veröffentlicht</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Was wofür passt</h2>
+  <div class="cols">
+    <div class="col">
+      <h3>Wo Calendar Mirror die bessere Wahl ist</h3>
+      <ul class="win">
+        <li>Es arbeitet mit Apple-Kalendern &mdash; iCloud, Exchange über EventKit und abonnierte ICS-Feeds &mdash; nichts davon unterstützt CalendarSync.</li>
+        <li>Überhaupt keine Zugangsdaten. CalendarSync hält deine Daten lokal, braucht aber OAuth-Tokens für Google und Microsoft; Calendar Mirror braucht keine, weil macOS die Accounts bereits hält.</li>
+        <li>Es läuft von selbst. Es gibt eine Menüleisten-App, einen Zeitplan und einen Echtzeitmodus statt eines Programms, an dessen cron-Eintrag man denken muss.</li>
+        <li>Eine Oberfläche, für die Menschen in deinem Leben, die keine YAML-Datei bearbeiten werden.</li>
+        <li>Es warnt im Kalender selbst, wenn ein Spiegel stehen bleibt.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3>Wo inovex/CalendarSync die bessere Wahl ist</h3>
+      <ul class="lose">
+        <li>Kostenlos &mdash; überhaupt kein Kauf.</li>
+        <li>Läuft unter Linux und Windows, auf einem Server, in CI, überall dort, wo Go läuft. Calendar Mirror läuft nur auf Apple-Geräten.</li>
+        <li>Google-zu-Google und Outlook-zu-Outlook ohne ein Apple-Gerät in der Kette.</li>
+        <li>Eine deklarative Konfigurationsdatei, die sich gut versionieren und prüfen lässt.</li>
+        <li>ZEP als Quelle, von der Calendar Mirror nichts weiß.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Beides zusammen nutzen</h2>
+  <div class="verdict">
+    <h3 style="margin-top:0">Gib CalendarSync eine Apple-Quelle</h3>
+    <p>CalendarSyncs Adapter sind Google, Outlook und ZEP. Einen iCloud-Adapter gibt es nicht, ein
+      iCloud-Kalender ist damit schlicht außer Reichweite.</p>
+    <p><b>Calendar Mirror kann der fehlende Adapter sein.</b> Spiegle den iCloud-Kalender auf deinem
+      Mac in einen Google- oder Outlook-Kalender, und CalendarSync behandelt ihn von da an als
+      gewöhnliche Quelle. Du behältst die YAML-Konfiguration und die linuxfreundliche Zeitplanung
+      und bekommst Apple-Kalender hinein, ohne auf einen Adapter zu warten, der vielleicht nie
+      geschrieben wird.</p>
+    <p class="src">Eine Brücke fügt einen Sprung hinzu: Calendar Mirror schreibt die Kopie auf
+      deinem Gerät, und der andere Dienst liest diese Kopie nach seinem eigenen Rhythmus. Der
+      Zielaccount muss auf deinem Mac oder iPhone eingerichtet sein, und die Kopie läuft in eine
+      Richtung, wie jeder Spiegel.</p>
+  </div>
+
+  <h2>Was Calendar Mirror in keiner Stufe tut</h2>
+  <p>Nichts davon kommt noch zu Calendar Mirror. Wenn du eines davon brauchst, kauf etwas anderes
+    &mdash; mit einer Ausnahme, und die kommt zuerst:</p>
+  <ul class="lose">
+    <li><b>Keine Buchungslinks &mdash; mit Absicht.</b> Nichts schreibt aus einem Webformular in
+      deinen Kalender. <b>AskWhen.me</b>, ein eigenes Abo, das du in Calendar Mirror einschaltest,
+      liefert stattdessen eine <em>Anfrageseite</em>: Jemand wählt eine Zeit, du nimmst an oder
+      lehnst ab, und nichts landet, bevor du das tust.
+      <a href="../askwhen.html">Wie es funktioniert</a>.</li>
+    <li><b>Keine zusammengeführte Kalenderansicht.</b> Calendar Mirror macht Kopien; deine
+      Kalender-App zeigt sie an.</li>
+    <li><b>Keine Team-, Admin- oder SSO-Funktionen.</b> Es ist ein Werkzeug für eine Person.</li>
+    <li><b>Nur Apple.</b> Kein Windows, kein Android, kein Web.</li>
+    <li><b>Teilnehmer werden nicht übernommen.</b> Apples EventKit bietet keine Schnittstelle, um
+      Teilnehmer an einem Termin zu setzen; eine Kopie trägt also die Zeit und was du sonst
+      erlaubst, aber nie die Gästeliste.</li>
+  </ul>
+
+  <div class="cta">
+    <a class="button" href="https://apps.apple.com/de/app/cal-mirror/id6787358036">Calendar Mirror holen &mdash; 2,99 &euro;</a>
+    <a class="ghost" href="https://github.com/inovex/CalendarSync">CalendarSync besuchen</a>
+  </div>
+  <p class="src">Ein Kauf gilt für iPhone, iPad und Mac. Calendar Mirror ist in keiner Weise mit
+    CalendarSync verbunden, und diese Seite ist vom Autor von Calendar Mirror geschrieben.</p>
+
+  <h2>Quellen</h2>
+  <ul class="src">
+      <li><a href="https://github.com/inovex/CalendarSync">inovex/CalendarSync auf GitHub</a></li>
+  </ul>
+
+  <div class="others">
+    <h2>Mit den anderen vergleichen</h2>
+    <div class="chips">
+      <a class="chip" href="fantastical.html">vs Fantastical</a>
+      <a class="chip" href="localcalendarsync.html">vs Local Calendar Sync</a>
+      <a class="chip" href="reciprocal.html">vs ReciproCal Sync</a>
+      <a class="chip" href="calends.html">vs Calends</a>
+      <a class="chip" href="calendarbusysync.html">vs Calendar Busy Sync</a>
+      <a class="chip" href="calmirror.html">vs CalMirror</a>
+      <a class="chip" href="syncdate.html">vs SYNCDATE</a>
+      <a class="chip" href="onecal.html">vs OneCal</a>
+      <a class="chip" href="calendarbridge.html">vs CalendarBridge</a>
+      <a class="chip" href="syncthemcalendars.html">vs SyncThemCalendars</a>
+      <a class="chip here" aria-current="page" href="calendarsync.html">vs CalendarSync</a>
+      <a class="chip" href="reclaim.html">vs Reclaim.ai</a>
+      <a class="chip" href="clockwise.html">vs Clockwise</a>
+      <a class="chip" href="index.html">Alle Vergleiche</a>
+    </div>
+  </div>
+
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="../">Calendar Mirror</a>
+      <a href="https://apps.apple.com/de/app/cal-mirror/id6787358036">App Store</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <a href="../blog/">Blog</a>
+      <a href="../vs/">Vergleich</a>
+      <a href="../changelog.html">Versionshinweise</a>
+      <a href="../privacy.html">Datenschutz</a>
+      <a href="../terms.html">Nutzungsbedingungen</a>
+    </nav>
+    <div>MIT &copy; Matt Baylor</div>
+  </footer>
+</div>
+</body>
+</html>

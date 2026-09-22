@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AskWhen.me &mdash; eine Anfrageseite, deren Server deinen Kalender nie sieht</title>
+<meta name="description" content="AskWhen.me ist eine Seite, auf der Menschen dich nach einer Zeit fragen können. Dein Gerät wählt die Zeiten, der Server sieht deinen Kalender nie, und nichts landet im Kalender, bevor du zustimmst. Ein Abo, das du in Calendar Mirror einschaltest.">
+<link rel="preload" href="../fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../site.css?v=20260918a">
+<link rel="stylesheet" href="../askwhen.css?v=20260922a">
+<link rel="icon" href="../img/askwhen-mark.png">
+<link rel="canonical" href="https://calendarmirror.com/de/askwhen.html">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/askwhen.html">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/askwhen.html">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/askwhen.html">
+<meta property="og:title" content="AskWhen.me">
+<meta property="og:description" content="Eine Seite, auf der Menschen dich nach einer Zeit fragen können. Dein Gerät wählt die Zeiten, der Server sieht deinen Kalender nie, und nichts landet, bevor du zustimmst.">
+<meta property="og:image" content="https://calendarmirror.com/img/askwhen-mark.png">
+<meta property="og:locale" content="de_DE">
+<meta property="og:type" content="website">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../nav.js?v=20260922d"></script>
+<script src="../platform.js?v=20260922a"></script>
+</head>
+<body>
+<cm-nav lang="de" current="askwhen" ></cm-nav>
+<div class="wrap">
+
+  <header class="hero wide">
+    <img class="mark" src="../img/askwhen-mark.png" width="72" height="72" alt="">
+    <h1>Eine Seite, auf der Menschen dich nach einer Zeit fragen können.</h1>
+    <p class="lede">Dein Gerät weiß längst, wann du frei bist. AskWhen.me lässt es antworten: eine
+      Seite unter askwhen.me/deineseite, auf der jemand eine Zeit auswählt und fragt &mdash; von
+      einem Server, der deinen Kalender nie sieht.</p>
+    <div class="cta centered">
+      <a class="button" href="https://apps.apple.com/de/app/cal-mirror/id6787358036">Calendar Mirror holen, 2,99 &euro;</a>
+      <p class="small">AskWhen.me ist ein Abo darin: 90 Tage kostenlos, danach 19,99 $ im Jahr.</p>
+    </div>
+  </header>
+
+  <div class="field wide">
+    <div class="demo" id="demo">
+      <div class="side">
+        <div class="who">Danas Gerät</div>
+        <div class="frame" id="frame-a">
+          <div class="notch ios-only"></div>
+          <div class="titlebar mac-only"><div class="lights"><i></i><i></i><i></i></div><span>Calendar Mirror</span></div>
+          <div class="screen">
+            <div class="body">
+              <div class="day" id="device"></div>
+              <div class="request hidden" id="request">
+                <b>Alex Rivera fragt nach 14:00&nbsp;Uhr</b>
+                <span>&bdquo;Kaffee wegen des Antrags?&ldquo; Dienstag um 14 Uhr ist noch frei.</span>
+                <div class="acts"><span class="yes">Annehmen</span><span>Ablehnen</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="wire"><span class="packet" id="packet"></span><span class="wire-label" id="wire-label"></span></div>
+      <div class="side">
+        <div class="who">Alex&rsquo; Gerät</div>
+        <div class="frame" id="frame-b">
+          <div class="notch ios-only"></div>
+          <div class="titlebar safari mac-only"><div class="lights"><i></i><i></i><i></i></div><div class="address">askwhen.me/dana</div></div>
+          <div class="screen">
+            <div class="body page">
+              <div class="url ios-only">askwhen.me/dana</div>
+              <h4><img src="../img/askwhen-mark.png" alt="">Dana Cho nach einer Zeit fragen</h4>
+              <p class="sub">Dienstag. Ein Angebot, keine Reservierung: Dana bestätigt jede.</p>
+              <div class="times" id="times"></div>
+              <div class="cursor" id="cursor"></div>
+              <div class="status hidden" id="status"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="demo-note">Drei Zeiten gehen über die Leitung, sonst nichts. Die Anfrage kommt zu Dana
+      zurück, und nichts landet in ihrem Kalender, bevor sie Ja sagt.</p>
+  </div>
+
+  <section>
+  <h2 class="centered">Alle anderen Server lesen deinen Kalender. Unserer soll das nicht können.</h2>
+  <p class="lede centered">Eine Buchungs-App hält deinen Kalender, um auf der Stelle eine Zeit
+    zusagen zu können. AskWhen.me hält ein paar Zeiten am Tag &mdash; und eine Frage.</p>
+  <p>Dein Gerät veröffentlicht ein paar Zeiten, zu denen es gefragt werden möchte, und sonst nichts.
+    Wählt jemand eine aus, kommt die Anfrage zurück auf dein Gerät, das deinen Kalender erneut
+    prüft, bevor etwas geschrieben wird. Solange du es nicht einschaltest, stellt Calendar Mirror
+    überhaupt keine Netzwerkanfrage.</p>
+  </section>
+
+  <section>
+  <h2 class="centered">Zwei Wege, gefragt zu werden</h2>
+  <p class="lede centered">Eine Seite, von der aus jeder fragen kann, und ein Link für eine Person.</p>
+  <div class="columns wide" style="grid-template-columns:repeat(2,1fr);max-width:44rem">
+    <div><h3>Die Seite</h3><p>askwhen.me/deineseite. Wer die Adresse hat, kann eine Zeit wählen und fragen. Jede Anfrage wartet auf dich.</p></div>
+    <div><h3>Der Link</h3><p>An eine Person geschickt. Ist die gewählte Zeit noch frei, antwortet dein Gerät für dich.</p></div>
+  </div>
+  </section>
+
+  <section>
+  <h2 class="centered">Die Seite: dein Gerät bietet an, sie fragen, du antwortest.</h2>
+  <p class="lede centered">Wer die Adresse hat, kann fragen. Jede Anfrage wartet auf dich.</p>
+  <ol class="steps wide">
+    <li><b>Dein Gerät wählt die Zeiten</b><p>Aus den Kalendern, die du bestimmst: ein paar am Tag,
+      innerhalb der Stunden, die du angibst, mit Luft um das, was schon dasteht.</p></li>
+    <li><b>Du veröffentlichst diese &mdash; und nur diese</b><p>Sie gehen unter dem Namen, den du
+      gewählt hast, auf askwhen.me/deineseite. Die Seite zeigt eine Liste von Zeiten und sonst
+      nichts über dich.</p></li>
+    <li><b>Jemand fragt</b><p>Die Person wählt eine Zeit, sagt, wer sie ist, und bestätigt ihre
+      E-Mail. Die Anfrage wartet auf dein Gerät; der Server hält sie, mehr nicht.</p></li>
+    <li><b>Du nimmst an, auf deinem Gerät</b><p>Es prüft zuerst deinen Kalender erneut. Nimmst du
+      an, schreibt dein Gerät den Termin, und die Person bekommt eine Kalenderdatei per
+      E-Mail.</p></li>
+  </ol>
+
+  <div class="phones wide ios-only">
+    <figure>
+      <picture>
+        <source srcset="../img/askwhen-explainer-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="../img/askwhen-explainer-light.png" width="285" height="620" alt="Der erste Bildschirm der AskWhen.me-Einrichtung auf dem iPhone: das Zeichen, die Zeile „Eine Seite, auf der Menschen nach einer Zeit fragen können“, und drei Punkte: du wählst die Zeiten, der Server sieht deinen Kalender nie, nichts landet ohne deine Zustimmung.">
+      </picture>
+      <figcaption>Wozu du zustimmst, bevor irgendetwas eingerichtet wird.</figcaption>
+    </figure>
+    <figure>
+      <picture>
+        <source srcset="../img/askwhen-preview-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="../img/askwhen-preview-light.png" width="285" height="620" alt="Der Vorschaubildschirm auf dem iPhone: ein Namensfeld, darunter „36 Zeiten an 14 Tagen“ nach Tagen aufgelistet, über einer Schaltfläche „Preis ansehen“.">
+      </picture>
+      <figcaption>Die Seite, bevor du sie veröffentlichst &mdash; auf dem Gerät berechnet.</figcaption>
+    </figure>
+    <figure>
+      <picture>
+        <source srcset="../img/askwhen-live-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="../img/askwhen-live-light.png" width="285" height="620" alt="Der Bildschirm der laufenden Seite auf dem iPhone: „Deine Seite ist live“ mit der Adresse askwhen.me/x7f2k9, einem Teilen-Link, Mitteilungen und dem Gerät, das veröffentlicht.">
+      </picture>
+      <figcaption>Live. Die Adresse gehört dir, und der Schalter ist gleich daneben.</figcaption>
+    </figure>
+  </div>
+  <figure class="wide mac-only">
+    <picture>
+      <source srcset="../img/askwhen-mac-dark.png" media="(prefers-color-scheme: dark)">
+      <img src="../img/askwhen-mac-light.png" width="940" height="700" alt="Auf dem Mac dieselbe Einrichtung als Blatt über dem Fenster „Manage Mirrors“: das AskWhen.me-Zeichen, „Eine Seite, auf der Menschen nach einer Zeit fragen können“, die drei Punkte und eine Weiter-Schaltfläche.">
+    </picture>
+    <figcaption>Die Einrichtung auf dem Mac, als Blatt über der Spiegelverwaltung: wozu du zustimmst, bevor irgendetwas eingerichtet wird. Ein Abo gilt für iPhone, iPad und Mac.</figcaption>
+  </figure>
+
+  </section>
+  <section>
+  <h2 class="centered">Was die fragende Person sieht</h2>
+  <p class="lede centered">Deine Seite sagt, wem sie gehört, und sonst nichts über dich. Die Zeiten
+    erscheinen in der Zeitzone der fragenden Person, und jeder Schritt sagt: Das ist ein Angebot,
+    keine Reservierung.</p>
+  <ol class="flow wide">
+    <li><b>Eine Zeit wählen</b><p>Eine Woche voller Zeiten, in der Zone der Besucherin. Die Zeile unter deinem Namen ist deine.</p>
+      <figure>
+        <picture class="ios-only">
+          <source srcset="../img/askwhen-req-pick-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="../img/askwhen-req-pick-light.png" width="285" height="620" alt="Die Anfrageseite: „Dana Cho nach einer Zeit fragen“, ein Hinweis, dass die Zeiten ein Angebot und keine Reservierung sind, und eine Woche mit Zeiten zur Auswahl.">
+        </picture>
+        <picture class="mac-only">
+          <source srcset="../img/askwhen-desk-pick-dark.png" media="(prefers-color-scheme: dark)">
+          <img class="desk" src="../img/askwhen-desk-pick-light.png" width="1100" height="720" alt="Die Anfrageseite: „Dana Cho nach einer Zeit fragen“, ein Hinweis, dass die Zeiten ein Angebot und keine Reservierung sind, und eine Woche mit Zeiten zur Auswahl.">
+        </picture>
+      </figure>
+    </li>
+    <li><b>Sagen, wer du bist</b><p>Ein Name und eine E-Mail. Kein Account. Die Adresse sieht Dana erst, wenn sie bestätigt ist.</p>
+      <figure>
+        <picture class="ios-only">
+          <source srcset="../img/askwhen-req-ask-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="../img/askwhen-req-ask-light.png" width="285" height="620" alt="Schritt zwei: die gewählte Zeit, darunter zwei Felder, Name und E-Mail.">
+        </picture>
+        <picture class="mac-only">
+          <source srcset="../img/askwhen-desk-ask-dark.png" media="(prefers-color-scheme: dark)">
+          <img class="desk" src="../img/askwhen-desk-ask-light.png" width="1100" height="720" alt="Schritt zwei: die gewählte Zeit, darunter zwei Felder, Name und E-Mail.">
+        </picture>
+      </figure>
+    </li>
+    <li><b>Per E-Mail bestätigen</b><p>Die Anfrage wird fünfzehn Minuten gehalten. Nichts erreicht Dana, bevor der Link angeklickt ist.</p>
+      <figure>
+        <picture class="ios-only">
+          <source srcset="../img/askwhen-req-confirm-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="../img/askwhen-req-confirm-light.png" width="285" height="620" alt="Schritt drei: „Sieh in deine E-Mails“. Die Anfrage wird gehalten, bis der Link in der E-Mail angeklickt wird.">
+        </picture>
+        <picture class="mac-only">
+          <source srcset="../img/askwhen-desk-confirm-dark.png" media="(prefers-color-scheme: dark)">
+          <img class="desk" src="../img/askwhen-desk-confirm-light.png" width="1100" height="720" alt="Schritt drei: „Sieh in deine E-Mails“. Die Anfrage wird gehalten, bis der Link in der E-Mail angeklickt wird.">
+        </picture>
+      </figure>
+    </li>
+    <li><b>Eine Antwort bekommen</b><p>Dana sagt auf ihrem Gerät Ja, und die Einladung kommt per E-Mail.</p>
+      <figure>
+        <picture class="ios-only">
+          <source srcset="../img/askwhen-req-accepted-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="../img/askwhen-req-accepted-light.png" width="285" height="620" alt="Angenommen: „Dana Cho hat angenommen und den Termin in den eigenen Kalender geschrieben. Die Einladung ist per E-Mail zu dir unterwegs.“">
+        </picture>
+        <picture class="mac-only">
+          <source srcset="../img/askwhen-desk-accepted-dark.png" media="(prefers-color-scheme: dark)">
+          <img class="desk" src="../img/askwhen-desk-accepted-light.png" width="1100" height="720" alt="Angenommen: „Dana Cho hat angenommen und den Termin in den eigenen Kalender geschrieben. Die Einladung ist per E-Mail zu dir unterwegs.“">
+        </picture>
+      </figure>
+    </li>
+  </ol>
+  <p class="small centered" style="margin-top:1.6rem">Eine Seite, gesetzt für die Breite, die sie bekommt. Auf keiner Seite der Frage muss eine App installiert werden.</p>
+
+  </section>
+  <section>
+  <h2 class="centered">Was der Server hält</h2>
+  <p>Der Entwurf ist ein totes Postfach: Zeiten hinein, Anfragen heraus &mdash; und dem Server wird
+    nie gesagt, wer du bist. Die <a href="privacy.html">Datenschutzseite</a> sagt dasselbe
+    vollständig, samt der Aufbewahrungsfristen.</p>
+  <div class="holds">
+    <div>
+      <h3>Er hält</h3>
+      <ul>
+        <li>Die Zeiten, die du anbietest, als Anfang und Ende. Nichts darüber, warum diese.</li>
+        <li>Den Namen auf der Seite und die Zeile darunter, Titel und Länge des Termins und deine Zeitzone.</li>
+        <li>Anfragen von Menschen, die gefragt haben: die Zeit, ihren Namen, ihre Adresse, eine Notiz. Bis du antwortest, höchstens 14 Tage.</li>
+        <li>Eine anonyme Abo-Kennung von Apple, als Hash gespeichert. Sie sagt, dass eine Seite bezahlt ist, nicht, wer bezahlt hat.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Er sieht nie</h3>
+      <ul>
+        <li>Deinen Kalender oder irgendeinen Termin darin: Titel, Orte, Teilnehmer, Notizen.</li>
+        <li>Welche Kalender du gewählt hast oder wie viele es sind.</li>
+        <li>Deine E-Mail-Adresse, deine Apple-ID oder deine Zahlungsdaten.</li>
+        <li>Die Form deiner Woche jenseits der Handvoll Zeiten, die du angeboten hast.</li>
+      </ul>
+    </div>
+  </div>
+
+  </section>
+  <section>
+  <h2 class="centered">Der Link: eine Person, eine Woche, kein Warten.</h2>
+  <p class="lede centered">Send times legt deine nächsten drei freien Zeiten in die Zwischenablage,
+    fertig zum Einfügen in eine Nachricht, eine E-Mail oder Slack. Mit eingeschaltetem AskWhen.me
+    trägt sie einen Link.</p>
+  <p>Der Link ist nicht die Adresse deiner Seite. Er öffnet einmal, eine Woche lang, für die Person,
+    der du ihn geschickt hast &mdash; eine weitergeleitete Nachricht ist also keine offene Tür. Und
+    weil du ihn geschickt hast, gibt es keine E-Mail-Bestätigung: Ist die gewählte Zeit noch frei,
+    sagt dein Gerät für dich Ja. Ist sie weg, wird das gesagt, und nichts wird geschrieben.</p>
+
+  </section>
+  <section>
+  <h2 class="centered">Was es kostet</h2>
+  <p>90 Tage kostenlos &mdash; lang genug, dass wirklich jemand Fremdes fragt &mdash; danach
+    jahresweise. Gekauft über den App Store, die Zahlung liegt also bei Apple und wir sehen sie nie;
+    Verlängerung, Kündigung und Erstattung richten sich nach Apples Bedingungen. Nach dem Abo wird
+    am Ende der Einrichtung gefragt, wenn du die Seite gesehen hast, die du veröffentlichen
+    würdest.</p>
+  <table class="tiers">
+    <tr><th>Stufe</th><th>Was du bekommst</th><th>Pro Jahr</th></tr>
+    <tr><td>Request Page</td><td>Eine Seite unter askwhen.me/deineseite. Die ersten 90 Tage sind kostenlos.</td><td>19,99 $</td></tr>
+    <tr><td>Custom Subdomain</td><td>Ein eigener Name, du.askwhen.me, und mehr als eine Seite.</td><td>34,99 $</td></tr>
+    <tr><td>Custom Domain</td><td>Deine Seite auf einer Domain, die dir gehört &mdash; ein DNS-Eintrag genügt.</td><td>69,99 $</td></tr>
+  </table>
+  <p class="small">US-Preise; den Gegenwert anderswo setzt Apple. Die
+    <a href="terms.html">Nutzungsbedingungen</a> sagen, was mit deiner Seite und deiner Adresse
+    passiert, wenn ein Abo endet. Sie sind kurz.</p>
+
+  </section>
+  <section>
+  <h2 class="centered">Es beginnt in Calendar Mirror</h2>
+  <p class="centered">Calendar Mirror ist eine kleine App, die eine Kopie eines Kalenders in einem
+    anderen hält, in eine Richtung. AskWhen.me ist das Einzige darin, das mit einem Server spricht,
+    und es ist aus, bis du es einschaltest; die Zeile steht unter <em>Background sync</em>.
+    <a href="index.html">Über Calendar Mirror.</a></p>
+  <div class="cta centered">
+    <a class="button" href="https://apps.apple.com/de/app/cal-mirror/id6787358036">Calendar Mirror holen, 2,99 &euro;</a>
+    <p class="small">AskWhen.me ist 90 Tage kostenlos, danach 19,99 $ im Jahr.</p>
+  </div>
+
+  </section>
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="index.html">Calendar Mirror</a>
+      <a href="https://apps.apple.com/de/app/cal-mirror/id6787358036">App Store</a>
+      <a href="privacy.html">Datenschutz</a>
+      <a href="terms.html">Nutzungsbedingungen</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+    </nav>
+    <div>&copy; Matt Baylor</div>
+  </footer>
+
+</div>
+
+<script type="module" src="../demo-askwhen.js?v=20260922a"></script>
+</body>
+</html>

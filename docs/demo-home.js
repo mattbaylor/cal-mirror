@@ -4,6 +4,27 @@
 // With prefers-reduced-motion the final state is drawn once and left alone.
 const START = 9, END = 17;                     // the day column, 9am to 5pm
 
+// The demo's own words, per language, picked from <html lang>. The page around
+// it is already translated; these three event titles, the redacted label and
+// the clock format are the only strings that live in here.
+const WORDS = {
+  en: {
+    busy: "Busy",
+    hour: (h) => (h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`),
+    work: ["Standup", "Design review", "1:1 with Priya", "Vendor call"],
+    where: ["Room 4", "Zoom", "Her office", "Teams"],
+    own: ["Lunch with Sam", "Gym"], ownWhere: ["Café Rio", ""],
+  },
+  de: {
+    busy: "Belegt",
+    hour: (h) => `${h}:00`,
+    work: ["Standup", "Design-Review", "1:1 mit Priya", "Gespräch mit Lieferant"],
+    where: ["Raum 4", "Zoom", "Ihr Büro", "Teams"],
+    own: ["Mittagessen mit Sam", "Sport"], ownWhere: ["Café Rio", ""],
+  },
+};
+const W = WORDS[document.documentElement.lang.slice(0, 2)] || WORDS.en;
+
 // The whole thing sits in a Mac window or a phone, following the page's switch.
 function dress() {
   const ios = document.documentElement.dataset.platform === "ios";
@@ -17,22 +38,22 @@ const modes = document.querySelectorAll(".modes button");
 let mode = "basics";
 
 const WORK = [
-  { id: "standup", title: "Standup",        where: "Room 4",      at: 9.5,  len: 0.5 },
-  { id: "review",  title: "Design review",  where: "Zoom",        at: 11,   len: 1 },
-  { id: "one",     title: "1:1 with Priya", where: "Her office",  at: 14,   len: 0.5 },
+  { id: "standup", title: W.work[0], where: W.where[0], at: 9.5, len: 0.5 },
+  { id: "review",  title: W.work[1], where: W.where[1], at: 11,  len: 1 },
+  { id: "one",     title: W.work[2], where: W.where[2], at: 14,  len: 0.5 },
 ];
 const OWN = [
-  { title: "Lunch with Sam", where: "Café Rio", at: 12.5, len: 1 },
-  { title: "Gym",            where: "",         at: 16.5, len: 0.5 },
+  { title: W.own[0], where: W.ownWhere[0], at: 12.5, len: 1 },
+  { title: W.own[1], where: W.ownWhere[1], at: 16.5, len: 0.5 },
 ];
-const LATER = { id: "vendor", title: "Vendor call", where: "Teams", at: 15.5, len: 0.5 };
+const LATER = { id: "vendor", title: W.work[3], where: W.where[3], at: 15.5, len: 0.5 };
 
 function pct(h) { return ((h - START) / (END - START) * 100).toFixed(2) + "%"; }
 function ticks(day) {
   for (let h = START; h < END; h++) {
     const t = document.createElement("div");
     t.className = "tick"; t.style.top = pct(h);
-    t.textContent = h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`;
+    t.textContent = W.hour(h);
     day.append(t);
   }
 }
@@ -49,7 +70,7 @@ function label(el, m) {
   el.classList.toggle("busy", m === "busy");
   el.innerHTML = "";
   const b = document.createElement("b");
-  b.textContent = m === "busy" ? "Busy" : el.dataset.title;
+  b.textContent = m === "busy" ? W.busy : el.dataset.title;
   el.append(b);
   if (m === "full" && el.dataset.where) {
     const s = document.createElement("small"); s.textContent = el.dataset.where; el.append(s);

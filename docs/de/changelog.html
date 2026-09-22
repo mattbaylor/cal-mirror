@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
+<script type="module" src="../nav.js?v=20260922d"></script>
+<script src="../platform.js?v=20260922a"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar Mirror &mdash; Versionshinweise</title>
+<meta name="description" content="Was sich in jeder Version von Calendar Mirror geändert hat, einschließlich der Fehlerbehebungen.">
+<link rel="icon" href="../icon.png">
+<link rel="canonical" href="https://calendarmirror.com/de/changelog.html">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/changelog.html">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/changelog.html">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/changelog.html">
+<meta property="og:locale" content="de_DE">
+<link rel="preload" href="../fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../site.css?v=20260918a">
+<link rel="stylesheet" href="../changelog.css?v=20260922a">
+</head>
+<body>
+<cm-nav lang="de" current="changelog" ></cm-nav>
+<div class="wrap">
+
+  <h1>Versionshinweise</h1>
+  <p class="sub">Was sich in jeder Version geändert hat, samt der Fehlerbehebungen.</p>
+
+  <div class="rel">
+    <div class="relhead"><h2>2.0</h2><span class="tag">In Prüfung</span><span class="date">eingereicht am 17. September 2026</span></div>
+
+    <h3>Neu</h3>
+    <ul>
+      <li><b>AskWhen.me.</b> Ein eigenes Abonnement, das du in der App einschalten kannst: eine
+        Seite unter askwhen.me/deineseite, auf der jemand eine Zeit auswählt und fragt. Dein Gerät
+        ermittelt, welche Zeiten angeboten werden, und veröffentlicht nur diese; der Server bekommt
+        deinen Kalender nie, und nichts wird geschrieben, bevor du zustimmst. Standardmäßig aus
+        &mdash; und solange du es nicht einschaltest, stellt die App keinerlei Netzwerkanfrage. Es
+        hat <a href="askwhen.html">eine eigene Seite</a>, und die
+        <a href="privacy.html">Datenschutzseite</a> sagt, was der Server hält.</li>
+      <li><b>Send times.</b> Ein Tippen gibt dir deine nächsten drei freien Zeiten als Textzeile,
+        auf deinem Gerät aus den gewählten Kalendern berechnet, fertig zum Einfügen in eine
+        Nachricht. Dazu eine Kurzbefehl-Aktion, eine Siri-Formulierung und ein Menüleisten-Eintrag
+        auf dem Mac. Mit eingeschaltetem AskWhen.me kann die Nachricht einen persönlichen Link
+        tragen, der deine Seite einmal öffnet, eine Woche lang, für die Person, der du ihn
+        geschickt hast.</li>
+      <li><b>Echtzeit-Synchronisierung in der Mac-App-Store-App.</b> Bisher gab es das
+        Synchronisieren kurz nach einer Kalenderänderung nur in der selbst gebauten Version; die
+        App-Store-App hielt sich an einen festen Zeitplan. Sie trifft jetzt dieselbe dreifache
+        Entscheidung wie der eigenständige Daemon &mdash; entprellte Kalenderänderungen, ein
+        Mindestabstand zwischen änderungsgetriebenen Durchläufen und darunter eine
+        Fünf-Minuten-Grenze als Rückfallebene. Einschalten in der Menüleiste. iPhone und iPad
+        bleiben bei ihren Hintergrundzeitplänen, weil iOS entscheidet, wann eine App überhaupt
+        laufen darf.</li>
+      <li><b>Duplikate in einem gemeinsamen Ziel überspringen.</b> Richtet man zwei Paare auf
+        denselben Kalender &mdash; etwa einen Arbeits-Feed und einen Bereitschafts-Feed &mdash;
+        wurde eine Schicht, die in beiden auftauchte, zweimal kopiert: zwei identische Blöcke,
+        gestapelt in einem Kalender, den du vermutlich teilst. Keines der Paare räumte die Kopie
+        des anderen weg, weil jedes nur seine eigenen anfasst. Mit dieser Einstellung wird der
+        Block einmal geschrieben. Paare, die unterschiedlich viel verbergen, bleiben unberührt:
+        eine Belegt-Kopie und eine vollständige Kopie sind nicht derselbe Block, also kommen beide
+        herüber. Standardmäßig aus, denn es ändert, was in einem Kalender landet.</li>
+    </ul>
+  </div>
+
+  <div class="rel">
+    <div class="relhead"><h2>1.4.1</h2><span class="date">1. September 2026</span>
+      <span class="tag">Im App Store</span></div>
+
+    <h3>Neu</h3>
+    <ul>
+      <li><b>Kurzbefehle.</b> Eine Aktion <b>Jetzt synchronisieren</b>, auf iPhone, iPad und Mac.
+        Leg sie in einen Kurzbefehl, auf den Home-Bildschirm oder in eine Automation &mdash;
+        synchronisieren, wenn du im Büro ankommst, jeden Morgen um acht, oder wenn ein Fokus
+        anspringt. Sie läuft im Hintergrund, ohne die App zu öffnen, und sagt dir, was sich geändert
+        hat, statt nur &bdquo;fertig&ldquo;: <i>3 hinzugefügt, 1 aktualisiert</i> &mdash; oder
+        welches Paar fehlgeschlagen ist und warum. Siri versteht &bdquo;Synchronisiere meine
+        Kalender mit Calendar Mirror&ldquo;.</li>
+    </ul>
+  </div>
+
+  <div class="rel">
+    <div class="relhead"><h2>1.4.0</h2><span class="date">31. August 2026</span></div>
+
+    <h3>Neu</h3>
+    <ul>
+      <li><b>Auswählen, welche Termine kopiert werden &mdash; ohne sie zu markieren.</b> Ein Paar
+        kann jetzt Termine überspringen, die du abgelehnt hast, unbeantwortete, vom Veranstalter
+        abgesagte, ganztägige und als frei markierte. Es kann alles überspringen, was kürzer oder
+        länger als eine gesetzte Minutenzahl ist, Titel mit bestimmten Wörtern überspringen oder
+        behalten und das Kopieren auf ein Tagesfenster an gewählten Wochentagen begrenzen. Das
+        funktioniert auch bei Kalendern, über die du nicht bestimmst &mdash; ein abonnierter
+        Arbeits-Feed, ein Team-Kalender &mdash; wo das Markieren einzelner Termine nie möglich
+        war.</li>
+      <li><b>Ein neu gebautes Verwaltungsfenster auf dem Mac.</b> Die Paare stehen seitlich,
+        gruppiert nach dem Kalender, in den sie kopieren, und jedes öffnet sich in einem eigenen
+        Bereich. Abschnitte klappen zu einer Zeile zusammen, die beschreibt, worauf sie eingestellt
+        sind &mdash; so bleibt auch ein Paar mit einem Dutzend Einstellungen auf einen Blick
+        lesbar.</li>
+      <li><b>Ein Kürzel vor kopierte Titel setzen.</b> Setze ein Präfix wie <code>[Arbeit]</code>,
+        und jede Kopie trägt es. Es gilt auch für verborgene Titel, sodass ein Belegt-Paar trotzdem
+        sagen kann, woher der Block stammt &mdash; <code>[Arbeit] Belegt</code>.</li>
+      <li><b>Den Meeting-Link mitnehmen.</b> Ein Paar kann den Link des Quelltermins in die Notizen
+        der Kopie übernehmen, damit ein gespiegeltes Meeting keine Sackgasse ist, die man sieht,
+        aber nicht betreten kann. Standardmäßig aus und unterdrückt bei jedem Termin mit
+        <code>#private</code> &mdash; ein Meeting-Link verrät einiges über ein Meeting, dessen Titel
+        du verbergen wolltest.</li>
+      <li><b>Ein neues Menüleisten-Symbol auf dem Mac.</b> Früher zeigte die Leiste ein nacktes
+        Häkchen, Dreieck oder Kreuz &mdash; Symbole, die nichts darüber sagten, zu welcher App sie
+        gehören. Jetzt zeigt sie Calendar Mirrors eigenes Symbol, neu gezeichnet in Menüleistengröße,
+        mit einem Gesicht, das sich nach dem Zustand richtet: ein Lächeln, wenn jede Kopie aktuell
+        ist, Warndreiecke, wenn eine zurückliegt, durchgestrichene Augen, wenn eine fehlschlägt, ein
+        ausdrucksloses Gesicht bei Pause und ein Plus, wenn noch keine Kopien eingerichtet sind. Die
+        Außenkontur bleibt in jedem Zustand gleich, damit das Symbol in der Leiste nie
+        verspringt.</li>
+      <li><b>Synchronisieren, während sich deine Kalender ändern.</b> In der aus dem Quellcode
+        gebauten Mac-Version kann Calendar Mirror auf Kalenderänderungen achten und kurz danach
+        synchronisieren, statt auf den nächsten geplanten Durchlauf zu warten. Ein
+        Fünf-Minuten-Durchgang läuft weiterhin als Rückfallebene darunter und repariert auch von
+        Hand Gelöschtes. Das gibt es nur unter macOS und gilt für alle Paare zugleich, weil macOS
+        meldet, dass sich <em>etwas</em> geändert hat, ohne zu sagen, welcher Kalender.</li>
+    </ul>
+
+    <h3>Geändert</h3>
+    <ul>
+      <li><b>Die Notiz im Kalender ist jetzt eine Warnung, kein Lebenszeichen.</b> Früher konnte ein
+        Paar bei jedem erfolgreichen Durchlauf eine ganztägige &bdquo;zuletzt synchronisiert&ldquo;-
+        Notiz ins Ziel schreiben. Das tut es nicht mehr: <b>ein gesundes Paar schreibt überhaupt
+        nichts</b>, und eine Notiz erscheint nur, wenn ein Paar stehen bleibt. Zielkalender sind
+        meist Kalender, die man teilt, und eine tägliche &bdquo;läuft noch&ldquo;-Markierung war ein
+        Artefakt, das andere sehen konnten und das niemandem etwas sagte. Alte Notizen werden beim
+        ersten Synchronisieren nach dem Update automatisch entfernt.</li>
+    </ul>
+
+    <h3>Behoben</h3>
+    <ul>
+      <li>Kopien wurden bei jedem Durchlauf neu geschrieben, wenn der Quellkalender die Kennung
+        eines Termins neu vergab, der sich sonst nicht geändert hatte. Verloren ging nichts, aber
+        die Kopien wurden unnötig umgeschrieben &mdash; und in einem geteilten Ziel war das für alle
+        sichtbar.</li>
+      <li>Das Speichern eines Paares im Mac-Verwaltungsfenster konnte die Echtzeit-Synchronisierung
+        für jedes Paar einschalten, ob sie dort aktiviert war oder nicht.</li>
+    </ul>
+
+    <p class="note">Die Terminfilter sind von der Testsuite gründlich abgedeckt, haben sich aber
+      vergleichsweise wenig an echten abgelehnten und abgesagten Einladungen in freier Wildbahn
+      bewährt. Wenn ein Filter etwas verwirft, das er behalten sollte, oder umgekehrt,
+      <a href="https://github.com/mattbaylor/cal-mirror/issues">melde bitte ein Issue</a>.</p>
+  </div>
+
+  <div class="rel">
+    <div class="relhead"><h2>1.3.0</h2><span class="date">27. August 2026</span></div>
+
+    <h3>Neu</h3>
+    <ul>
+      <li><b>Entscheiden, was jede Kopie trägt.</b> Termine vollständig kopieren, nur Titel und Ort,
+        oder jedes Detail durch einen schlichten Block mit &bdquo;Belegt&ldquo; ersetzen. Ort,
+        Notizen und Hinweise lassen sich einzeln ein- und ausschalten, und jedes Paar kann seine
+        Kopien zwingen, als belegt zu gelten.</li>
+      <li><b>Einzelne Termine mit einem Schlagwort steuern.</b> Schreibe <code>#nomirror</code> in
+        die Notizen eines Termins, um ihn zu überspringen, <code>#private</code>, um ihn als
+        Belegt-Block ohne Details zu kopieren, oder <code>#public</code>, um ihn vollständig zu
+        kopieren, selbst bei einem Paar, das sonst verbirgt.</li>
+      <li><b>Nur die Termine kopieren, die du auswählst.</b> Richte ein Paar auf ein Schlagwort, und
+        es spiegelt nur die Termine, die es tragen &mdash; oder überspringt sie. Nützlich, wenn ein
+        geteilter Kalender weit mehr enthält, als du brauchst.</li>
+      <li><b>Schlagwörter ohne die Notiz mitnehmen.</b> Notizen können vollständig, gar nicht oder
+        nur als Schlagwörter übergehen &mdash; Letzteres setzt die Schlagwörter in die Kopie und
+        lässt den Notiztext zurück.</li>
+      <li><b>Das Hintergrundintervall auf iPhone und iPad einstellen.</b> 15 Minuten, 30 Minuten,
+        1 Stunde oder 2 Stunden. iOS entscheidet, wann Hintergrundaktualisierungen tatsächlich
+        laufen, das ist also der früheste mögliche Start und kein Versprechen &mdash; zieh die Liste
+        jederzeit nach unten für eine sofortige Aktualisierung.</li>
+    </ul>
+
+    <h3>Behoben</h3>
+    <ul>
+      <li>Termine aus abonnierten Kalender-Feeds wurden bei jedem Synchronisieren neu kopiert. Sie
+        konnten bei jedem Abruf neu identifiziert werden, was wiederholte Aktualisierungen und
+        doppelte Kopien verursachte.</li>
+      <li>Kopien wurden in jedem Durchlauf neu geschrieben, wenn der Quellkalender keine
+        Verfügbarkeitsinformation meldete.</li>
+      <li>Auf iPhone und iPad setzte die App ihren eigenen Hintergrundzeitplan nach jedem Durchlauf
+        auf 30 Minuten zurück und verwarf das eingestellte Intervall.</li>
+    </ul>
+  </div>
+
+  <div class="rel">
+    <div class="relhead"><h2>1.0.1</h2><span class="date">9. Juli 2026</span></div>
+    <h3>Behoben</h3>
+    <ul>
+      <li>Im Zielkalender konnten sich doppelte Kopien ansammeln. Ursache war, dass die App auf
+        einer unvollständigen Sicht eines noch ladenden Kalenders handelte; sie wartet jetzt auf
+        eine gesetzte Sicht, bevor sie etwas ändert.</li>
+    </ul>
+  </div>
+
+  <div class="rel">
+    <div class="relhead"><h2>1.0</h2><span class="date">4. Juli 2026</span></div>
+    <h3>Neu</h3>
+    <ul>
+      <li>Erste Version. Jeden Kalender in jeden anderen kopieren, nur in eine Richtung, auf iPhone,
+        iPad und Mac.</li>
+    </ul>
+  </div>
+
+  <p class="note">Die Versionen 1.1 und 1.2 wurden vorbereitet, aber nie veröffentlicht; ihre
+    Änderungen sind Teil von 1.3.0.</p>
+
+  <footer class="site">
+    <nav aria-label="Site">
+      <a href="./">Calendar Mirror</a>
+      <a href="https://apps.apple.com/de/app/cal-mirror/id6787358036">App Store</a>
+      <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <a href="blog/">Blog</a>
+      <a href="vs/">Vergleich</a>
+      <a href="changelog.html">Versionshinweise</a>
+      <a href="privacy.html">Datenschutz</a>
+      <a href="terms.html">Nutzungsbedingungen</a>
+    </nav>
+    <div>MIT &copy; Matt Baylor</div>
+  </footer>
+</div>
+</body>
+</html>

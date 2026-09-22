@@ -103,10 +103,13 @@ gone.)
 ## Search engines
 
 `docs/robots.txt` allows everything and names the sitemap. `docs/sitemap.xml`
-is written by `python3 infra/site/sitemap.py` from the pages in `docs/`, dated
-from git — run it in the same change as any page edit. Every page carries a
-canonical URL, so `/`, `/index.html` and `/?platform=ios` count as one page.
-`coming.html` is `noindex` and left out of the sitemap since nothing links to it.
+is written by `python3 infra/site/sitemap.py` from the pages in `docs/` — every
+published page in every language, found by one recursive walk, so a new section
+or language needs no edit. It carries no `lastmod`: the old one dated each page
+from git, which lied whenever a page was edited without rerunning the script.
+Anything marked `noindex` is left out. Every page carries a canonical URL, so
+`/`, `/index.html` and `/?platform=ios` count as one page, and an `hreflang`
+pair plus `x-default` tying it to its counterpart in the other language.
 
 **IndexNow** (Bing, and through Bing Yahoo and DuckDuckGo; Yandex, Naver,
 Seznam) is a POST on deploy: `infra/site/indexnow.sh` runs on CT 112 as an

@@ -33,7 +33,10 @@
       const shadow = this.attachShadow({ mode: "open" });
       const style = document.createElement("style"); style.textContent = STYLE;
       const seg = document.createElement("div"); seg.className = "seg";
-      seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "Show it on");
+      seg.setAttribute("role", "group");
+      // The two product names don't translate; the label around them does.
+      const LABEL = { en: "Show it on", de: "Anzeigen auf" };
+      seg.setAttribute("aria-label", LABEL[document.documentElement.lang.slice(0, 2)] || LABEL.en);
       const ICON = {
         mac: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 18.5h20"/></svg>',
         ios: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M10.5 5h3"/></svg>',

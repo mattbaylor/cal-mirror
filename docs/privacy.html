@@ -3,20 +3,19 @@
 <head>
 <meta charset="utf-8">
 <script defer data-domain="calendarmirror.com" src="https://stats.rehosted.us/js/script.js"></script>
-<script type="module" src="nav.js?v=20260918a"></script>
-<script src="platform.js?v=20260918a"></script>
+<script type="module" src="nav.js?v=20260922d"></script>
+<script src="platform.js?v=20260922a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendar Mirror — Privacy</title>
 <meta name="description" content="Your calendar data is yours. Calendar Mirror collects nothing and makes no network request until you turn on AskWhen.me — a separate product whose server never sees your calendar. Here is exactly what it holds, and for how long.">
 <link rel="icon" href="icon.png">
 <link rel="canonical" href="https://calendarmirror.com/privacy.html">
+<link rel="alternate" hreflang="en" href="https://calendarmirror.com/privacy.html">
+<link rel="alternate" hreflang="de" href="https://calendarmirror.com/de/privacy.html">
+<link rel="alternate" hreflang="x-default" href="https://calendarmirror.com/privacy.html">
 <link rel="preload" href="fonts/Figtree.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="site.css?v=20260918a">
-<style>
-  h1{font-size:clamp(32px,4.6vw,48px);margin-top:1.5rem}
-  .sub{color:var(--muted);margin:0 0 2rem}
-  .lead{font-size:19px;line-height:1.6}
-</style>
+<link rel="stylesheet" href="legal.css?v=20260922a">
 </head>
 <body>
 <cm-nav current="privacy"></cm-nav>
@@ -166,15 +165,23 @@
      identifier as above, so a lapsed page can be taken down.</p>
 
   <h3>Where it runs</h3>
-  <p>On a server we operate in Colorado, United States, behind a reverse proxy that
-     keeps ordinary access logs. <!-- TODO Matt: how long does caddy-dc keep its
-     access logs, and do they hold client IPs? Say so here either way. --></p>
+  <p>On a server we operate in Colorado, United States, on hardware we own. The proxy in front of
+     it <strong>keeps no access log</strong>: an ordinary request leaves no record at all &mdash;
+     not who asked, not from what address, not when, not for which page.</p>
+  <p>Errors are written, because a fault nobody can see is a fault nobody can fix. If the proxy
+     cannot reach the service behind it, or a connection fails before it becomes a request, it
+     records what happened &mdash; and such an entry can contain the address the request came from
+     and the path it asked for. Those entries are read when something is broken, are never
+     analysed, counted or joined to anything else, and are discarded when the proxy is rebuilt.</p>
 
   <h2>This website</h2>
   <p>calendarmirror.com uses a self-hosted, cookieless page counter on our own
      infrastructure to see which pages are read. It sets no cookie, stores no IP
      address, and is not shared with anyone. The request page at askwhen.me carries
      nothing of the kind.</p>
+  <p>The site is served from the same infrastructure, under the same rule: the proxy in front of
+     it keeps no access log either. The counter&rsquo;s page totals are the only record that
+     anyone read anything here.</p>
 
   <h2>Changes</h2>
   <p>If this policy ever changes, the update will be here and in the source, which
@@ -185,15 +192,14 @@
   <h2>Contact</h2>
   <p>Questions, concerns, or something that went wrong with a request:
      <a href="mailto:support@askwhen.me">support@askwhen.me</a>, or
-     <a href="https://github.com/mattbaylor/cal-mirror/issues">github.com/mattbaylor/cal-mirror</a>.
-     <!-- TODO Matt: the support address. support@askwhen.me needs an inbound route
-     on Postal (or a forward) before this goes live; say which, or pick another. --></p>
+     <a href="https://github.com/mattbaylor/cal-mirror/issues">github.com/mattbaylor/cal-mirror</a>.</p>
 
   <footer class="site">
     <nav aria-label="Site">
       <a href="">Calendar Mirror</a>
       <a href="https://apps.apple.com/us/app/cal-mirror/id6787358036">App Store</a>
       <a href="https://github.com/mattbaylor/cal-mirror">GitHub</a>
+      <a href="blog/">Blog</a>
       <a href="vs/">Compare</a>
       <a href="changelog.html">Release notes</a>
       <a href="privacy.html">Privacy</a>

@@ -20,12 +20,19 @@ head=$(git -C "$SITE" rev-parse HEAD)
 last=$(cat "$STAMP" 2>/dev/null || true)
 [ "$head" = "$last" ] && exit 0
 
+# Every page under docs/, at any depth: the comparison pages, the blog, and
+# each language directory. It used to list 'docs/*.html' and 'docs/vs/*.html'
+# by hand, which silently stopped pinging the moment the site grew a section.
 if [ -n "$last" ] && git -C "$SITE" cat-file -e "$last" 2>/dev/null; then
-  changed=$(git -C "$SITE" diff --name-only "$last" "$head" -- 'docs/*.html' 'docs/vs/*.html')
+  changed=$(git -C "$SITE" diff --name-only "$last" "$head" -- docs | grep '\.html$' || true)
 else
-  changed=$(cd "$SITE" && ls docs/*.html docs/vs/*.html)
+  changed=$(cd "$SITE" && find docs -name '*.html' | sort)
 fi
-changed=$(printf '%s\n' $changed | grep -v 'coming.html' || true)
+# A noindex page is not one to announce.
+changed=$(cd "$SITE" && for f in $changed; do
+  [ -f "$f" ] || continue
+  grep -q 'name="robots" content="noindex"' "$f" || printf '%s\n' "$f"
+done)
 if [ -z "$changed" ]; then mkdir -p "$(dirname "$STAMP")"; echo "$head" > "$STAMP"; exit 0; fi
 urls=$(printf '%s\n' $changed | sed -e 's#^docs/index.html$##' -e 's#^docs/\(.*\)/index.html$#\1/#' -e 's#^docs/##' -e "s#^#https://$HOST/#")
 

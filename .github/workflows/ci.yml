@@ -100,6 +100,13 @@ jobs:
           git diff --exit-code -- ../metadata
       - name: The site makes no claim the listing may not
         run: python3 appstore/tools/checksite.py
+      # The site ships in every language it offers, or not at all. Without this
+      # a new page lands in English, the German nav grows an "(EN)" label, and
+      # the switcher starts handing readers pages they cannot read. The check
+      # reads the language list out of nav.js, so adding a language adds its
+      # requirement automatically.
+      - name: Every page exists in every language
+        run: python3 docs/i18n-check.py
 
   askwhen-web:
     # The request page. Linux, because nothing here is Apple — and because the
