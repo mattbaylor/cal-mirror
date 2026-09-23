@@ -71,6 +71,12 @@ retries four times, sleeping 1, 2 and 3 seconds between attempts, so up to
 about six seconds can pass before prices appear. Wait it out on camera; a cut
 here looks like the failure it is meant to disprove.
 
+**If you see "Could not reach the App Store" here, stop — you are on build 13
+or earlier.** Until build 14 the automatic load cancelled itself and this
+screen failed in under a second, every time, on every device; "Try again"
+always worked, which is what disguised it. A recording that opens with that
+failure and recovers on a second tap argues the reviewer's case, not ours.
+
 What must be visible, and ideally in one unscrolled frame:
 
 | Product | ID | What is drawn |

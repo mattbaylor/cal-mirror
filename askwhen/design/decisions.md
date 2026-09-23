@@ -644,6 +644,21 @@ two had it nowhere. The price now sits under the description carrying its
 period, as the Page tier's does, and the section footer says each renews
 yearly. The trailing column is gone: at phone width a product name and
 "$34.99 a year." on one line is a wrap waiting to happen.
+*(23 September, later — the reasoning above was built on a wrong cause.)* A
+screen recording from a real device on build 13 showed the offer screen
+falling to "Could not reach the App Store" in **under a second**, and "Try
+again" then working. `load()`'s own move to `.loading` flipped the
+`.task(id: phase == .checking)` id and cancelled the task loading the
+products; a cancelled `Task.sleep` does not sleep, so four attempts and six
+seconds of backoff passed in microseconds. The automatic load had never
+worked on a device. App Review saw that screen, which is why they could not
+find *any* of the three products — including the Request Page tier this
+screen has always sold prominently. The two extra Subscribe buttons were an
+answer to a question nobody asked; they are worth keeping on their own
+merits, and this entry still needs Matt's yes, but they were never the
+rejection. **The 17 Sept note in the code about the first product request
+"coming back empty in the simulator" was this bug, misread as a StoreKit
+flake.**
 
 **Inside "Send times": three slots, the owner's zone, link on by default.**
 *(16 September 2026 — an agent's numbers; Matt decided the feature, not
