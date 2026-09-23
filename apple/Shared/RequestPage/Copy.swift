@@ -220,7 +220,7 @@ enum RequestCopy {
         static let buyWithoutTrial = "Subscribe"
         static let renews = "Renews yearly until you cancel in Settings. Nothing is charged during the trial."
         static let upgradesHeading = "More pages, or your own address"
-        static let upgradesNote = "Either includes everything above. Neither carries a trial, and either can also be taken later from your page."
+        static let upgradesNote = "Each renews yearly until you cancel in Settings. Either includes everything above; neither carries a trial, and either can also be taken later from your page."
         static let restore = "Restore Purchases"
         static let restoring = "Checking with Apple…"
         static let restoredNone = "Apple has no subscription on file for this Apple Account."
