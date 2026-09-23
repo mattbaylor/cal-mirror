@@ -66,11 +66,17 @@ def main():
     # Builds Apple has accepted, so we can see whether 10 is processed and usable.
     print("\nBUILDS (most recent)")
     builds = get(f"/v1/builds?filter[app]={APP}&limit=8"
-                 f"&fields[builds]=version,processingState,uploadedDate,expired").get("data", [])
+                 f"&fields[builds]=version,processingState,uploadedDate,expired,"
+                 f"usesNonExemptEncryption").get("data", [])
     for b in builds:
         a = b["attributes"]
+        # usesNonExemptEncryption null is "Missing Compliance" in the UI, and a
+        # build in that state is not installable from TestFlight however green
+        # everything else looks. Worth seeing here rather than on the device.
+        enc = a.get("usesNonExemptEncryption")
+        compliance = "compliance MISSING" if enc is None else f"nonExemptEncryption={enc}"
         print(f"  build {a.get('version'):4} {a.get('processingState'):12} "
-              f"expired={a.get('expired')} {a.get('uploadedDate')}")
+              f"expired={a.get('expired')} {a.get('uploadedDate')}  {compliance}")
 
     # Name and subtitle live on appInfoLocalizations, NOT on the version — this
     # is the pair the 1.4.1 release exists to change.
@@ -140,6 +146,33 @@ def main():
             rel = {k: v.get("data") for k, v in it.get("relationships", {}).items() if v.get("data")}
             what = ", ".join(f"{k}={names.get((d['type'], d['id']), d['id'])}" for k, d in rel.items())
             print(f"    {it['attributes'].get('state'):28} {what}")
+
+    # TestFlight, because a sandbox purchase on a physical device needs the
+    # submitted binary on that device, and the only way to get it there without
+    # a development profile is a tester group. An internal group takes anyone
+    # with a role on the team and needs no beta review; external does not, and
+    # would put another Apple queue between us and a screen recording.
+    print("\nTESTFLIGHT")
+    groups = get(f"/v1/apps/{APP}/betaGroups?limit=20"
+                 "&fields[betaGroups]=name,isInternalGroup,publicLinkEnabled,"
+                 "createdDate,hasAccessToAllBuilds").get("data", [])
+    if not groups:
+        print("  no beta groups — nothing can be installed from TestFlight yet")
+    for g in groups:
+        a = g["attributes"]
+        kind = "internal" if a.get("isInternalGroup") else "EXTERNAL (needs beta review)"
+        print(f"  group {a.get('name')!r} — {kind}, "
+              f"allBuilds={a.get('hasAccessToAllBuilds')}, "
+              f"publicLink={a.get('publicLinkEnabled')}")
+        testers = get(f"/v1/betaGroups/{g['id']}/betaTesters?limit=50"
+                      "&fields[betaTesters]=firstName,lastName,email,inviteType,state"
+                      ).get("data", [])
+        if not testers:
+            print("    no testers")
+        for t in testers:
+            ta = t["attributes"]
+            name = " ".join(x for x in (ta.get("firstName"), ta.get("lastName")) if x)
+            print(f"    {ta.get('email'):40} {name!r} {ta.get('state') or ''}")
     return 0
 
 
