@@ -636,7 +636,14 @@ decoys) mostly survives: the higher tiers are still presented as *more*, not
 as a third of the choice. The address-screen upgrade stays. If Matt would
 rather keep them unsold here, the alternative is review notes that walk the
 reviewer through buying Page first and then upgrading — slower, and it is the
-path that just failed.
+path that just failed. *(23 September — amended before the build went out.)*
+Each upgrade row said "$34.99" in a trailing column and nothing about a year.
+Guideline 3.1.2 wants a subscription's length where it is sold, and the Page
+tier had it twice over ("…then $19.99 a year." plus its footer) while these
+two had it nowhere. The price now sits under the description carrying its
+period, as the Page tier's does, and the section footer says each renews
+yearly. The trailing column is gone: at phone width a product name and
+"$34.99 a year." on one line is a wrap waiting to happen.
 
 **Inside "Send times": three slots, the owner's zone, link on by default.**
 *(16 September 2026 — an agent's numbers; Matt decided the feature, not

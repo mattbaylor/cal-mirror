@@ -139,13 +139,15 @@ struct RequestOfferView: View {
             Section {
                 ForEach(offers.filter { $0.tier != .page }, id: \.tier) { offer in
                     VStack(alignment: .leading, spacing: 3) {
-                        HStack {
-                            Text(offer.displayName).font(.callout)
-                            Spacer()
-                            Text(offer.displayPrice).foregroundStyle(.secondary)
-                        }
+                        Text(offer.displayName).font(.callout)
                         Text(offer.description).font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                        // The price carries its period, as the Page tier's
+                        // does: 3.1.2 wants the length of an auto-renewable
+                        // subscription on the screen that sells it, and
+                        // "$34.99" alone in a trailing column does not say
+                        // "a year". The footer below says it again for both.
+                        Text(priceLine(offer)).font(.caption.weight(.medium))
                     }
                     Button(RequestCopy.Offer.buyWithoutTrial) { Task { await buy(offer.tier) } }
                         .accessibilityLabel("\(RequestCopy.Offer.buyWithoutTrial), \(offer.displayName)")
