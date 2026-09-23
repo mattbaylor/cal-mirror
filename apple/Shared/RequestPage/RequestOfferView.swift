@@ -74,9 +74,23 @@ struct RequestOfferView: View {
                 Color.clear.onAppear(perform: onPublished)
             }
         }
-        // Tied to the phase, not to the view: entering `.checking` is the
-        // owner arriving at the price, and nothing earlier may trigger it.
-        .task(id: phase == .checking) {
+        // NOT `.task(id: phase == .checking)`, however well that reads. The
+        // first thing `load()` does after its opening await is set
+        // `phase = .loading`, which flips a phase-derived id and makes SwiftUI
+        // cancel the task doing the loading. Everything downstream then lies:
+        // `Product.products` throws CancellationError into a `try?`, a
+        // cancelled `Task.sleep` does not sleep, so four attempts and six
+        // seconds of backoff pass in microseconds and the owner gets "Could
+        // not reach the App Store" in well under a second. That shipped in 12
+        // and 13, and it is why App Review could not find any of the three
+        // products — including the one this screen has always sold. "Try
+        // again" worked because its Task is not the view's.
+        //
+        // A plain `.task` keeps the promise this screen is measured against:
+        // it runs when the view appears, and the view is built only at
+        // `step == .offer` — the owner asking what this costs. The guard is
+        // what stops a future parent from constructing it earlier.
+        .task {
             guard phase == .checking else { return }
             await load()
         }
@@ -230,14 +244,21 @@ struct RequestOfferView: View {
         if state.isActive { phase = .alreadySubscribed(state); return }
 
         phase = .loading
-        // Four attempts, backing off a second at a time. The first product
-        // request after launch comes back empty in the simulator often enough
-        // that two attempts a second apart still showed the failure screen on
-        // 17 Sept, with "Try again" succeeding immediately; a transient like
-        // that must not be the owner's — or a reviewer's — problem to notice.
-        // Anything that fails four times is the real failure screen.
+        // Four attempts, backing off a second at a time, because a first
+        // product request can genuinely come back empty and a transient must
+        // not be the owner's — or a reviewer's — problem to notice.
+        //
+        // The cancellation checks are not defensive clutter: without them a
+        // cancelled task runs the whole loop instantly (a cancelled sleep
+        // returns at once, and every `try?` swallows the CancellationError)
+        // and paints the failure screen on its way out. That is precisely how
+        // this screen lied for two builds. If this task is cancelled, the
+        // right answer is to leave the screen as it is and say nothing.
         for attempt in 0..<4 {
-            if attempt > 0 { try? await Task.sleep(for: .seconds(attempt)) }
+            if attempt > 0 {
+                do { try await Task.sleep(for: .seconds(attempt)) } catch { return }
+            }
+            if Task.isCancelled { return }
             // StoreKit answers an unknown product id with silence, not an
             // error — an empty list, or one without the page tier — and the
             // screen that would render is a heading over nothing with no way
@@ -249,6 +270,7 @@ struct RequestOfferView: View {
                 return
             }
         }
+        if Task.isCancelled { return }
         phase = .failed
     }
 
