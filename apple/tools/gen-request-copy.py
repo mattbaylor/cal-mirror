@@ -275,7 +275,8 @@ def gen_sheet(c: dict) -> str:
             ("AskWhen.me Custom Subdomain", "$34.99", "Your own name.askwhen.me, and more than one page."),
             ("AskWhen.me Custom Domain", "$69.99", "Your page on your own domain, and several pages.")]:
             ups += (f'<div class="row"><div class="rowmain"><span class="t">{esc(name)}</span>'
-                    f'<span class="val">{esc(pr)}</span></div><p class="cap">{esc(desc)}</p></div>')
+                    f'<span class="val">{esc(pr)}</span></div><p class="cap">{esc(desc)}</p></div>'
+                    + row(off["buyWithoutTrial"], None, "none"))
         return ('<div class="scr"><div class="nav">' + esc(off["section"]) + "</div>"
                 + '<div class="grp"><div class="pad14">'
                 + f'<h4>{esc(off["heading"])}</h4>'

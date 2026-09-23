@@ -622,6 +622,22 @@ of them is worth reopening on its own merits if it starts to bite:
 Everything here was arrived at by Claude and reads as settled in the docs it came
 from. It is not. Each needs Matt's yes, no, or something else.
 
+**All three tiers are buyable on the offer screen.** *(22 September 2026 —
+an agent's change, made to answer App Review; it amends the Settled entry
+"The offer screen sells the Request Page trial, not a choice of three".)* iOS
+2.0 was rejected under Guideline 2.1(b): App Review could not find the Request
+Page, Custom Subdomain or Custom Domain products in the binary. The two higher
+tiers could only be bought from the address screen, which exists only after
+the Page tier has been bought and askwhen.me has created a page — so to a
+reviewer they were not there. The offer screen now gives each of the two a
+plain *Subscribe* under its price. The Page trial keeps the one prominent
+button, so the argument of the Settled entry (a free option beside two
+decoys) mostly survives: the higher tiers are still presented as *more*, not
+as a third of the choice. The address-screen upgrade stays. If Matt would
+rather keep them unsold here, the alternative is review notes that walk the
+reviewer through buying Page first and then upgrading — slower, and it is the
+path that just failed.
+
 **Inside "Send times": three slots, the owner's zone, link on by default.**
 *(16 September 2026 — an agent's numbers; Matt decided the feature, not
 these.)* Three slots, because three reads as an offer and eight as a

@@ -186,7 +186,7 @@ def build(c, fx):
             + ftr(prv["cappedNote"]) + ftr(prv["stale"]) + pinned("See what it costs"))))
 
     steps.append(step(7, "Publishing", "apple",
-        "The offer. The Request Page trial is the single live action; the two paid tiers are shown as upgrades, not sold here.",
+        "The offer. The Request Page trial is the prominent action; the two paid tiers sit below it with a plain Subscribe each, so all three products are buyable from this one screen (App Review, 2.1(b), 22 Sept).",
         "Apple grants one introductory offer per customer per group, so a three-way picker with one free option is a free option with two decoys.",
         phone(nav(esc(off["section"])) + grp(pad(
             f'<h4>{esc(off["heading"])}</h4><p class="body sm">{esc(off["lede"])}</p>'))
@@ -196,7 +196,9 @@ def build(c, fx):
             + ftr(off["renews"]) + ftr(off["network"])
             + grp(f'<div class="hdr">{esc(off["upgradesHeading"])}</div>'
                   '<div class="row"><div class="rowmain"><span class="t">Custom Subdomain</span><span class="val">$34.99</span></div></div>'
-                  '<div class="row"><div class="rowmain"><span class="t">Custom Domain</span><span class="val">$69.99</span></div></div>')
+                  f'<div class="row"><div class="rowmain"><span class="t">{esc(off["buyWithoutTrial"])}</span></div></div>'
+                  '<div class="row"><div class="rowmain"><span class="t">Custom Domain</span><span class="val">$69.99</span></div></div>'
+                  f'<div class="row"><div class="rowmain"><span class="t">{esc(off["buyWithoutTrial"])}</span></div></div>')
             + ftr(off["upgradesNote"])
             + grp(f'<div class="row"><div class="rowmain"><span class="t">{esc(off["restore"])}</span></div></div>')),
         open_q="A returning owner has no trial left, and sees the price plainly instead. That variant is 7b on the contact sheet."))

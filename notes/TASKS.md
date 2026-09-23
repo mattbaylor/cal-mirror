@@ -46,6 +46,7 @@ left behind is below, under *Next*.
 | 4 | **Privacy policy, terms, listing and site** — drafted in the F PR (16 Sept), waiting on Matt's read plus three TODOs: log retention, the support address, the operator's name on the terms. | **Matt** to review |
 | 5 | ~~Rotate the five leaked credentials~~ **done 17 Sept**, verified. | done |
 | 6 | ~~Release 2.0 from CI~~ **done 17 Sept** — build 12 uploaded by `release.yml`, attached by `asc-apply`, submitted with the subscriptions. Both platforms waiting for review. | done |
+| 7 | **Rejected 22 Sept, Guideline 2.1(b)** — App Review could not find the three subscriptions in the binary. Fixed in code: all three are buyable on the offer screen (`decisions.md`, *Proposed*, *All three tiers are buyable on the offer screen*), and the review notes walk from install to that screen step by step. Left: a new build from `release.yml`; `asc-apply` for the notes; resubmit the rejected subscriptions with it (App Store Connect → Monetization → Subscriptions); a sandbox purchase of each tier on a physical device, screen-recorded from the Home Screen, attached in the App Review notes. `AW_APPSTORE_SANDBOX` must stay 1 until approval. | **Matt** |
 
 ## Asks — none open
 
