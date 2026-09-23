@@ -19,6 +19,13 @@ metadata/{ios,mac}/privacy_policy_url.txt    the privacy page on it
 
 Upload order matters — the files are numbered in the order they should appear.
 
+## The review recording
+
+`review-recording.md` — the shot list for the screen recording App Review asked
+for on 22 September, checked against the app's own strings: what must be on the
+device before you press record, the four taps into AskWhen.me that the 2.1(b)
+rejection was about, and which purchase flow lives on which screen.
+
 ## App Privacy
 
 `privacy-labels.md` — the nutrition-label questionnaire answered question by
