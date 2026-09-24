@@ -232,6 +232,25 @@ sizes or after a rotation cannot be concatenated by copying, and the result of
 trying is a file that plays for a second and freezes. Each clip is scaled into
 the first one's frame and padded rather than cropped, so nothing is cut off.
 
+A clip may carry a range in seconds, and the same file may appear twice —
+which is how you cut something out of the middle of a take rather than
+reshooting it:
+
+```bash
+appstore/tools/stitch-review-video.sh take.mov@0-41 take.mov@52
+```
+
+`0-41` is the first 41 seconds, `52` is from 52 seconds to the end, and what
+happened in between is not in the file.
+
+**Do not record an Apple Account password**, and better still, arrange not to
+be asked: verify the account in Settings › Media & Purchases *before* you
+start, and the purchase then confirms with Face ID rather than a password
+field. If you are asked anyway, stop the recording, deal with it, start
+another, and join the two — or cut the span out with the ranges above. iOS
+draws dots rather than characters, but that is not a reason to hand App Review
+the keystrokes.
+
 **Audio is dropped outright.** A screen recording picks up the room, and the
 room is not evidence.
 
