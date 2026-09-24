@@ -45,12 +45,21 @@ type Subdomains struct {
 	// a squat.
 	Lifetime time.Duration
 
-	// Pepper, RateWindow, RatePerIP and TrustedProxy mirror Requests: the
-	// limiter key is an HMAC over the address and the day, so the rows cannot
-	// be linked back to an address once the day turns.
-	Pepper       []byte
-	RateWindow   time.Duration
-	RatePerIP    int
+	// Pepper, RateWindow and TrustedProxy mirror Requests: the limiter key is
+	// an HMAC over the address and the day, so the rows cannot be linked back
+	// to an address once the day turns.
+	Pepper     []byte
+	RateWindow time.Duration
+	// RatePerIP budgets *checking*, which costs a row read and denies nobody
+	// anything. It can afford to be generous: an owner weighing five names
+	// against each other is the behaviour this whole screen exists to allow.
+	RatePerIP int
+	// HoldPerIP budgets *holding*, which takes a name away from everyone else.
+	// It is deliberately much tighter, and in its own bucket — an owner who
+	// has tried a dozen names must still be able to reserve the one they
+	// settled on, and someone parking names must run out long before they
+	// have parked many.
+	HoldPerIP    int
 	TrustedProxy string
 
 	Logger *slog.Logger
@@ -92,7 +101,7 @@ func (s *Subdomains) Available(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if over, err := s.overLimit(r); err != nil {
+	if over, err := s.overLimit(r, "check:", s.RatePerIP); err != nil {
 		s.Logger.Error("subdomains: rate limit", "err", err)
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
@@ -131,7 +140,7 @@ func (s *Subdomains) Hold(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if over, err := s.overLimit(r); err != nil {
+	if over, err := s.overLimit(r, "hold:", s.holdBudget()); err != nil {
 		s.Logger.Error("subdomains: rate limit", "err", err)
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
@@ -194,24 +203,39 @@ func (s *Subdomains) lifetime() time.Duration {
 	return s.Lifetime
 }
 
+// DefaultHoldsPerHour is what one address may reserve in an hour. A real owner
+// holds once, or twice if they changed their mind. Five is generous for that
+// and useless for squatting, especially against a fifteen-minute lifetime.
+const DefaultHoldsPerHour = 5
+
+func (s *Subdomains) holdBudget() int {
+	if s.HoldPerIP <= 0 {
+		return DefaultHoldsPerHour
+	}
+	return s.HoldPerIP
+}
+
 // overLimit is Requests.overLimit's twin, and deliberately a copy rather than a
 // shared helper: the two have different windows and different budgets, and the
 // day any of that diverges further the shared version would be the thing in
 // the way.
-func (s *Subdomains) overLimit(r *http.Request) (bool, error) {
+//
+// `bucket` is what keeps looking and taking apart. They must not share a
+// budget in either direction: an owner who has weighed a dozen names must
+// still be able to reserve the one they chose, and nothing about checking
+// should be spendable to park more names than holding allows.
+func (s *Subdomains) overLimit(r *http.Request, bucket string, budget int) (bool, error) {
 	ip := clientIP(r, s.TrustedProxy)
 	window := time.Now().UTC().Truncate(s.RateWindow)
 	day := window.Format("2006-01-02")
 
-	// "sub:" keeps this in its own bucket: checking names must not spend the
-	// budget a requester needs to send the owner a time.
 	mac := hmac.New(sha256.New, append(append([]byte{}, s.Pepper...), []byte(day)...))
-	mac.Write([]byte("sub:" + ip))
+	mac.Write([]byte("sub:" + bucket + ip))
 	key := mac.Sum(nil)
 
 	n, err := s.Store.Bump(r.Context(), key, window)
 	if err != nil {
 		return false, err
 	}
-	return n > s.RatePerIP, nil
+	return n > budget, nil
 }

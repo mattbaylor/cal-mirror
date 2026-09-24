@@ -193,7 +193,7 @@ def build(c, fx):
             + grp(pad('<p class="body"><b>AskWhen.me Request Page</b></p>'
                       f'<p class="body"><b>{esc(fmt(off["trialLine"], "3 months free", "$19.99"))}</b></p>'
                       f'<div class="btn">{esc(off["buyWithTrial"])}</div>'))
-            + ftr(off["renews"]) + ftr(off["network"])
+            + ftr(off["renews"])
             + grp(f'<div class="hdr">{esc(off["upgradesHeading"])}</div>'
                   '<div class="row"><div class="rowmain"><span class="t">Custom Subdomain</span></div>'
                   f'<p class="cap"><b>{esc(fmt(off["noTrialLine"], "$34.99"))}</b></p></div>'

@@ -19,7 +19,8 @@ func setupSubdomains(t *testing.T) (*Subdomains, *Domains, string, string) {
 		Store:      d.Owner.Store,
 		Lifetime:   15 * time.Minute,
 		Pepper:     []byte("pepper"),
-		RatePerIP:  30,
+		RatePerIP:  60,
+		HoldPerIP:  DefaultHoldsPerHour,
 		RateWindow: time.Hour,
 		Logger:     d.Logger,
 	}
@@ -162,7 +163,7 @@ func TestHoldExpiresAndTheNameComesBack(t *testing.T) {
 
 func TestHoldIsRateLimited(t *testing.T) {
 	s, _, _, _ := setupSubdomains(t)
-	s.RatePerIP = 2
+	s.HoldPerIP = 2
 
 	labels := []string{"alpha", "bravo", "charlie", "delta"}
 	limited := false
@@ -174,6 +175,34 @@ func TestHoldIsRateLimited(t *testing.T) {
 	}
 	if !limited {
 		t.Fatal("holding names is unauthenticated and must be limited")
+	}
+}
+
+// The two budgets are separate in both directions, which is the whole reason
+// they are separate at all.
+func TestCheckingAndHoldingDoNotShareABudget(t *testing.T) {
+	s, _, _, _ := setupSubdomains(t)
+	s.RatePerIP = 60
+	s.HoldPerIP = 1
+
+	// Weighing a dozen names must not cost the owner the one reservation they
+	// came to make.
+	for _, l := range []string{"alpha", "bravo", "charlie", "delta", "echo",
+		"foxtrot", "golf", "hotel", "india", "juliet", "kilo", "lima"} {
+		if code, _ := available(s, l); code != http.StatusOK {
+			t.Fatalf("checking %q was limited: %d", l, code)
+		}
+	}
+	if code, _ := hold(s, "mike"); code != http.StatusCreated {
+		t.Fatalf("a hold after a dozen checks: %d", code)
+	}
+
+	// And the reverse: a spent hold budget must not close the door on looking.
+	if code, _ := hold(s, "november"); code != http.StatusTooManyRequests {
+		t.Fatalf("second hold should be over budget: %d", code)
+	}
+	if code, _ := available(s, "oscar"); code != http.StatusOK {
+		t.Fatalf("checking after the hold budget ran out: %d", code)
 	}
 }
 

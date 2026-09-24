@@ -623,7 +623,8 @@ Everything here was arrived at by Claude and reads as settled in the docs it cam
 from. It is not. Each needs Matt's yes, no, or something else.
 
 **The subdomain is checked, and held, before it is bought.** *(24 September
-2026 — Matt's call on the shape; the design below is the agent's.)* The
+2026 — Matt's call on the shape; the design below is the agent's. The footer
+paragraph at the end of this entry is his decision, not a proposal.)* The
 complaint was exact: the owner had to buy the $35 tier before finding out
 whether `matt.askwhen.me` was free, because the field that claims one sat
 behind the entitlement that allows one. Worse, the same was true of the
@@ -650,14 +651,24 @@ nothing a DNS lookup does not already publish; holding is limited per address
 and swept on every read, so nobody accumulates names faster than the limiter
 allows or keeps one longer than a purchase takes.
 
-**It amends the privacy promise, and the copy now says so.** The offer
-screen's footer read *"Loading the price is this app's first contact with
-anyone — Apple, for the price in your currency. AskWhen.me is not involved
-yet."* That is no longer true on a screen that can ask askwhen.me about a
-name, so the footer now ends *"AskWhen.me hears nothing until you check a name
-below."* The spirit is intact — nothing is sent until the owner types a name
-and taps a button — but the Settled entry it came from should be read again
-with this in front of it. **This is the line that most needs Matt's yes.**
+**The privacy footer is gone, and the ordering it described is not.**
+*(Matt, 24 September, and this part is decided, not proposed.)* The footer read
+*"Loading the price is this app's first contact with anyone — Apple, for the
+price in your currency. AskWhen.me is not involved yet."* A screen that can ask
+askwhen.me about a name cannot say that, and the honest rewrite was longer than
+the original. Matt: *"I don't think the line is important. They've already made
+the decision to move forward and probably have investigated elsewhere. Let's
+just drop it and reclaim the screen area."* He is right about who is reading:
+by screen 7 the pitch is over and the footnote on screen 2 has already named
+the cost and said setup stays on the device.
+
+So the sentence goes and the rule stays. Nothing is fetched before the owner
+asks — products when they reach this screen, the name only when they type one
+and tap Check — and `RequestOfferView`'s doc comment now carries that as an
+invariant to be tested against rather than a promise to be printed. The risk
+is real and worth naming: a promise nobody prints is a promise nobody
+notices breaking. `load()` hanging off `task` with a phase guard, and the
+check firing only from a button, are what hold it up now.
 
 **Not done, deliberately:** the same treatment for custom domains. You own the
 name you are about to point at us, so the only surprises are malformed, or

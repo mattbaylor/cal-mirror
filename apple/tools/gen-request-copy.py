@@ -288,7 +288,7 @@ def gen_sheet(c: dict) -> str:
                 + '<p class="cap">Anyone can ask you for a time. Your calendar stays put.</p>'
                 + f'<p class="body" style="margin-top:8px"><b>{esc(price)}</b></p>{note}'
                 + f'<div class="btn">{esc(btn)}</div></div></div>'
-                + ftr(off["renews"]) + ftr(off["network"])
+                + ftr(off["renews"])
                 + '<div class="grp"><div class="hdr">' + esc(off["upgradesHeading"]) + "</div>"
                 + ups + "</div>" + ftr(off["upgradesNote"])
                 + '<div class="grp">' + row(off["restore"], None, "none") + "</div></div>")
