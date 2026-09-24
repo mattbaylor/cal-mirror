@@ -20,6 +20,17 @@
 #   appstore/tools/stitch-review-video.sh take1.mov take2.mov take3.mov
 #   OUT=/tmp/review.mp4 CRF=30 appstore/tools/stitch-review-video.sh *.mov
 #
+# A clip may carry a range in seconds, and the same file may appear twice —
+# which is how you cut something out of the middle of a take rather than
+# reshooting it:
+#
+#   stitch-review-video.sh take.mov@0-41 take.mov@52
+#
+# 0-41 is the first 41 seconds, 52 is from 52 seconds to the end, and what
+# happened in between is not in the file. Typing an Apple Account password is
+# the reason this exists: iOS shows dots rather than characters, but a password
+# is not something to hand to App Review on the strength of that.
+#
 # The default CRF is chosen for App Store Connect's attachment field rather
 # than for archival: legible text at phone scale, and a file small enough to
 # upload. Raise CRF to shrink it further; the script prints the size it made.
@@ -36,7 +47,14 @@ fi
 command -v ffmpeg >/dev/null || { echo "ffmpeg not on PATH — brew install ffmpeg" >&2; exit 1; }
 command -v ffprobe >/dev/null || { echo "ffprobe not on PATH — brew install ffmpeg" >&2; exit 1; }
 
-for f in "$@"; do
+# Split "path@start-end" into the three. The path is taken from the left of the
+# LAST "@" so a filename containing one still works.
+clip_path() { case "$1" in *@*) echo "${1%@*}";; *) echo "$1";; esac; }
+clip_start() { case "$1" in *@*) r="${1##*@}"; echo "${r%%-*}";; *) echo "";; esac; }
+clip_end()   { case "$1" in *@*-*) r="${1##*@}"; echo "${r#*-}";; *) echo "";; esac; }
+
+for spec in "$@"; do
+  f=$(clip_path "$spec")
   [ -f "$f" ] || { echo "no such file: $f" >&2; exit 1; }
 done
 
@@ -49,22 +67,33 @@ done
 probe() { ffprobe -v error -select_streams v:0 -show_entries "stream=$1" \
   -of default=noprint_wrappers=1:nokey=1 "$2" | head -1; }
 
-W=$(probe width  "$1")
-H=$(probe height "$1")
+first=$(clip_path "$1")
+W=$(probe width  "$first")
+H=$(probe height "$first")
 # H.264 wants even dimensions; a phone capture is already even, but a clip
 # scaled from one is not reliably so.
 W=$(( (W / 2) * 2 ))
 H=$(( (H / 2) * 2 ))
 
-echo "==> Output frame ${W}x${H}, from $(basename "$1")"
+echo "==> Output frame ${W}x${H}, from $(basename "$first")"
 
 inputs=()
 filter=""
 i=0
-for f in "$@"; do
+for spec in "$@"; do
+  f=$(clip_path "$spec")
+  ss=$(clip_start "$spec")
+  to=$(clip_end "$spec")
   dims="$(probe width "$f")x$(probe height "$f")"
   dur=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$f" | head -1)
-  printf '    %-40s %s  %.1fs\n' "$(basename "$f")" "$dims" "$dur"
+  range=""
+  [ -n "$ss" ] && range=" from ${ss}s"
+  [ -n "$to" ] && range="${range} to ${to}s"
+  printf '    %-40s %s  %.1fs%s\n' "$(basename "$f")" "$dims" "$dur" "$range"
+  # -ss and -to belong BEFORE -i: after it they seek the output, which for a
+  # concat means decoding the whole clip and throwing most of it away.
+  [ -n "$ss" ] && inputs+=(-ss "$ss")
+  [ -n "$to" ] && inputs+=(-to "$to")
   inputs+=(-i "$f")
   # scale keeps the aspect ratio, pad fills the rest — a take shot in a
   # different aspect is letterboxed, never cropped. setsar keeps the concat
