@@ -729,3 +729,37 @@ func TestMintingAPersonalLinkReturnsACodeAUrlAndAnExpiry(t *testing.T) {
 		t.Fatalf("wrong token: %d", w.Code)
 	}
 }
+
+// A real StoreKit jwsRepresentation carries Apple's whole certificate chain in
+// its header and is several kilobytes on its own. The create cap was 4 KiB,
+// which no genuine purchase could fit through: the transaction was taken, the
+// page was never made, and the device said "Apple said yes, AskWhen.me did not
+// answer". This asserts the body is not the thing standing in the way, and
+// that a body which really is too large says so instead of "malformed".
+func TestCreateAcceptsARealSizedTransaction(t *testing.T) {
+	o := setupOwner(t)
+
+	// Bigger than the old cap, smaller than a chain-carrying JWS would push it.
+	body := map[string]any{
+		"transaction": strings.Repeat("A", 8<<10),
+		"display":     map[string]string{"name": "Matt", "blurb": "", "tz": "America/Denver"},
+	}
+	w := do(o.Create, http.MethodPost, "/v1/pages", body, "", nil, nil)
+	if w.Code == http.StatusBadRequest && strings.Contains(w.Body.String(), "malformed") {
+		t.Fatalf("an 8 KiB transaction was refused as malformed — the cap is back: %s", w.Body.String())
+	}
+	// It should get as far as Apple's word on it, and be refused there.
+	if w.Code != http.StatusPaymentRequired {
+		t.Fatalf("expected the entitlement check to be reached, got %d %s", w.Code, w.Body.String())
+	}
+
+	// And something genuinely enormous is told what is wrong with it.
+	body["transaction"] = strings.Repeat("A", 128<<10)
+	w = do(o.Create, http.MethodPost, "/v1/pages", body, "", nil, nil)
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("a 128 KiB body should be 413, got %d %s", w.Code, w.Body.String())
+	}
+	if strings.Contains(w.Body.String(), "malformed") {
+		t.Fatal("an over-cap body must not be reported as malformed — that is what cost a day")
+	}
+}
