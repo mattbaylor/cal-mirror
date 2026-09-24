@@ -120,8 +120,24 @@ func (o *Owner) Create(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	var in createRequest
-	r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
+	// 64 KiB, and not the 4 KiB this used to be. The body carries StoreKit's
+	// jwsRepresentation, whose header holds Apple's whole x5c chain — leaf,
+	// intermediate and root, base64'd — and a real one does not fit in four.
+	// Every genuine purchase this service ever saw was refused here, and the
+	// device showed "Apple said yes, AskWhen.me did not answer" with the money
+	// already taken. Found 24 September 2026 from a screen recording.
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		// Saying WHICH is the whole lesson: a body over the cap and a body of
+		// nonsense both came back "malformed", so the one thing the log and
+		// the device needed to distinguish them was the one thing neither had.
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			o.Logger.Warn("owner: create body over cap", "limit", tooBig.Limit)
+			http.Error(w, `{"error":"that transaction is too large to accept"}`,
+				http.StatusRequestEntityTooLarge)
+			return
+		}
 		http.Error(w, `{"error":"malformed"}`, http.StatusBadRequest)
 		return
 	}
