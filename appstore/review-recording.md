@@ -24,7 +24,7 @@ does not match, the app changed and this file did not — fix this file.
 | **An iPad, if you have one** | Apple reviewed on an iPad Air 11-inch and that is where they got lost. An iPhone recording meets the letter of the ask; an iPad one answers the complaint. |
 | **`AW_APPSTORE_SANDBOX` is `1`** on CT 112 | The service verifies Apple's signature against the sandbox root. At `0` it refuses the transaction and you record *"Apple said yes, AskWhen.me did not answer"* — PR #132 stays a draft until approval for exactly this reason. |
 | **A calendar with real events in the next two weeks** | The preview screen is drawn from the device's own calendar. An empty fortnight gives *"Your page would be empty"* and a reviewer sees a product with nothing in it. |
-| **Signed in as the Sandbox Apple Account** | Apple asked for this by name — "using the Sandbox Apple Account configured in App Store Connect". Settings › Media & Purchases, sign out of the production account; then Settings › Developer › Sandbox Apple Account, sign in. It is also what gives you the sandbox controls, and a fresh one is what gives you a fresh offer screen. |
+| **Signed in as the Sandbox Apple Account** | Apple asked for this by name — "using the Sandbox Apple Account configured in App Store Connect". Which account, and where its password is, is the section below. Settings › Media & Purchases, sign out of the production account; then Settings › Developer › Sandbox Apple Account, sign in. It is also what gives you the sandbox controls, and a fresh one is what gives you a fresh offer screen. |
 | **The Apple Account verified on the device first** | Settings › Apple Account. iOS does not ask until you are already mid-purchase, and then it replaces Apple's sheet with *"Apple Account Verification — Enter the password for … in Settings"*. Tapping Settings and entering it carries on fine; dismissing it is a cancellation, and the app says *"Nothing was bought and nothing changed."* Not a blocker — just an interruption you do not want in the middle of a take. |
 | **The app deleted first** | Every step below assumes a fresh install: the dormant row, the explainer, and — the point of the whole exercise — an offer screen with nothing yet owned. |
 
@@ -47,6 +47,56 @@ And TestFlight renews subscriptions **daily, up to six times, then stops**,
 whatever the real duration says. A yearly subscription bought today renews six
 times this week and expires. All sandbox, all free; if a take runs long enough
 to catch one, it is expected rather than wrong.
+
+---
+
+## The test account, and where it lives
+
+**Not in this repository, and not in any file in it.** This repo is public. The
+account below can buy things, and a password in a public git history is a
+password you cannot unpublish — `git rm` does not remove it, it only stops it
+being the latest version.
+
+There are two accounts in play and they are not the same thing:
+
+**1. The Sandbox Apple Account — what you sign into on the device.**
+App Store Connect › **Users and Access › Sandbox › Test Accounts**. The list
+shows each account's email; the password is set when the account is created and
+can be reset from that row (**Edit › Reset Password**) if nobody has it any
+more. Resetting costs nothing — a sandbox account has no purchase history worth
+keeping, and a fresh account is a fresh offer screen anyway.
+
+`asc-status` prints the list, so "which tester was it?" has an answer that does
+not depend on anyone remembering:
+
+```
+SANDBOX APPLE ACCOUNTS
+  <email>  'Name'  territory=USA interrupt=False subRenewal=...
+```
+
+**2. The demo account on the submission — what App Review is handed.**
+App Store Connect › the app › the version › **App Review Information**, the
+*Sign-In Required* block. For Calendar Mirror the app itself needs no account
+at all, so those fields carry the sandbox tester instead, which is what the
+review notes tell the reviewer to use. `asc-status` reports whether they are
+filled, and deliberately **never prints the password** — it runs in a workflow
+on a public repository, whose logs are public:
+
+```
+APP REVIEW INFORMATION
+  IOS
+    demo account required : True
+    demo account name     : <the sandbox tester's email>
+    demo account password : set
+    attachment            : NONE — the screen recording goes here
+```
+
+If that last line says `EMPTY` where it should say `set`, the reviewer cannot
+sign in, and no recording will save the submission.
+
+**To read the password itself**, open App Store Connect in a browser — App
+Review Information shows it in the clear to anyone who can log in. That is the
+only place it should exist.
 
 ---
 

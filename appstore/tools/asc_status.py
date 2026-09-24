@@ -147,6 +147,52 @@ def main():
             what = ", ".join(f"{k}={names.get((d['type'], d['id']), d['id'])}" for k, d in rel.items())
             print(f"    {it['attributes'].get('state'):28} {what}")
 
+    # What App Review is handed to get in: the demo account fields, the review
+    # notes, and whether an attachment is on the version.
+    #
+    # THE PASSWORD IS NEVER PRINTED. This runs in a workflow on a public
+    # repository, so its log is public, and a credential echoed there is a
+    # credential published. Presence is all anybody needs from here; the value
+    # itself is in App Store Connect, behind a login, which is the right place
+    # for it.
+    print("\nAPP REVIEW INFORMATION")
+    for v in mine:
+        plat = v["attributes"].get("platform")
+        d = get(f"/v1/appStoreVersions/{v['id']}/appStoreReviewDetail").get("data")
+        if not d:
+            print(f"  {plat}: none set")
+            continue
+        a = d["attributes"]
+        pw = a.get("demoAccountPassword")
+        notes = a.get("notes") or ""
+        print(f"  {plat}")
+        print(f"    demo account required : {a.get('demoAccountRequired')}")
+        print(f"    demo account name     : {a.get('demoAccountName') or '(empty)'}")
+        print(f"    demo account password : {'set' if pw else 'EMPTY'}")
+        print(f"    contact               : {a.get('contactFirstName')} {a.get('contactLastName')} "
+              f"<{a.get('contactEmail')}> {a.get('contactPhone')}")
+        print(f"    notes                 : {len(notes)} chars")
+        atts = get(f"/v1/appStoreReviewDetails/{d['id']}/appStoreReviewAttachments?limit=10").get("data", [])
+        if not atts:
+            print("    attachment            : NONE — the screen recording goes here")
+        for at in atts:
+            aa = at["attributes"]
+            state = (aa.get("assetDeliveryState") or {}).get("state")
+            print(f"    attachment            : {aa.get('fileName')} "
+                  f"{aa.get('fileSize')} bytes, {state}")
+
+    # The sandbox accounts themselves, so "which tester was it?" has an answer
+    # that does not depend on anyone remembering.
+    print("\nSANDBOX APPLE ACCOUNTS")
+    testers = get("/v2/sandboxTesters?limit=50").get("data", [])
+    if not testers:
+        print("  none returned (the v2 endpoint needs an Admin or App Manager key)")
+    for t in testers:
+        a = t["attributes"]
+        name = " ".join(x for x in (a.get("firstName"), a.get("lastName")) if x)
+        print(f"  {a.get('acAccountName')}  {name!r}  territory={a.get('territory')} "
+              f"interrupt={a.get('interruptPurchases')} subRenewal={a.get('subscriptionRenewalRate')}")
+
     # TestFlight, because a sandbox purchase on a physical device needs the
     # submitted binary on that device, and the only way to get it there without
     # a development profile is a tester group. An internal group takes anyone
