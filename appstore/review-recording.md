@@ -20,10 +20,11 @@ does not match, the app changed and this file did not — fix this file.
 
 | | Why |
 |---|---|
-| **Build 13 on the device, from TestFlight** | It must be the submitted binary. A build run from Xcode is signed differently and proves nothing about what Apple holds. TestFlight builds also transact against the StoreKit sandbox automatically — no sandbox sign-in, no charge. |
+| **Build 14 on the device, from TestFlight** | It must be the submitted binary. A build run from Xcode is signed differently and proves nothing about what Apple holds. TestFlight builds also transact against the StoreKit sandbox automatically — no sandbox sign-in, no charge. |
 | **An iPad, if you have one** | Apple reviewed on an iPad Air 11-inch and that is where they got lost. An iPhone recording meets the letter of the ask; an iPad one answers the complaint. |
 | **`AW_APPSTORE_SANDBOX` is `1`** on CT 112 | The service verifies Apple's signature against the sandbox root. At `0` it refuses the transaction and you record *"Apple said yes, AskWhen.me did not answer"* — PR #132 stays a draft until approval for exactly this reason. |
 | **A calendar with real events in the next two weeks** | The preview screen is drawn from the device's own calendar. An empty fortnight gives *"Your page would be empty"* and a reviewer sees a product with nothing in it. |
+| **The Apple Account verified on the device first** | Settings › Apple Account. If iOS wants the password, it will not say so until you are mid-purchase: the sheet is replaced by *"Apple Account Verification — Enter the password for … in Settings"*, StoreKit reports the purchase as cancelled, and the app honestly says *"Nothing was bought and nothing changed."* Cost one take on 24 September. Verify first, then film. |
 | **The app deleted first** | Every step below assumes a fresh install: the dormant row, the explainer, and — the point of the whole exercise — an offer screen with nothing yet owned. |
 
 One consequence of that last row is worth understanding before you plan the
