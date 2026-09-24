@@ -763,3 +763,54 @@ func TestCreateAcceptsARealSizedTransaction(t *testing.T) {
 		t.Fatal("an over-cap body must not be reported as malformed — that is what cost a day")
 	}
 }
+
+// maxDumpFor builds what the app itself calls its ceiling: PolicyDump.maxSlots
+// is 500 and the app truncates to it, so this is the largest body Publish can
+// ever be asked to take.
+func maxDumpFor(slug string) string {
+	var b strings.Builder
+	b.WriteString(`{"v":1,"slug":"` + slug + `","generated":"2026-09-10T15:00:00Z",`)
+	b.WriteString(`"expires":"2026-09-11T15:00:00Z",`)
+	b.WriteString(`"display":{"name":"Matt Baylor","blurb":"30 minutes, usually about refereeing or calendars.","tz":"America/Denver"},`)
+	b.WriteString(`"meeting":{"minutes":30,"title":"Intro call","location":null},"slots":[`)
+	day := time.Date(2026, 9, 12, 16, 0, 0, 0, time.UTC)
+	for i := 0; i < 500; i++ {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		st := day.Add(time.Duration(i) * 30 * time.Minute)
+		b.WriteString(`{"s":"` + st.Format(time.RFC3339) + `","e":"` + st.Add(30*time.Minute).Format(time.RFC3339) + `"}`)
+	}
+	b.WriteString(`]}`)
+	return b.String()
+}
+
+// Every other Publish test uses a one-slot dump, which is how a body cap goes
+// unnoticed until a real device meets it — the 4 KiB cap on Create survived
+// every test in this file for the same reason. This publishes the largest dump
+// the app can produce and insists the service takes it.
+func TestPublishAcceptsTheLargestDumpTheAppCanMake(t *testing.T) {
+	o := setupOwner(t)
+	slug, token := createPage(t, o)
+
+	dump := maxDumpFor(slug)
+	t.Logf("500-slot dump is %d bytes against a %d byte cap", len(dump), 64<<10)
+	if len(dump) < 8<<10 {
+		t.Fatalf("a 500-slot dump should be tens of kilobytes, got %d — is maxSlots still 500?", len(dump))
+	}
+
+	w := do(o.Publish, http.MethodPut, "/v1/pages/"+slug, dump, token,
+		map[string]string{"slug": slug}, nil)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("the app's own maximum dump was refused: %d %s", w.Code, w.Body.String())
+	}
+
+	// And it comes back verbatim, so nothing was quietly truncated on the way.
+	got, _, err := o.Store.Dump(context.Background(), slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != dump {
+		t.Fatalf("stored dump differs from what was sent: %d bytes in, %d out", len(dump), len(got))
+	}
+}

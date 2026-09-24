@@ -209,6 +209,15 @@ rejection was really about, and it now exists in two places rather than one:
 All three are one subscription group, so each of these is an upgrade Apple
 prorates, not a second charge — the note on screen says so before you agree.
 
+**Give the service a moment between buying an upgrade and claiming a name.**
+The device knows its new tier the instant StoreKit answers; askwhen.me learns
+it from Apple's server notification, which is asynchronous. Claim too quickly
+and the service is still holding the old tier and refuses with *"this
+subscription does not include that kind of hostname"* — a true statement about
+stale knowledge, and an alarming thing to have on camera. A few seconds is
+normally plenty. If it does refuse, wait and tap again; nothing is lost and
+nothing was charged twice.
+
 ### 6 · Close
 
 Back on **Your page**, show the live address once more and open it in Safari if
