@@ -4,6 +4,7 @@ package store
 
 import (
 	"context"
+	"crypto/hmac"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -128,6 +129,102 @@ func (s *Store) ClaimDomain(ctx context.Context, host, slug, kind string) error 
 			return ErrNoPage
 		}
 		return fmt.Errorf("claim domain: %w", err)
+	}
+	return nil
+}
+
+// ErrHeldByAnother means a live hold on that label belongs to somebody else.
+var ErrHeldByAnother = errors.New("subdomain held by another")
+
+// SweepSubdomainHolds drops holds that have run out. Called on the way into
+// every read rather than on a timer: the table is tiny, the cost is a delete
+// over an index, and a hold that has expired must never be able to answer
+// "taken" to the next person who asks.
+func (s *Store) SweepSubdomainHolds(ctx context.Context, now time.Time) error {
+	_, err := s.db.ExecContext(ctx,
+		`DELETE FROM subdomain_hold WHERE expires_at <= ?`, now.UTC().Format(time.RFC3339))
+	if err != nil {
+		return fmt.Errorf("sweep subdomain holds: %w", err)
+	}
+	return nil
+}
+
+// SubdomainTaken reports whether a host is claimed outright or held by
+// somebody, which are the same answer to whoever is asking: not yours.
+func (s *Store) SubdomainTaken(ctx context.Context, host string, now time.Time) (bool, error) {
+	if err := s.SweepSubdomainHolds(ctx, now); err != nil {
+		return false, err
+	}
+	var n int
+	err := s.db.QueryRowContext(ctx, `
+		SELECT (SELECT COUNT(*) FROM domain WHERE host = ?)
+		     + (SELECT COUNT(*) FROM subdomain_hold WHERE host = ?)`, host, host).Scan(&n)
+	if err != nil {
+		return false, fmt.Errorf("subdomain taken: %w", err)
+	}
+	return n > 0, nil
+}
+
+// HoldSubdomain reserves a label until expires. A hold the caller already owns
+// is extended rather than refused, so a retry on a flaky network does not cost
+// the owner their name.
+func (s *Store) HoldSubdomain(ctx context.Context, host string, secretHash []byte,
+	now, expires time.Time) error {
+	if err := s.SweepSubdomainHolds(ctx, now); err != nil {
+		return err
+	}
+	var claimed int
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM domain WHERE host = ?`, host).Scan(&claimed); err != nil {
+		return fmt.Errorf("hold subdomain: %w", err)
+	}
+	if claimed > 0 {
+		return ErrDomainTaken
+	}
+
+	var existing []byte
+	err := s.db.QueryRowContext(ctx,
+		`SELECT secret_hash FROM subdomain_hold WHERE host = ?`, host).Scan(&existing)
+	switch {
+	case err == nil && !hmac.Equal(existing, secretHash):
+		return ErrHeldByAnother
+	case err != nil && err != sql.ErrNoRows:
+		return fmt.Errorf("hold subdomain: %w", err)
+	}
+
+	_, err = s.db.ExecContext(ctx, `
+		INSERT INTO subdomain_hold (host, secret_hash, created_at, expires_at)
+		VALUES (?, ?, ?, ?)
+		ON CONFLICT (host) DO UPDATE SET expires_at = excluded.expires_at`,
+		host, secretHash, now.UTC().Format(time.RFC3339), expires.UTC().Format(time.RFC3339))
+	if err != nil {
+		return fmt.Errorf("hold subdomain: %w", err)
+	}
+	return nil
+}
+
+// HoldMatches reports whether a live hold on host was made with this secret.
+// A hold nobody holds is not a match: an expired one has already lost the name.
+func (s *Store) HoldMatches(ctx context.Context, host string, secretHash []byte, now time.Time) (bool, error) {
+	if err := s.SweepSubdomainHolds(ctx, now); err != nil {
+		return false, err
+	}
+	var stored []byte
+	err := s.db.QueryRowContext(ctx,
+		`SELECT secret_hash FROM subdomain_hold WHERE host = ?`, host).Scan(&stored)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("hold matches: %w", err)
+	}
+	return hmac.Equal(stored, secretHash), nil
+}
+
+// DropSubdomainHold removes a hold once its name has been claimed for real.
+func (s *Store) DropSubdomainHold(ctx context.Context, host string) error {
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM subdomain_hold WHERE host = ?`, host); err != nil {
+		return fmt.Errorf("drop subdomain hold: %w", err)
 	}
 	return nil
 }

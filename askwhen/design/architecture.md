@@ -408,6 +408,21 @@ but note it also *buys* the privacy property, which is worth saying in the copy.
 
 14-day trial, annual only.
 
+**The name is asked for before the money** (24 September 2026). The tiers above
+read as if buying one grants a name, but a name is not ours to grant twice — and
+until build 15 the owner found that out only after paying, because the field
+that claims a subdomain lived behind the entitlement that allows it. Two public
+endpoints fix the ordering: `GET /v1/subdomains/{label}` says whether a label is
+free, and `POST /v1/subdomains/{label}/hold` reserves it for fifteen minutes
+against a secret it hands back. Checking reserves nothing — an owner trying five
+names must not park four — so the hold is taken when they tap Subscribe, which
+is the window that matters, and the secret is presented to the ordinary
+authenticated claim once the page exists. These are the only owner-side routes
+with no token, and they must be: they are asked on the offer screen, where by
+design nothing has been bought yet. Availability leaks nothing a DNS lookup
+does not already publish; holding is the part with teeth, so it is rate limited
+per address and swept on every read.
+
 **Lapse behavior needs deciding** (decision 6). My recommendation: 7-day grace
 during which the page shows "not currently taking requests", then the dump is
 deleted and the slug 404s. Never silently keep serving.

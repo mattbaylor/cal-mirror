@@ -371,6 +371,23 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 	mux.HandleFunc("PUT /v1/pages/{slug}/domains/{host}", domains.Claim)
 	mux.HandleFunc("DELETE /v1/pages/{slug}/domains/{host}", domains.Release)
 
+	// The only unauthenticated owner-side routes there are. They have to be:
+	// they answer "is this name free" and "keep it while I pay", which are
+	// both asked on the offer screen, before a page or a write token exists.
+	// See internal/api/subdomains.go for why that is safe to publish.
+	subdomains := &api.Subdomains{
+		Domains:      domains,
+		Store:        st,
+		Lifetime:     api.DefaultHoldLifetime,
+		Pepper:       cfg.pepper,
+		RatePerIP:    30,
+		RateWindow:   time.Hour,
+		TrustedProxy: cfg.trustedProxy,
+		Logger:       log,
+	}
+	mux.HandleFunc("GET /v1/subdomains/{label}", subdomains.Available)
+	mux.HandleFunc("POST /v1/subdomains/{label}/hold", subdomains.Hold)
+
 	// Double opt-in. GET renders, POST confirms — see internal/api/confirm.go
 	// for why that split is not decoration.
 	confirm := &api.Confirm{

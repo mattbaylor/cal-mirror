@@ -1409,6 +1409,43 @@ do {
     _ = try! run { try await c.releaseDomain("matt.askwhen.me", slug: "x7f2k9", token: "tok_123") }.get()
     check(t.calls.last?.method == "DELETE" && t.calls.last?.path == "/v1/pages/x7f2k9/domains/matt.askwhen.me", "releaseDomain is DELETE")
 
+    // Asking for a name before there is anything to authenticate with. These
+    // two are the only owner-side calls that carry no token, and the check
+    // that they do not is the point: a token on the offer screen would mean
+    // the app had already created something.
+    t.answers = [(200, [:], #"{"label":"dana","host":"dana.askwhen.me","available":true}"#)]
+    let free = try! run { try await c.subdomainAvailability("dana") }.get()
+    check(t.calls.last?.method == "GET" && t.calls.last?.path == "/v1/subdomains/dana",
+          "subdomainAvailability is GET /v1/subdomains/{label}")
+    check(t.calls.last?.headers["Authorization"] == nil, "and carries no token, because there is nothing to be yet")
+    check(free.available && free.host == "dana.askwhen.me", "a free label comes back available")
+
+    t.answers = [(200, [:], #"{"label":"www","host":"","available":false,"reason":"invalid","why":"that label is reserved"}"#)]
+    let no = try! run { try await c.subdomainAvailability("www") }.get()
+    check(!no.available && no.reason == "invalid" && no.why == "that label is reserved",
+          "a refusal carries the service's own sentence, so the app need not guess at it")
+
+    t.answers = [(201, [:], #"{"host":"dana.askwhen.me","secret":"s3cr3t","expires":"2026-09-24T12:00:00Z"}"#)]
+    let held = try! run { try await c.holdSubdomain("dana") }.get()
+    check(t.calls.last?.method == "POST" && t.calls.last?.path == "/v1/subdomains/dana/hold",
+          "holdSubdomain is POST /v1/subdomains/{label}/hold")
+    check(held.secret == "s3cr3t" && held.host == "dana.askwhen.me", "and hands back the one proof of the reservation")
+
+    t.answers = [(409, [:], "that hostname is not available")]
+    if case .success = run({ try await c.holdSubdomain("dana") }) {
+        check(false, "a name already held must not come back as a hold")
+    } else {
+        check(true, "a name already held is refused rather than double-booked")
+    }
+
+    t.answers = [(201, [:], #"{"host":"dana.askwhen.me","kind":"subdomain","verified":true}"#)]
+    _ = try! run { try await c.claimDomain("dana.askwhen.me", slug: "x7f2k9", token: "tok_123", hold: "s3cr3t") }.get()
+    check(t.calls.last?.headers["X-Askwhen-Hold"] == "s3cr3t",
+          "claiming a held name presents the secret, which is the only thing that proves it is ours")
+    t.answers = [(201, [:], #"{"host":"other.askwhen.me","kind":"subdomain","verified":true}"#)]
+    _ = try! run { try await c.claimDomain("other.askwhen.me", slug: "x7f2k9", token: "tok_123") }.get()
+    check(t.calls.last?.headers["X-Askwhen-Hold"] == nil, "and an unheld name sends no hold header at all")
+
     t.answers = [(402, [:], #"{"error":"subscription has expired"}"#)]
     check((run { try await c.createPage(transaction: "eyJ.old", display: .init(name: "M", tz: "UTC")) }.failure as? AskwhenError)
           == .rejected(#"{"error":"subscription has expired"}"#), "402 → rejected, with the service's reason")

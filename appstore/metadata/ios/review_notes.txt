@@ -28,12 +28,15 @@ screen, reached like this from a fresh install:
      - AskWhen.me Custom Domain, me.askwhen.domain.annual, $69.99/yr
        — "Subscribe" under it
      "Restore Purchases" is at the bottom of the same screen.
-Once a page exists, the two higher tiers are also offered as upgrades on
-that page's screen, under "Your own name on AskWhen.me" and "A domain you
-own". On the Mac the same row is last in the window's sidebar, under
-"AskWhen.me", and the steps are the same inside the sheet it opens. All
-three are in one subscription group, so buying a higher tier after a lower
-one is an upgrade, prorated by Apple.
+  6. Under Custom Subdomain, a name field and "Check it" ask our server
+     whether that name is free. Optional, and it reserves nothing: the
+     reservation is taken on "Subscribe", and if the name has gone by then
+     nothing is bought.
+Once a page exists, both higher tiers are also offered as upgrades on that
+page's screen, under "Your own name on AskWhen.me" and "A domain you own".
+On the Mac the row is last in the window's sidebar; the steps inside are the
+same. All three are one subscription group, so a higher tier bought after a
+lower one is an upgrade, prorated by Apple.
 
 SANDBOX TESTER: in the demo-account fields of this submission. Sign into it
 under Settings › App Store › Sandbox Account on the test device before
