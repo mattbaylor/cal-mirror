@@ -121,10 +121,24 @@ public final class RequestPageCoordinator: @unchecked Sendable {
     /// verified entitlement and this device only holds an opinion about it.
     /// A refusal arrives as `AskwhenError.rejected` with the service's own
     /// words, which the UI shows rather than paraphrases.
-    public func claimDomain(_ host: String, page: RequestPageConfig) async throws -> AskwhenClient.ClaimedDomain {
+    public func claimDomain(_ host: String, page: RequestPageConfig,
+                            hold: String? = nil) async throws -> AskwhenClient.ClaimedDomain {
         guard !page.slug.isEmpty else { throw RequestPageError.notCreated }
         guard let token = try tokens.token(for: page.slug) else { throw RequestPageError.noToken }
-        return try await client.claimDomain(Self.normalize(host), slug: page.slug, token: token)
+        return try await client.claimDomain(Self.normalize(host), slug: page.slug,
+                                            token: token, hold: hold)
+    }
+
+    /// Is this label free? The one question asked before a page exists, so it
+    /// takes no token and this method needs no page.
+    public func subdomainAvailability(_ label: String) async throws -> AskwhenClient.SubdomainAvailability {
+        try await client.subdomainAvailability(label)
+    }
+
+    /// Reserve it for the length of a purchase. The secret comes back once;
+    /// hand it to `claimDomain` after the subscription lands.
+    public func holdSubdomain(_ label: String) async throws -> AskwhenClient.SubdomainHold {
+        try await client.holdSubdomain(label)
     }
 
     /// Releases it. Anyone holding a link to that hostname loses it, which is

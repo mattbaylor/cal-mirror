@@ -263,11 +263,63 @@ public struct AskwhenClient: Sendable {
 
     /// Claims `host` for the page. A subdomain of askwhen.me comes back
     /// verified; a custom domain comes back with what the customer has to set.
-    public func claimDomain(_ host: String, slug: String, token: String) async throws -> ClaimedDomain {
-        let (data, resp) = try await exchange(request("PUT", "/v1/pages/\(slug)/domains/\(host)", token: token))
+    ///
+    /// `hold` is the secret from `holdSubdomain`, for a label reserved before
+    /// the subscription was bought. Without it a held name is refused exactly
+    /// as a stranger's would be — the hold is not advisory.
+    public func claimDomain(_ host: String, slug: String, token: String,
+                            hold: String? = nil) async throws -> ClaimedDomain {
+        var req = request("PUT", "/v1/pages/\(slug)/domains/\(host)", token: token)
+        if let hold { req.setValue(hold, forHTTPHeaderField: "X-Askwhen-Hold") }
+        let (data, resp) = try await exchange(req)
         guard resp.statusCode == 201 || resp.statusCode == 200 else { throw failure(resp, data) }
         guard let d = try? JSONDecoder().decode(ClaimedDomain.self, from: data) else { throw AskwhenError.malformed }
         return d
+    }
+
+    // MARK: Subdomains, before there is anything to authenticate with
+
+    /// What the service thinks of a label, asked before a page exists.
+    public struct SubdomainAvailability: Codable, Equatable, Sendable {
+        public let label: String
+        public let host: String
+        public let available: Bool
+        /// "taken", "reserved", "invalid" — nil when available.
+        public let reason: String?
+        /// The service's own sentence, where it has one worth showing.
+        public let why: String?
+    }
+
+    /// A label reserved for long enough to buy the tier that allows it.
+    public struct SubdomainHold: Codable, Equatable, Sendable {
+        public let host: String
+        /// The only proof of the reservation. Nothing else identifies it, so
+        /// losing it loses the name when the hold runs out.
+        public let secret: String
+        public let expires: String
+    }
+
+    /// Is this name free? Unauthenticated, because it is asked on the offer
+    /// screen with nothing bought — and it reserves nothing, so an owner
+    /// trying five names does not park four of them.
+    public func subdomainAvailability(_ label: String) async throws -> SubdomainAvailability {
+        let (data, resp) = try await exchange(request("GET", "/v1/subdomains/\(label)", token: nil))
+        guard resp.statusCode == 200 else { throw failure(resp, data) }
+        guard let a = try? JSONDecoder().decode(SubdomainAvailability.self, from: data) else {
+            throw AskwhenError.malformed
+        }
+        return a
+    }
+
+    /// Reserve it. Called when the owner commits to buying, not when they
+    /// look: Apple's sheet is the window this exists to cover.
+    public func holdSubdomain(_ label: String) async throws -> SubdomainHold {
+        let (data, resp) = try await exchange(request("POST", "/v1/subdomains/\(label)/hold", token: nil))
+        guard resp.statusCode == 201 else { throw failure(resp, data) }
+        guard let h = try? JSONDecoder().decode(SubdomainHold.self, from: data) else {
+            throw AskwhenError.malformed
+        }
+        return h
     }
 
     public func releaseDomain(_ host: String, slug: String, token: String) async throws {

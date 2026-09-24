@@ -20,7 +20,7 @@ does not match, the app changed and this file did not — fix this file.
 
 | | Why |
 |---|---|
-| **Build 14 on the device, from TestFlight** | It must be the submitted binary. A build run from Xcode is signed differently and proves nothing about what Apple holds. TestFlight builds also transact against the StoreKit sandbox automatically — no sandbox sign-in, no charge. |
+| **Build 15 on the device, from TestFlight** | It must be the submitted binary. A build run from Xcode is signed differently and proves nothing about what Apple holds. TestFlight builds also transact against the StoreKit sandbox automatically — no sandbox sign-in, no charge. |
 | **An iPad, if you have one** | Apple reviewed on an iPad Air 11-inch and that is where they got lost. An iPhone recording meets the letter of the ask; an iPad one answers the complaint. |
 | **`AW_APPSTORE_SANDBOX` is `1`** on CT 112 | The service verifies Apple's signature against the sandbox root. At `0` it refuses the transaction and you record *"Apple said yes, AskWhen.me did not answer"* — PR #132 stays a draft until approval for exactly this reason. |
 | **A calendar with real events in the next two weeks** | The preview screen is drawn from the device's own calendar. An empty fortnight gives *"Your page would be empty"* and a reviewer sees a product with nothing in it. |
@@ -90,6 +90,20 @@ Under the two upgrades: *"Each renews yearly until you cancel in Settings."*
 At the bottom of the screen: **Restore Purchases**. Scroll once, unhurried, so
 all three products and the restore button are unambiguously in the binary, then
 scroll back.
+
+### 3b · The name, before the money (build 15 and after)
+
+Under **AskWhen.me Custom Subdomain** there is a field and **Check it**. Type a
+name and tap it: the answer comes back free, taken, or refused with the
+service's own sentence. This is worth filming — it is the one place the app
+talks to askwhen.me before a purchase, and it shows the owner finding out what
+they are buying before they buy it.
+
+Checking reserves nothing. The reservation is taken when **Subscribe** is
+tapped, and if the name has gone in between, nothing is bought at all and the
+screen says so. Leave the field empty if the take is running long: the tier
+buys perfectly well without a name, and the Address section still claims one
+afterwards.
 
 ### 4 · The successful sandbox purchase
 

@@ -184,6 +184,32 @@ CREATE TABLE IF NOT EXISTS domain (
 
 CREATE INDEX IF NOT EXISTS domain_slug ON domain (slug);
 
+-- ------------------------------------------------------------ held subdomains
+
+-- A label under our zone that somebody has spoken for but does not yet own.
+--
+-- It exists because of the order the owner meets things in: the name is chosen
+-- on the offer screen, before there is a page, a write token, or anything else
+-- to authenticate with, and Apple's sheet then sits in front of them for as
+-- long as a password takes. Without this table the honest answer to "is
+-- matt.askwhen.me free?" would be "it was a minute ago".
+--
+-- `secret_hash` is the only identity in play. Whoever can present the secret
+-- may claim the name; nothing about the device is recorded, which keeps this
+-- the same shape as the rest of the service — no accounts, only bearer proof.
+--
+-- Short on purpose. A hold that outlived its purchase would be a squatting
+-- primitive with no owner to answer for it, so a sweep runs on every read and
+-- the lifetime is minutes, not days.
+CREATE TABLE IF NOT EXISTS subdomain_hold (
+  host        TEXT PRIMARY KEY CHECK (host = lower(host)),
+  secret_hash BLOB NOT NULL,
+  created_at  TEXT NOT NULL,
+  expires_at  TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS subdomain_hold_expires ON subdomain_hold (expires_at);
+
 -- ------------------------------------------------------------ personal links
 
 -- A link the owner minted at share time and sent to one person — "Send times"

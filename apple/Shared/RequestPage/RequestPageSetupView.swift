@@ -139,7 +139,11 @@ struct RequestPageSetupView: View {
                 RequestOfferView(page: model.requestPageBinding,
                                  subscriptions: model.subscriptions,
                                  createPage: { await model.createRequestPage(transaction: $0) },
-                                 onPublished: { step = .live })
+                                 onPublished: { step = .live },
+                                 names: SubdomainActions(
+                                    check: { await model.subdomainAvailability($0) },
+                                    hold: { await model.holdSubdomain($0) },
+                                    claim: { await model.claimHeldSubdomain(host: $0, hold: $1) }))
             }
             .formStyle(.grouped)
         case .live:

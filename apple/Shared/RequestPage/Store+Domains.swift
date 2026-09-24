@@ -40,6 +40,38 @@ extension Store {
         }
     }
 
+    // MARK: Names asked for before there is a page
+
+    /// Is this label free? Asked from the offer screen, with nothing bought
+    /// and no page to authenticate as — which is the whole reason the service
+    /// publishes this one unauthenticated.
+    func subdomainAvailability(_ label: String) async -> Result<AskwhenClient.SubdomainAvailability, Error> {
+        do { return .success(try await requestCoordinator().subdomainAvailability(label)) }
+        catch { return .failure(error) }
+    }
+
+    /// Reserve it for the length of a purchase. Called when the owner commits,
+    /// not when they look.
+    func holdSubdomain(_ label: String) async -> Result<AskwhenClient.SubdomainHold, Error> {
+        do { return .success(try await requestCoordinator().holdSubdomain(label)) }
+        catch { return .failure(error) }
+    }
+
+    /// Turn a reservation into the real thing, once the page exists. Failure
+    /// here is not a failed purchase: the subscription is bought and the name
+    /// is still claimable from the page's Address section, so the caller says
+    /// that rather than implying something went wrong with the money.
+    func claimHeldSubdomain(host: String, hold: String) async -> Result<Void, Error> {
+        do {
+            let claimed = try await requestCoordinator().claimDomain(host, page: requestPage, hold: hold)
+            claimedDomains.removeAll { $0.host == claimed.host }
+            claimedDomains.append(claimed)
+            return .success(())
+        } catch {
+            return .failure(error)
+        }
+    }
+
     func releaseDomain(_ host: String) async {
         domainsBusy = true
         defer { domainsBusy = false }

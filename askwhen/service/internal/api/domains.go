@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -112,6 +113,35 @@ func (d *Domains) Claim(w http.ResponseWriter, r *http.Request) {
 			already = true
 		}
 	}
+
+	// A label somebody reserved on the offer screen is not free, even though
+	// no page owns it yet. The holder proves themselves with the secret the
+	// hold handed back; anybody else is told what a stranger is told about a
+	// name that is spoken for.
+	if kind == "subdomain" {
+		held, err := d.Owner.Store.SubdomainTaken(r.Context(), host, time.Now())
+		if err != nil {
+			d.fail(w, "hold check", err)
+			return
+		}
+		if held && !already {
+			secret := r.Header.Get("X-Askwhen-Hold")
+			ok := false
+			if secret != "" {
+				sum := sha256.Sum256([]byte(secret))
+				ok, err = d.Owner.Store.HoldMatches(r.Context(), host, sum[:], time.Now())
+				if err != nil {
+					d.fail(w, "hold match", err)
+					return
+				}
+			}
+			if !ok {
+				http.Error(w, "that hostname is not available", http.StatusConflict)
+				return
+			}
+		}
+	}
+
 	if !already && len(existing) >= MaxDomainsPerPage {
 		http.Error(w, "this page already has the most hostnames it may have", http.StatusConflict)
 		return
@@ -132,6 +162,13 @@ func (d *Domains) Claim(w http.ResponseWriter, r *http.Request) {
 	}
 	if !already {
 		d.Logger.Info("domain: claimed", "host", host, "kind", kind, "slug", slug)
+	}
+	// The name is owned now, so the reservation has done its job. Left behind
+	// it would only be a row that says "taken" twice.
+	if kind == "subdomain" {
+		if err := d.Owner.Store.DropSubdomainHold(r.Context(), host); err != nil {
+			d.Logger.Error("domain: drop hold", "host", host, "err", err)
+		}
 	}
 
 	view := d.view(r.Context(), store.Domain{Host: host, Slug: slug, Kind: kind}, true)
