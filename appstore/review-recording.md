@@ -24,15 +24,29 @@ does not match, the app changed and this file did not — fix this file.
 | **An iPad, if you have one** | Apple reviewed on an iPad Air 11-inch and that is where they got lost. An iPhone recording meets the letter of the ask; an iPad one answers the complaint. |
 | **`AW_APPSTORE_SANDBOX` is `1`** on CT 112 | The service verifies Apple's signature against the sandbox root. At `0` it refuses the transaction and you record *"Apple said yes, AskWhen.me did not answer"* — PR #132 stays a draft until approval for exactly this reason. |
 | **A calendar with real events in the next two weeks** | The preview screen is drawn from the device's own calendar. An empty fortnight gives *"Your page would be empty"* and a reviewer sees a product with nothing in it. |
+| **Signed in as the Sandbox Apple Account** | Apple asked for this by name — "using the Sandbox Apple Account configured in App Store Connect". Settings › Media & Purchases, sign out of the production account; then Settings › Developer › Sandbox Apple Account, sign in. It is also what gives you the sandbox controls, and a fresh one is what gives you a fresh offer screen. |
 | **The Apple Account verified on the device first** | Settings › Apple Account. iOS does not ask until you are already mid-purchase, and then it replaces Apple's sheet with *"Apple Account Verification — Enter the password for … in Settings"*. Tapping Settings and entering it carries on fine; dismissing it is a cancellation, and the app says *"Nothing was bought and nothing changed."* Not a blocker — just an interruption you do not want in the middle of a take. |
 | **The app deleted first** | Every step below assumes a fresh install: the dormant row, the explainer, and — the point of the whole exercise — an offer screen with nothing yet owned. |
 
-One consequence of that last row is worth understanding before you plan the
-take. `RequestOfferView.load()` asks StoreKit what is already owned *before* it
-asks for prices, and an owner who already subscribes is shown "You already
+**Nothing here costs money.** Every in-app purchase in a TestFlight build runs
+in the sandbox: free to the tester, absent from real purchase history and
+invoices. Buy all three tiers on camera as often as you like — the only way to
+spend anything is an App Store build, which this is not.
+
+Two consequences worth planning around.
+
+`RequestOfferView.load()` asks StoreKit what is already owned *before* it asks
+for prices, and an owner who already subscribes is shown "You already
 subscribe" instead of the price list. **The screen that lists all three
-products only exists for someone who owns none of them.** You get one pass at
-it per sandbox account, so do not rehearse on the account you film with.
+products only exists for someone who owns none of them** — so one clean pass
+per account. That is not a constraint on *you*, though: sandbox accounts are
+free and unlimited (App Store Connect › Users and Access › Sandbox). Rehearse
+on a spare, film on a fresh one.
+
+And TestFlight renews subscriptions **daily, up to six times, then stops**,
+whatever the real duration says. A yearly subscription bought today renews six
+times this week and expires. All sandbox, all free; if a take runs long enough
+to catch one, it is expected rather than wrong.
 
 ---
 
