@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -61,6 +62,20 @@ type Subdomains struct {
 	// have parked many.
 	HoldPerIP    int
 	TrustedProxy string
+
+	// AppKeys are the build keys allowed to reserve a name. A list, not one
+	// value, so a rotation can land in a new build while the previous one
+	// keeps working until it is dropped from here.
+	//
+	// **These are not secrets.** They ship inside an app anyone can download,
+	// and the real defences against name-parking are the budget above, the
+	// lifetime below it, and the fact that a hold grants nothing without a
+	// paid subscription. What they buy is a floor: this is the one
+	// unauthenticated write the service has, its shape is public in the
+	// repository, and a key means driving it takes more than reading that.
+	// Empty turns the gate off, which is what a dev instance wants and what
+	// production must never have — see the startup warning in main.go.
+	AppKeys []string
 
 	Logger *slog.Logger
 }
@@ -140,6 +155,13 @@ func (s *Subdomains) Hold(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Before the budget, because a refused caller should not be able to spend
+	// a real owner's share of the limiter by being refused loudly.
+	if !s.appKeyAccepted(r.Header.Get("X-Askwhen-App")) {
+		http.Error(w, "not available", http.StatusForbidden)
+		return
+	}
+
 	if over, err := s.overLimit(r, "hold:", s.holdBudget()); err != nil {
 		s.Logger.Error("subdomains: rate limit", "err", err)
 		http.Error(w, "unavailable", http.StatusServiceUnavailable)
@@ -207,6 +229,22 @@ func (s *Subdomains) lifetime() time.Duration {
 // holds once, or twice if they changed their mind. Five is generous for that
 // and useless for squatting, especially against a fifteen-minute lifetime.
 const DefaultHoldsPerHour = 5
+
+// appKeyAccepted compares in constant time and against every key, so a
+// rotation overlaps cleanly and neither the answer nor its timing says which
+// key matched — or how much of one did.
+func (s *Subdomains) appKeyAccepted(presented string) bool {
+	if len(s.AppKeys) == 0 {
+		return true
+	}
+	ok := false
+	for _, k := range s.AppKeys {
+		if subtle.ConstantTimeCompare([]byte(k), []byte(presented)) == 1 {
+			ok = true
+		}
+	}
+	return ok
+}
 
 func (s *Subdomains) holdBudget() int {
 	if s.HoldPerIP <= 0 {

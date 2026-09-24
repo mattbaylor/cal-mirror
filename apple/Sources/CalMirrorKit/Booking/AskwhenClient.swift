@@ -145,12 +145,28 @@ public struct URLSessionTransport: Transport {
 public struct AskwhenClient: Sendable {
     public let baseURL: URL
     private let transport: Transport
+    /// Baked into the build, and sent only on `holdSubdomain`.
+    ///
+    /// **It is not a secret and is not treated as one.** Anyone who can
+    /// download the app can read it out of the bundle, and the service's real
+    /// defences against name-parking are the rate limit, the fifteen-minute
+    /// lifetime, and the fact that a hold grants nothing without a paid
+    /// subscription. What this buys is a floor: the one unauthenticated write
+    /// this service has cannot be driven by someone who merely read the public
+    /// repository, and a key that does leak is rotated with the next build
+    /// while the old one keeps working until it is dropped from the server's
+    /// list. Empty in a local or CI build, which is why the server treats a
+    /// missing key as a refusal and never as an error worth explaining.
+    private let appKey: String?
 
     public static let production = URL(string: "https://askwhen.me")!
 
-    public init(baseURL: URL = AskwhenClient.production, transport: Transport = URLSessionTransport()) {
+    public init(baseURL: URL = AskwhenClient.production,
+                transport: Transport = URLSessionTransport(),
+                appKey: String? = nil) {
         self.baseURL = baseURL
         self.transport = transport
+        self.appKey = appKey.flatMap { $0.isEmpty ? nil : $0 }
     }
 
     // MARK: Create
@@ -314,7 +330,9 @@ public struct AskwhenClient: Sendable {
     /// Reserve it. Called when the owner commits to buying, not when they
     /// look: Apple's sheet is the window this exists to cover.
     public func holdSubdomain(_ label: String) async throws -> SubdomainHold {
-        let (data, resp) = try await exchange(request("POST", "/v1/subdomains/\(label)/hold", token: nil))
+        var req = request("POST", "/v1/subdomains/\(label)/hold", token: nil)
+        if let appKey { req.setValue(appKey, forHTTPHeaderField: "X-Askwhen-App") }
+        let (data, resp) = try await exchange(req)
         guard resp.statusCode == 201 else { throw failure(resp, data) }
         guard let h = try? JSONDecoder().decode(SubdomainHold.self, from: data) else {
             throw AskwhenError.malformed

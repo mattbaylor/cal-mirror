@@ -36,8 +36,16 @@ func available(s *Subdomains, label string) (int, availabilityView) {
 }
 
 func hold(s *Subdomains, label string) (int, holdView) {
+	return holdWithKey(s, label, "")
+}
+
+func holdWithKey(s *Subdomains, label, key string) (int, holdView) {
+	hdr := map[string]string{}
+	if key != "" {
+		hdr["X-Askwhen-App"] = key
+	}
 	w := do(s.Hold, http.MethodPost, "/v1/subdomains/"+label+"/hold", nil, "",
-		map[string]string{"label": label}, nil)
+		map[string]string{"label": label}, hdr)
 	var v holdView
 	json.Unmarshal(w.Body.Bytes(), &v)
 	return w.Code, v
@@ -226,5 +234,43 @@ func TestSubdomainsUseTheConfiguredZone(t *testing.T) {
 	s.Domains.Verify = domainverify.Config{Target: "edge.example.test"}
 	if code, v := available(s, "matt"); code != http.StatusOK || v.Host != "matt.example.test" {
 		t.Fatalf("zone not honoured: %d %+v", code, v)
+	}
+}
+
+// The gate is a floor, not a secret — see the comment on Subdomains.AppKeys —
+// but a floor that is not there is no floor at all, and the configured-empty
+// case makes that easy to ship by accident.
+func TestHoldIsGatedOnTheBuildKey(t *testing.T) {
+	s, _, _, _ := setupSubdomains(t)
+	s.AppKeys = []string{"build-15", "build-14"}
+
+	if code, _ := hold(s, "dana"); code != http.StatusForbidden {
+		t.Fatalf("no key should be refused: %d", code)
+	}
+	if code, _ := holdWithKey(s, "dana", "guessed"); code != http.StatusForbidden {
+		t.Fatalf("a wrong key should be refused: %d", code)
+	}
+	// A refusal must not have cost anybody the name.
+	if code, v := available(s, "dana"); code != http.StatusOK || !v.Available {
+		t.Fatalf("a refused hold reserved the name anyway: %d %+v", code, v)
+	}
+
+	// Both keys work, which is what makes a rotation survivable: the build
+	// in the store keeps holding names while the new one goes out.
+	if code, _ := holdWithKey(s, "dana", "build-15"); code != http.StatusCreated {
+		t.Fatalf("current key: %d", code)
+	}
+	if code, _ := holdWithKey(s, "erin", "build-14"); code != http.StatusCreated {
+		t.Fatalf("previous key, still accepted during a rotation: %d", code)
+	}
+}
+
+// Checking stays open. A dev build with no key, and anything else we might
+// want to offer a name checker from later, must still be able to ask.
+func TestCheckingIsNotGated(t *testing.T) {
+	s, _, _, _ := setupSubdomains(t)
+	s.AppKeys = []string{"build-15"}
+	if code, v := available(s, "dana"); code != http.StatusOK || !v.Available {
+		t.Fatalf("checking should not need a key: %d %+v", code, v)
 	}
 }

@@ -1430,6 +1430,19 @@ do {
     check(t.calls.last?.method == "POST" && t.calls.last?.path == "/v1/subdomains/dana/hold",
           "holdSubdomain is POST /v1/subdomains/{label}/hold")
     check(held.secret == "s3cr3t" && held.host == "dana.askwhen.me", "and hands back the one proof of the reservation")
+    check(t.calls.last?.headers["X-Askwhen-App"] == nil,
+          "a build with no hold key sends no gate header, and is refused by the service rather than failing here")
+
+    // The build key, which is not a secret and is not treated as one — it is
+    // the floor under the one unauthenticated write the service has.
+    let keyed = AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t, appKey: "cm15-abc")
+    t.answers = [(201, [:], #"{"host":"erin.askwhen.me","secret":"s3cr3t","expires":"2026-09-24T12:00:00Z"}"#)]
+    _ = try! run { try await keyed.holdSubdomain("erin") }.get()
+    check(t.calls.last?.headers["X-Askwhen-App"] == "cm15-abc", "a build with one presents it on hold")
+    t.answers = [(200, [:], #"{"label":"erin","host":"erin.askwhen.me","available":true}"#)]
+    _ = try! run { try await keyed.subdomainAvailability("erin") }.get()
+    check(t.calls.last?.headers["X-Askwhen-App"] == nil,
+          "and never on the check, which is open on purpose so a keyless build can still ask")
 
     t.answers = [(409, [:], "that hostname is not available")]
     if case .success = run({ try await c.holdSubdomain("dana") }) {

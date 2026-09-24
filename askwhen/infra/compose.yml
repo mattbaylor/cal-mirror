@@ -61,6 +61,23 @@ services:
       # window when two edges overlap, as on 16 Sept 2026; it should be one
       # address at every other time.
       AW_TRUSTED_PROXY: "172.28.0.2"
+
+      # Build keys allowed to reserve a subdomain name
+      # (POST /v1/subdomains/{label}/hold). A comma-separated list in the file,
+      # so a rotation overlaps: add the new build's key, ship the build, then
+      # drop the old one once that build is gone from people's devices.
+      #
+      # It is *weak*, not secret-grade: it ships inside an app anyone can
+      # download, and someone determined will read it out of the bundle in
+      # minutes. But it must still not be in this repository, which is public —
+      # a key anyone can read here is no floor at all, which was the entire
+      # point of having one. Hence a file, like the real secrets, even though
+      # this is not one of them. What actually bounds name-parking is the
+      # per-address budget, the fifteen-minute lifetime, and the fact that a
+      # hold grants nothing without a paid subscription.
+      #
+      # EMPTY MEANS OFF, and the service warns at startup when it is.
+      AW_HOLD_KEYS_FILE: "/run/secrets/hold_keys"
       # Where a custom domain is supposed to point (§7): the CNAME target a
       # customer is told, and the edge's public address for an apex that
       # cannot carry a CNAME. Both are checked before the gate will issue.
@@ -95,6 +112,7 @@ services:
       - postal_api_key
       - pepper
       - tls_auth_secret
+      - hold_keys
 
     volumes:
       - aw-data:/data
@@ -242,6 +260,12 @@ secrets:
   # variable, via its command). Nothing outside this compose project has it.
   tls_auth_secret:
     file: ./secrets/tls_auth_secret
+  # Not a secret in the sense the three above are — it ships inside the app —
+  # but it does not belong in a public repository either. One line, comma
+  # separated during a rotation, and it must match the AW_HOLD_KEY GitHub
+  # secret that release.yml bakes into the build.
+  hold_keys:
+    file: ./secrets/hold_keys
 
 volumes:
   aw-data:

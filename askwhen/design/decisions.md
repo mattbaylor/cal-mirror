@@ -644,6 +644,22 @@ reported as "your subscription is fine, take the name from your page" rather
 than as a failed purchase. The two outcomes are separable and the screen says
 so.
 
+**The hold is gated on a key baked into the build** *(Matt, 24 September:
+"/hold can be gated by a pre-shared key per app build")*, sent as
+`X-Askwhen-App` and checked against a list so a rotation overlaps. Said
+plainly, because it would be easy to file this under "secured": **it is not a
+secret**. It ships inside an app anyone can download, and someone determined
+reads it out of the bundle — or off their own proxied device — in minutes.
+What it buys is a floor. This service's one unauthenticated write has its shape
+published in a public repository, and the key means driving it takes more than
+reading that. It sits *beside* the rate limit, never instead of it, and the key
+itself lives in `secrets/hold_keys` rather than `compose.yml` for the same
+reason the floor exists at all — a key printed in the public repo is no floor.
+Checking stays open: it denies nobody anything, and a build without a key
+should still be able to ask. **If this is ever actually abused, the answer is
+the Altcha-shaped proof of work §8 already keeps a seam for** — stateless,
+nothing to leak, cost scaled to the attacker — not a better-hidden key.
+
 **Against it, and why it was accepted anyway:** two endpoints on the service
 now answer to nobody, which is a first. They have to — they are asked on the
 offer screen, where by design nothing has been bought. Availability leaks

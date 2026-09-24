@@ -106,10 +106,24 @@ extension Store {
         #if DEBUG && targetEnvironment(simulator)
         let args = ProcessInfo.processInfo.arguments
         if let i = args.firstIndex(of: "-AskWhenService"), i + 1 < args.count, let url = URL(string: args[i + 1]) {
-            return AskwhenClient(baseURL: url)
+            return AskwhenClient(baseURL: url, appKey: appKey)
         }
         #endif
-        return AskwhenClient()
+        return AskwhenClient(appKey: appKey)
+    }
+
+    /// The build's key for `POST /v1/subdomains/{label}/hold`, written into the
+    /// bundle by `release.yml` from the `AW_HOLD_KEY` secret.
+    ///
+    /// Nil in a local build and in CI, and deliberately so: everything except
+    /// reserving a name works without it, so nobody has to hold a production
+    /// credential to run the app. See `AskwhenClient.appKey` for what this is
+    /// and is not — it is a floor, not a secret, and `Info.plist` is an honest
+    /// place to keep something anyone with the app can read anyway.
+    static var appKey: String? {
+        guard let v = Bundle.main.object(forInfoDictionaryKey: "AWHoldKey") as? String,
+              !v.isEmpty, !v.hasPrefix("$(") else { return nil }
+        return v
     }
 
     /// Create the page with Apple's signed transaction, then persist the slug.

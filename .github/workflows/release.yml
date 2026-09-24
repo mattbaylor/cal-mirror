@@ -134,6 +134,11 @@ jobs:
         env:
           CM_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           CM_ASC_ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          # Baked into the bundle so the app can reserve an askwhen.me
+          # subdomain. Must also be in AW_HOLD_KEYS on the service, or the
+          # build ships unable to hold a name. Absent here, the build still
+          # works and simply cannot reserve.
+          AW_HOLD_KEY: ${{ secrets.AW_HOLD_KEY }}
         run: |
           set -euo pipefail
           args=(--validate)

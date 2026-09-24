@@ -67,6 +67,7 @@ type config struct {
 	zone         string
 	tlsSecret    string
 	pepper       []byte
+	holdKeys     []string
 	origin       string
 	trustedProxy string
 	postalURL    string
@@ -101,7 +102,8 @@ func loadConfig() (config, error) {
 		webDir:       envOr("AW_WEB", "/web"),
 		edgeTarget:   envOr("AW_EDGE_TARGET", "edge.askwhen.me"),
 		edgeIPs:      strings.Fields(strings.ReplaceAll(envOr("AW_EDGE_IPS", "64.111.27.242"), ",", " ")),
-		bundleID:     envOr("AW_BUNDLE_ID", "io.github.mattbaylor.cal-mirror"),
+
+		bundleID: envOr("AW_BUNDLE_ID", "io.github.mattbaylor.cal-mirror"),
 		// Default on: the sandbox is how the flow is proven before launch.
 		// compose.yml flips it to "0" at launch (TASKS.md).
 		appstoreSandbox: envOr("AW_APPSTORE_SANDBOX", "1") == "1",
@@ -114,6 +116,15 @@ func loadConfig() (config, error) {
 		return c, err
 	}
 	c.tlsSecret = secret
+
+	// Weak by construction — it ships inside the app and anyone with the app
+	// can read it — but a file all the same, because this repository is public
+	// and a key anyone can read *here* is no floor at all.
+	holdKeys, err := readSecret("AW_HOLD_KEYS_FILE", "AW_HOLD_KEYS")
+	if err != nil {
+		return c, err
+	}
+	c.holdKeys = strings.Fields(strings.ReplaceAll(holdKeys, ",", " "))
 
 	// The pepper is what makes a stolen database useless for publishing to
 	// somebody's page or confirming somebody's request. Without it the service
@@ -380,11 +391,18 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 		Store:        st,
 		Lifetime:     api.DefaultHoldLifetime,
 		Pepper:       cfg.pepper,
+		AppKeys:      cfg.holdKeys,
 		RatePerIP:    60,
 		HoldPerIP:    api.DefaultHoldsPerHour,
 		RateWindow:   time.Hour,
 		TrustedProxy: cfg.trustedProxy,
 		Logger:       log,
+	}
+	// Said once, loudly, because the failure mode is silent: the gate simply
+	// is not there, everything works, and the one unauthenticated write this
+	// service has is open to anyone who read the repository.
+	if len(cfg.holdKeys) == 0 {
+		log.Warn("subdomains: AW_HOLD_KEYS is empty — name reservation is open to any caller")
 	}
 	mux.HandleFunc("GET /v1/subdomains/{label}", subdomains.Available)
 	mux.HandleFunc("POST /v1/subdomains/{label}/hold", subdomains.Hold)
