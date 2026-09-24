@@ -4,14 +4,18 @@ import CalMirrorKit
 /// Screens 7 and 8 — the offer, Apple's sheet, and the page that exists
 /// afterwards.
 ///
-/// **This is the screen the privacy promise is measured against.** Everything
-/// before it is local; `offers()` is the app's first network request of any
-/// kind, and it is made here because the owner asked what this costs
-/// (`decisions.md`, "The product load happens on the offer screen"). Screen 2's
-/// footnote promises exactly that, so if this view ever loads products in
-/// `init`, or a parent prefetches them, the promise is broken and the screen
-/// still looks fine — which is why the load is tied to `task` on the *offer*
-/// phase rather than to the view appearing.
+/// **Nothing here runs until the owner asks.** Everything before this screen is
+/// local; `offers()` is the app's first network request of any kind, and it is
+/// made here because the owner asked what this costs (`decisions.md`, "The
+/// product load happens on the offer screen"). The name check is the second,
+/// and only when they type one and tap Check.
+///
+/// That ordering is still the rule even though the screen no longer prints a
+/// sentence about it (24 Sept: Matt, "they've already made the decision to
+/// move forward" — the footer was costing more space than the reassurance was
+/// worth by the time anyone read it). A prefetch in `init`, or a parent
+/// loading products early, would break it and the screen would still look
+/// fine, which is why the load hangs off `task` and the phase guard.
 ///
 /// The trial is never hardcoded. `SubscriptionOffer.trial` is nil for a
 /// customer who has used their one introductory offer, so a returning owner is
@@ -148,10 +152,6 @@ struct RequestOfferView: View {
                     Label(RequestCopy.Offer.cancelled, systemImage: "info.circle")
                         .font(.callout).foregroundStyle(.secondary)
                 }
-            } footer: {
-                // The privacy promise this screen is measured against, as the
-                // one footer on the first group.
-                Text(RequestCopy.Offer.network)
             }
 
             if let base = offers.first(where: { $0.tier == .page }) {
