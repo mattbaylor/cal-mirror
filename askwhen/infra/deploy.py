@@ -103,7 +103,11 @@ def fail(label):
 # ------------------------------------------------------------------ preflight
 
 def preflight():
-    for name in ("postal_api_key", "pepper", "tls_auth_secret"):
+    # hold_keys is not a secret in the sense the other three are — it ships
+    # inside the app — but it is checked exactly like them, because the way it
+    # fails is silent: an absent or empty file turns the gate on
+    # POST /v1/subdomains/{label}/hold off, and everything still works.
+    for name in ("postal_api_key", "pepper", "tls_auth_secret", "hold_keys"):
         path = os.path.join(HERE, "secrets", name)
         if not os.path.exists(path):
             fail(f"secrets/{name} missing — see README.md, Secrets")
