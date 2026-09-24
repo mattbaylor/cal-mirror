@@ -42,6 +42,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.mattbaylor.cal-mirror
         MARKETING_VERSION: "2.0"
         CURRENT_PROJECT_VERSION: "15"
+        # Empty unless release.yml passes it. The Info.plist entry
+        # expands to nothing, and the app then simply cannot reserve
+        # a name — every other path is unaffected.
+        AW_HOLD_KEY: ""
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: CalMirror/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

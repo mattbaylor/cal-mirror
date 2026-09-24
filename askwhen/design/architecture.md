@@ -421,7 +421,10 @@ authenticated claim once the page exists. These are the only owner-side routes
 with no token, and they must be: they are asked on the offer screen, where by
 design nothing has been bought yet. Availability leaks nothing a DNS lookup
 does not already publish; holding is the part with teeth, so it is rate limited
-per address and swept on every read.
+per address (5/hour against 60 checks, in separate buckets), swept on every
+read, and gated on a key baked into the app build — a floor rather than a
+secret, since anyone with the app can read it, and explicitly not a substitute
+for the limiter.
 
 **Lapse behavior needs deciding** (decision 6). My recommendation: 7-day grace
 during which the page shows "not currently taking requests", then the dump is

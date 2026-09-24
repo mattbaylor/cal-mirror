@@ -138,10 +138,24 @@ build_target() {
   sign=(CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution"
         PROVISIONING_PROFILE_SPECIFIER="$profile")
 
+  # The build's key for reserving an askwhen.me subdomain, from AW_HOLD_KEY.
+  # Unset locally, and the app then simply cannot reserve a name — every other
+  # path works, so nobody needs a production value to build this. It is not a
+  # secret (anyone with the app can read it out of the bundle); it is a floor
+  # under the one unauthenticated write the service has. See AskwhenClient.
+  local holdkey=()
+  if [ -n "${AW_HOLD_KEY:-}" ]; then
+    holdkey=(AW_HOLD_KEY="$AW_HOLD_KEY")
+    echo "==> Build carries an askwhen.me hold key"
+  else
+    echo "==> No AW_HOLD_KEY: this build cannot reserve subdomain names"
+  fi
+
   echo "==> Archiving $scheme (distribution signing happens on export)"
   rm -rf "${archive:?}" "${DIST:?}/${outdir:?}"
   "$XCB" -scheme "$scheme" -project "$project" -configuration Release \
-    "${dest[@]}" -archivePath "$archive" "${sign[@]}" archive >/dev/null
+    "${dest[@]}" -archivePath "$archive" "${sign[@]}" "${holdkey[@]+"${holdkey[@]}"}" \
+    archive >/dev/null
 
   # App Store Connect ACCEPTS an upload missing CFBundleIconName and only then
   # rejects the build as Invalid Binary (ITMS-90713); altool --validate-app does
