@@ -24,29 +24,35 @@ does not match, the app changed and this file did not — fix this file.
 | **An iPad, if you have one** | Apple reviewed on an iPad Air 11-inch and that is where they got lost. An iPhone recording meets the letter of the ask; an iPad one answers the complaint. |
 | **`AW_APPSTORE_SANDBOX` is `1`** on CT 112 | The service verifies Apple's signature against the sandbox root. At `0` it refuses the transaction and you record *"Apple said yes, AskWhen.me did not answer"* — PR #132 stays a draft until approval for exactly this reason. |
 | **A calendar with real events in the next two weeks** | The preview screen is drawn from the device's own calendar. An empty fortnight gives *"Your page would be empty"* and a reviewer sees a product with nothing in it. |
-| **Signed in as the Sandbox Apple Account** | Apple asked for this by name — "using the Sandbox Apple Account configured in App Store Connect". Which account, and where its password is, is the section below. Settings › Media & Purchases, sign out of the production account; then Settings › Developer › Sandbox Apple Account, sign in. It is also what gives you the sandbox controls, and a fresh one is what gives you a fresh offer screen. |
+| **Signed in as yourself** | TestFlight does *not* use the Sandbox Apple Accounts from App Store Connect — those are for locally signed development builds. A TestFlight build transacts against the sandbox backend with your **own** Apple ID, free, and there is nothing to sign out of. The sandbox tester in the demo-account fields is for the App Review reviewer, not for you; see below. |
 | **The Apple Account verified on the device first** | Settings › Apple Account. iOS does not ask until you are already mid-purchase, and then it replaces Apple's sheet with *"Apple Account Verification — Enter the password for … in Settings"*. Tapping Settings and entering it carries on fine; dismissing it is a cancellation, and the app says *"Nothing was bought and nothing changed."* Not a blocker — just an interruption you do not want in the middle of a take. |
 | **The app deleted first** | Every step below assumes a fresh install: the dormant row, the explainer, and — the point of the whole exercise — an offer screen with nothing yet owned. |
 
-**Nothing here costs money.** Every in-app purchase in a TestFlight build runs
-in the sandbox: free to the tester, absent from real purchase history and
-invoices. Buy all three tiers on camera as often as you like — the only way to
-spend anything is an App Store build, which this is not.
+**Nothing here costs money, and you film as yourself.** A TestFlight build
+transacts against the sandbox backend using your own Apple ID: free, and absent
+from real purchase history and invoices. The Sandbox Apple Accounts in App
+Store Connect are for locally signed development builds and are not used by
+TestFlight — there is nothing to sign out of and nothing to switch. The only
+way to spend money is an App Store build, which this is not.
 
-Two consequences worth planning around.
+**The cost of that is that you cannot rewind.** TestFlight purchases are made
+with a real Apple ID and cannot be cleared the way a sandbox account's can. So:
 
 `RequestOfferView.load()` asks StoreKit what is already owned *before* it asks
 for prices, and an owner who already subscribes is shown "You already
 subscribe" instead of the price list. **The screen that lists all three
-products only exists for someone who owns none of them** — so one clean pass
-per account. That is not a constraint on *you*, though: sandbox accounts are
-free and unlimited (App Store Connect › Users and Access › Sandbox). Rehearse
-on a spare, film on a fresh one.
+products only exists for someone who owns none of them.** Once you buy, that
+frame is gone from this Apple ID until the subscription lapses — `.expired` is
+not `.isActive`, so the offer list does come back, but TestFlight renews daily
+up to six times and then stops, which is about a week away.
 
-And TestFlight renews subscriptions **daily, up to six times, then stops**,
-whatever the real duration says. A yearly subscription bought today renews six
-times this week and expires. All sandbox, all free; if a take runs long enough
-to catch one, it is expected rather than wrong.
+**So shoot the whole thing in one pass**, and rehearse the walk without tapping
+Subscribe. A second take also starts from a different place than the first: the
+page's write token is in the iCloud Keychain, so a reinstall after a successful
+purchase shows the row as **Reconnect** rather than **Off**, which is not the
+fresh install the reviewer was promised.
+
+A renewal caught mid-take is expected rather than wrong.
 
 ---
 
@@ -59,12 +65,18 @@ being the latest version.
 
 There are two accounts in play and they are not the same thing:
 
-**1. The Sandbox Apple Account — what you sign into on the device.**
+**1. The Sandbox Apple Account — what App Review uses, not what you use.**
+Apple's rejection said to test "using the Sandbox Apple Account configured in
+App Store Connect", and that is how *their* reviewer installs and buys. You, on
+TestFlight, use your own Apple ID and never touch this account. It still has to
+exist and its password still has to be right, because the reviewer is given it.
+
 App Store Connect › **Users and Access › Sandbox › Test Accounts**. The list
 shows each account's email; the password is set when the account is created and
 can be reset from that row (**Edit › Reset Password**) if nobody has it any
-more. Resetting costs nothing — a sandbox account has no purchase history worth
-keeping, and a fresh account is a fresh offer screen anyway.
+more. Resetting costs nothing: the account exists to be handed to a reviewer,
+and nothing of ours depends on its history. If you cannot find the password,
+reset it rather than hunting — it is not recorded anywhere, by design.
 
 `asc-status` prints the list, so "which tester was it?" has an answer that does
 not depend on anyone remembering:
