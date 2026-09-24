@@ -179,3 +179,39 @@ jobs:
       - name: Test
         working-directory: askwhen/service
         run: go test -race ./...
+
+      # The 4 KiB body cap on POST /v1/pages survived every test in this
+      # package — because every test used a toy transaction — and refused every
+      # real purchase for as long as it existed. `go test` asks the handlers
+      # questions; this starts the service and asks it the questions the app
+      # asks, at the sizes the app sends. The two failures are not the same
+      # shape and one suite cannot stand in for the other.
+      - name: API contract, against a running service
+        working-directory: askwhen/service
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          # LoadShell insists on these two; none of the API probes touch them.
+          mkdir -p "$tmp/web"
+          printf '<!doctype html>' > "$tmp/web/index.html"
+          printf '// stub'         > "$tmp/web/app.js"
+
+          go build -o "$tmp/askwhen" ./cmd/askwhen
+          AW_LISTEN=":18080" AW_DB="$tmp/t.db" \
+            AW_SCHEMA="$GITHUB_WORKSPACE/askwhen/infra/schema.sql" \
+            AW_PEPPER=ci-pepper AW_TLS_AUTH_SECRET=ci-tls \
+            AW_HOLD_KEYS=ci-key AW_WEB="$tmp/web" \
+            "$tmp/askwhen" > "$tmp/log" 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+
+          for _ in $(seq 1 40); do
+            curl -sf -m 2 http://localhost:18080/healthz >/dev/null && break
+            sleep 0.5
+          done
+
+          # With the key, so the gated write is exercised rather than skipped.
+          if ! BASE=http://localhost:18080 HOLD_KEY=ci-key \
+               "$GITHUB_WORKSPACE/askwhen/infra/verify-api.sh"; then
+            echo "--- service log ---"; cat "$tmp/log"; exit 1
+          fi

@@ -215,6 +215,27 @@ def verify():
         else:
             ok(label)
 
+    # The contract, not just the process. Everything above proves the service
+    # is up; on 24 September it was up and refusing every real purchase,
+    # because POST /v1/pages capped the body below the size of a StoreKit
+    # transaction. Run WITHOUT the hold key, so this stays read-only — the one
+    # write verify-api.sh can make is the reservation, and it is skipped.
+    script = os.path.join(HERE, "verify-api.sh")
+    if os.access(script, os.X_OK):
+        print()
+        env = dict(os.environ, BASE="https://askwhen.me")
+        env.pop("HOLD_KEY", None)
+        r = subprocess.run([script], capture_output=True, text=True, env=env)
+        for line in (r.stdout or "").splitlines():
+            if line.strip():
+                print("    " + line)
+        if r.returncode != 0:
+            fail("API contract — see above")
+        else:
+            ok("API contract holds")
+    else:
+        fail(f"{script} is missing or not executable")
+
     print("\n    Mail is not verified from here. dlvr.rehosted.us is a different")
     print("    host and this script has no route to it — mail.md, 'Verifying'.")
 
