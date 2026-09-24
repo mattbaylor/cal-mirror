@@ -155,13 +155,41 @@ the clearest possible answer to "what does this subscription buy".
 
 ---
 
-## After the take
+## Three takes, one file
 
-- **Trim it.** Photos will do it. App Store Connect's attachment field is not
-  generous; keep it comfortably small and re-encode rather than sending a raw
-  4K capture.
-- **It goes in the Attachment field of App Review Information**, not pasted
-  into Notes. Notes is text; the video is a file beside it.
+Nobody gets a fresh install, three purchases and the page that follows right in
+one pass. Shoot it in as many takes as you like, in playing order, and join
+them:
+
+```bash
+appstore/tools/stitch-review-video.sh take1.mov take2.mov take3.mov
+```
+
+It re-encodes rather than stream-copying, on purpose: takes shot at different
+sizes or after a rotation cannot be concatenated by copying, and the result of
+trying is a file that plays for a second and freezes. Each clip is scaled into
+the first one's frame and padded rather than cropped, so nothing is cut off.
+
+**Audio is dropped outright.** A screen recording picks up the room, and the
+room is not evidence.
+
+The re-encode is also what makes the file small: two of the September takes,
+54 MB of input, came out as 3 MB with the text still crisp at phone scale.
+`CRF=32` shrinks it further if it ever needs it.
+
+## Where the file goes
+
+- **The Attachment field in App Review Information.** That is what it is for,
+  and the Notes field beside it is where any description or link goes. At a few
+  megabytes this is not a close call.
+- **Only if the upload is refused**, host it and put the URL in Notes. Use our
+  own site rather than an iCloud or Drive share: `calendarmirror.com` is served
+  by Caddy from `/opt/site/site` on CT 112, so a file dropped in there is a
+  plain URL with no account, no expiry and no third party between a reviewer
+  and the evidence. Copy it in as an untracked file — a `git reset --hard` on
+  the site timer leaves untracked files alone — and delete it once the version
+  is approved. Do not commit a video to this repository; it is permanent in the
+  history and the site does not need it to be.
 - **The notes already walk the same path.** `metadata/ios/review_notes.txt`
   numbers these steps and names each product ID. The recording and the notes
   should agree — if you deviate from this list while filming, change the notes
