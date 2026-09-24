@@ -52,6 +52,8 @@ left behind is below, under *Next*.
 
 | 10 | **`POST /v1/pages` refused every real purchase (found 24 Sept, fixed)** — the body cap was 4 KiB and StoreKit's `jwsRepresentation` carries Apple's whole x5c chain, so the money was taken and the page was never made: *"Apple said yes, AskWhen.me did not answer — rejected({"error":"malformed"})"*. Reproduced against production with a 5 KB valid body. Cap is now 64 KiB and an over-cap body answers 413 with its own words instead of "malformed". **This is why the sandbox proof never happened** — it was never going to. | done, needs deploy |
 
+| 11 | **The service learns a tier upgrade only from Apple's notification** — `model.upgrade(to:)` buys through StoreKit and tells nobody; the server's entitlement is updated by the App Store hook, asynchronously. So a claim made seconds after an upgrade can be refused 402 against a stale tier. Harmless and self-correcting, but there is no path for the device to assert the new transaction against an *existing* page — `POST /v1/pages` only creates. Worth an endpoint, or a retry, before AskWhen.me has customers doing this unattended. | **open** |
+
 ## Asks — none open
 
 Both of the 4 September asks were answered (DNS `Edit` on the Cloudflare token;
