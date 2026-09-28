@@ -199,6 +199,9 @@ enum RequestCopy {
         static let publishes = "Publishes your page"
         static let holdsKey = "Key in your iCloud Keychain"
         static let deviceFooter = "Other devices can answer requests; only this one publishes. The page’s key is in your iCloud Keychain, so a new device or a reinstall finds it. Switching off stops publishing at once."
+        static let subscriptionSection = "Subscription"
+        static let manage = "Manage subscription"
+        static let manageFooter = "Change tier or cancel, in Apple's own sheet. A cancelled subscription runs to the end of the time already paid for, and the page with it."
         static let turnOff = "Request page"
         static let notPublished = "Nothing has been published yet — the first upload happens on the next sync."
     }
