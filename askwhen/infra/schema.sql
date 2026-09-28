@@ -184,6 +184,23 @@ CREATE TABLE IF NOT EXISTS domain (
 
 CREATE INDEX IF NOT EXISTS domain_slug ON domain (slug);
 
+-- When each unverified custom domain was last looked at.
+--
+-- A separate table rather than a column on `domain`, for the reason
+-- `personal_link` gives above: this file is IF NOT EXISTS end to end so it can
+-- be reapplied at every startup, and ALTER TABLE is not idempotent in SQLite.
+-- A side table keyed by host costs one join on a list that is nearly always
+-- empty, and keeps the schema re-runnable.
+--
+-- It exists so the checker can hurry when somebody is watching and slow down
+-- when nobody is. The row is written whether the check succeeded or not —
+-- "when did we last ask" is the question, not "when did we last succeed" —
+-- and it goes with the domain when that is released.
+CREATE TABLE IF NOT EXISTS domain_check (
+  host            TEXT PRIMARY KEY REFERENCES domain (host) ON DELETE CASCADE,
+  last_checked_at TEXT NOT NULL
+);
+
 -- ------------------------------------------------------------ held subdomains
 
 -- A label under our zone that somebody has spoken for but does not yet own.
