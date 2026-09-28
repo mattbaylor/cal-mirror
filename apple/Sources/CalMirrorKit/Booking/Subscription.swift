@@ -17,6 +17,12 @@ public enum AskWhenTier: String, CaseIterable, Sendable, Codable {
 
     /// Higher is more. The order App Store Connect ranks them in.
     public var rank: Int { Self.allCases.firstIndex(of: self) ?? 0 }
+
+    /// The App Store Connect subscription group all three belong to. Handed to
+    /// StoreKit's manage sheet so it opens on AskWhen.me rather than on a list
+    /// of every subscription the customer has. `cmk-check` asserts it matches
+    /// the group in `AskWhen.storekit`.
+    public static let subscriptionGroupID = "22387296"
 }
 
 /// One subscription as it can be offered: what the sheet should say, with

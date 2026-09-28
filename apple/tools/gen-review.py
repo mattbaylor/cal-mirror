@@ -229,7 +229,10 @@ def build(c, fx):
                   f'<div class="row"><div class="rowmain"><span class="t">{esc(lv["publishes"])}</span><span class="val">✓</span></div></div>'
                   f'<div class="row"><div class="rowmain"><span class="t">{esc(lv["holdsKey"])}</span><span class="val">✓</span></div></div>'
                   f'<div class="row"><div class="rowmain"><span class="t">{esc(lv["turnOff"])}</span><span class="ctl toggle on"></span></div></div>')
-            + ftr(lv["deviceFooter"])),
+            + ftr(lv["deviceFooter"])
+            + grp(f'<div class="hdr">{esc(lv["subscriptionSection"])}</div>'
+                  f'<div class="row"><div class="rowmain"><span class="t link">{esc(lv["manage"])}</span></div></div>')
+            + ftr(lv["manageFooter"])),
         open_q="Screen 10 (which device publishes) is folded in here — a nomination screen with one candidate asks a question with no second answer."))
 
     steps.append(step(10, "Someone asks", "service",

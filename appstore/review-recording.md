@@ -46,6 +46,15 @@ frame is gone from this Apple ID until the subscription lapses — `.expired` is
 not `.isActive`, so the offer list does come back, but TestFlight renews daily
 up to six times and then stops, which is about a week away.
 
+**From build 16 there is a way back, if a slow one.** *Your page* and the
+"You already subscribe" screen both carry **Manage subscription**, which opens
+Apple's own sheet — the only place a TestFlight subscription can be cancelled,
+since it never appears in Settings › Subscriptions. Cancelling stops the
+renewals; the subscription still runs to the end of the current period, and
+only then does the offer screen list all three products again. Note that
+*buying an upgrade starts a fresh period*, which is how the 24 September
+subscription outlived every estimate of when it would lapse.
+
 **So shoot the whole thing in one pass**, and rehearse the walk without tapping
 Subscribe. A second take also starts from a different place than the first: the
 page's write token is in the iCloud Keychain, so a reinstall after a successful
