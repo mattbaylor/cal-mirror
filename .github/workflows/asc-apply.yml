@@ -17,6 +17,11 @@ on:
         description: Build number to attach
         type: string
         default: "12"
+      platforms:
+        description: Which platforms to touch (a live or in-review version is always left alone)
+        type: choice
+        options: [both, ios, mac]
+        default: both
       apply:
         description: Actually write (unticked = plan only)
         type: boolean
@@ -45,6 +50,7 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           CM_VERSION: ${{ inputs.version }}
           CM_BUILD: ${{ inputs.build }}
+          CM_PLATFORMS: ${{ inputs.platforms == 'ios' && 'IOS' || inputs.platforms == 'mac' && 'MAC_OS' || 'IOS,MAC_OS' }}
           # The sandbox tester, into the review details' demo-account fields.
           # Repository secrets; never in the notes, never in the repo.
           CM_DEMO_USER: ${{ secrets.ASC_DEMO_USER }}
