@@ -1702,6 +1702,12 @@ do {
        let doc = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
        let groups = doc["subscriptionGroups"] as? [[String: Any]],
        let subs = groups.first?["subscriptions"] as? [[String: Any]] {
+        // The manage sheet is opened on this group. A wrong ID does not fail
+        // loudly — StoreKit just shows every subscription the customer has, or
+        // nothing — so it is pinned to the file ASC synced, like the products.
+        let groupID = groups.first?["id"] as? String
+        check(groupID == AskWhenTier.subscriptionGroupID,
+              "AskWhenTier.subscriptionGroupID (\(AskWhenTier.subscriptionGroupID)) is the group in AskWhen.storekit (\(groupID ?? "none"))")
         let ids = Set(subs.compactMap { $0["productID"] as? String })
         check(ids == Set(AskWhenTier.allCases.map(\.rawValue)),
               "AskWhenTier's product ids are exactly the ones App Store Connect has: \(ids.sorted())")

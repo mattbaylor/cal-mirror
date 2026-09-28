@@ -293,6 +293,11 @@ struct RequestOfferView: View {
                 Text(RequestCopy.Offer.publish).frame(maxWidth: .infinity)
             }
             .askWhenProminent()
+            // Here as well as on the page, because this is where an owner who
+            // subscribed and then lost their page — or who wants a different
+            // tier before publishing — actually lands. It is the screen that
+            // had no way out on 28 September.
+            ManageSubscriptionButton()
         } footer: {
             Text(RequestCopy.Offer.tokenWarning)
         }

@@ -308,7 +308,9 @@ def gen_sheet(c: dict) -> str:
           + ftr(c["notification"]["permissionFooter"])
           + '<div class="grp"><div class="hdr">' + esc(lv["deviceSection"]) + "</div>"
           + row(lv["publishes"], None, "check") + row(lv["holdsKey"], None, "check")
-          + row(lv["turnOff"]) + "</div>" + ftr(lv["deviceFooter"]) + "</div>")
+          + row(lv["turnOff"]) + "</div>" + ftr(lv["deviceFooter"])
+          + '<div class="grp"><div class="hdr">' + esc(lv["subscriptionSection"]) + "</div>"
+          + row(lv["manage"], None, "none") + "</div>" + ftr(lv["manageFooter"]) + "</div>")
 
     cells = [
         ("1 · The dormant row", "Off by default. Drawing this costs no network.", s1),

@@ -54,6 +54,8 @@ left behind is below, under *Next*.
 
 | 11 | **The service learns a tier upgrade only from Apple's notification** — `model.upgrade(to:)` buys through StoreKit and tells nobody; the server's entitlement is updated by the App Store hook, asynchronously. So a claim made seconds after an upgrade can be refused 402 against a stale tier. Harmless and self-correcting, but there is no path for the device to assert the new transaction against an *existing* page — `POST /v1/pages` only creates. Worth an endpoint, or a retry, before AskWhen.me has customers doing this unattended. | **open** |
 
+| 12 | **No way to cancel an AskWhen.me subscription from inside the app (found 28 Sept, fixed in build 16)** — the offer screen said "cancel in Settings", which is true for an App Store purchase and unreachable for a TestFlight one: those never appear in Settings › Subscriptions. Found trying to reset a sandbox subscription for the review recording. **Manage subscription** now sits on *Your page* and on the "You already subscribe" screen: StoreKit's `manageSubscriptionsSheet` on iOS, opened on our group (22387296, pinned to `AskWhen.storekit` by cmk-check), and the App Store's subscriptions page on the Mac, where the sheet does not exist. Also learned: an upgrade opens a fresh subscription period, so the 24 Sept Page subscription never lapsed — its two upgrades restarted it. | done |
+
 ## Asks — none open
 
 Both of the 4 September asks were answered (DNS `Edit` on the Cloudflare token;

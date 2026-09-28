@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 import UserNotifications
 import CalMirrorKit
 
@@ -97,10 +98,47 @@ struct RequestLiveView: View {
             Text(RequestCopy.Live.deviceFooter)
         }
         .task { await refreshStatus() }
+
+        Section {
+            ManageSubscriptionButton()
+        } header: {
+            Text(RequestCopy.Live.subscriptionSection)
+        } footer: {
+            Text(RequestCopy.Live.manageFooter)
+        }
     }
 
     private func refreshStatus() async {
         notifyStatus = await RequestNotifications.authorization()
         if notifyStatus != .notDetermined { RequestNotifications.registerCategory() }
+    }
+}
+
+/// Apple's own sheet for changing tier or cancelling.
+///
+/// It has to live in the app. The offer screen says "cancel in Settings", which
+/// is true for a subscription bought from the App Store and simply unreachable
+/// for one bought in TestFlight — those never appear in Settings › Subscriptions.
+/// Found 28 September 2026, trying to reset a sandbox subscription for a
+/// screen recording and discovering there was no way to do it at all.
+///
+/// On the Mac there is no in-app sheet: StoreKit's `manageSubscriptionsSheet`
+/// is iOS and Catalyst only, so the App Store's own subscriptions page stands in.
+struct ManageSubscriptionButton: View {
+    @State private var showing = false
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        #if os(iOS)
+        Button(RequestCopy.Live.manage) { showing = true }
+            // The group ID opens the sheet on AskWhen.me, not on a list of
+            // every subscription this Apple Account holds.
+            .manageSubscriptionsSheet(isPresented: $showing,
+                                      subscriptionGroupID: AskWhenTier.subscriptionGroupID)
+        #else
+        Button(RequestCopy.Live.manage) {
+            openURL(URL(string: "https://apps.apple.com/account/subscriptions")!)
+        }
+        #endif
     }
 }
