@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/domainverify"
+	"github.com/mattbaylor/cal-mirror/askwhen/service/internal/store"
 )
 
 // A DNS that answers from a table. Unlisted names do not exist; "down" means
@@ -19,9 +20,13 @@ type fakeDNS struct {
 	cname map[string]string
 	addrs map[string][]string
 	down  bool
+	// asked counts CNAME lookups, one per check, so a test can tell whether
+	// the checker looked at all.
+	asked int
 }
 
 func (f *fakeDNS) LookupCNAME(_ context.Context, host string) (string, error) {
+	f.asked++
 	if f.down {
 		return "", errors.New("i/o timeout")
 	}
@@ -223,8 +228,13 @@ func TestListChecksDNSAndVerifiesWhenItPasses(t *testing.T) {
 
 func TestTheCheckerVerifiesWhileNobodyIsLooking(t *testing.T) {
 	dns := &fakeDNS{cname: map[string]string{}, addrs: map[string][]string{}}
-	d, slug, token := setupDomains(t, dns)
-	claim(d, slug, "ask.example.com", token)
+	d, slug, _ := setupDomains(t, dns)
+	// Straight into the store, not through Claim: a host nobody has ever
+	// checked is due at once, which is what lets the real loop be tested
+	// here without waiting out an interval.
+	if err := d.Owner.Store.ClaimDomain(context.Background(), "ask.example.com", slug, "custom"); err != nil {
+		t.Fatal(err)
+	}
 	dns.cname["ask.example.com"] = "edge.askwhen.me"
 	dns.addrs["ask.example.com"] = []string{"64.111.22.170"}
 
@@ -242,6 +252,87 @@ func TestTheCheckerVerifiesWhileNobodyIsLooking(t *testing.T) {
 	<-done
 	if ok, _ := d.Owner.Store.AuthorizedDomain(context.Background(), "ask.example.com"); !ok {
 		t.Fatal("the checker did not verify a domain that came to point at us")
+	}
+}
+
+func TestCheckIntervalSlowsDownOnceNobodyIsWatching(t *testing.T) {
+	for _, c := range []struct {
+		age  time.Duration
+		want time.Duration
+	}{
+		{0, 20 * time.Second},
+		{9 * time.Minute, 20 * time.Second},
+		{10 * time.Minute, time.Minute},
+		{59 * time.Minute, time.Minute},
+		{time.Hour, 5 * time.Minute},
+		{23 * time.Hour, 5 * time.Minute},
+		{24 * time.Hour, time.Hour},
+		{30 * 24 * time.Hour, time.Hour},
+	} {
+		if got := checkInterval(c.age); got != c.want {
+			t.Errorf("checkInterval(%v) = %v, want %v", c.age, got, c.want)
+		}
+	}
+}
+
+func TestDomainDue(t *testing.T) {
+	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	at := func(ago time.Duration) string { return now.Add(-ago).Format(time.RFC3339) }
+	for _, c := range []struct {
+		name             string
+		created, checked string
+		want             bool
+	}{
+		{"never checked", at(time.Minute), "", true},
+		{"fresh, checked 10s ago", at(time.Minute), at(10 * time.Second), false},
+		{"fresh, checked 20s ago", at(time.Minute), at(20 * time.Second), true},
+		{"a day old, checked 20s ago", at(25 * time.Hour), at(20 * time.Second), false},
+		{"a day old, checked an hour ago", at(25 * time.Hour), at(time.Hour), true},
+		{"unreadable check time", at(time.Minute), "yesterday", true},
+		{"unreadable claim time", "", at(10 * time.Second), true},
+	} {
+		dom := store.Domain{Host: "ask.example.com", Kind: "custom", CreatedAt: c.created, LastCheckedAt: c.checked}
+		if got := domainDue(dom, now); got != c.want {
+			t.Errorf("%s: due = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+// Every check is recorded, whoever made it, so the timer does not repeat a
+// look an owner or a claim has just taken — and does come back when due.
+func TestTheCheckerLeavesAloneWhatWasJustChecked(t *testing.T) {
+	dns := &fakeDNS{cname: map[string]string{}, addrs: map[string][]string{}}
+	d, slug, token := setupDomains(t, dns)
+	ctx := context.Background()
+
+	claim(d, slug, "ask.example.com", token) // checks, and records it
+	asked := dns.asked
+	d.checkDue(ctx, time.Now().Add(5*time.Second))
+	if dns.asked != asked {
+		t.Fatal("the checker asked DNS again about a host a claim checked seconds ago")
+	}
+
+	// The owner's Check is recorded too. Backdate the claim's record first,
+	// so only the owner's look can make the host not due.
+	if err := d.Owner.Store.MarkDomainChecked(ctx, "ask.example.com", time.Now().Add(-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	do(d.List, http.MethodGet, "/v1/pages/"+slug+"/domains", nil, token, map[string]string{"slug": slug}, nil)
+	asked = dns.asked
+	d.checkDue(ctx, time.Now().Add(5*time.Second))
+	if dns.asked != asked {
+		t.Fatal("the checker asked DNS again about a host the owner checked seconds ago")
+	}
+
+	// And it comes back once due, and verifies what now points at us.
+	dns.cname["ask.example.com"] = "edge.askwhen.me"
+	dns.addrs["ask.example.com"] = []string{"64.111.22.170"}
+	d.checkDue(ctx, time.Now().Add(21*time.Second))
+	if dns.asked == asked {
+		t.Fatal("the checker never came back to a host once it was due")
+	}
+	if ok, _ := d.Owner.Store.AuthorizedDomain(ctx, "ask.example.com"); !ok {
+		t.Fatal("a due host that points at us was not verified")
 	}
 }
 

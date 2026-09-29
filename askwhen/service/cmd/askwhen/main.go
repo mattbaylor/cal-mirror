@@ -200,7 +200,7 @@ func run(log *slog.Logger) error {
 
 	// A customer who set their CNAME and went to bed should wake up verified.
 	domains := domainsAPI(st, cfg, log)
-	go api.DomainChecker(sweepCtx, domains, 5*time.Minute)
+	go api.DomainChecker(sweepCtx, domains, 10*time.Second)
 
 	srv := &http.Server{
 		Addr:    cfg.listen,

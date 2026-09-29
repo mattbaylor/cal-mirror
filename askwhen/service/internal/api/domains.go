@@ -271,6 +271,11 @@ func (d *Domains) view(ctx context.Context, dom store.Domain, check bool) domain
 	v.Point = d.Verify.Target
 	res, err := domainverify.Check(ctx, d.resolver(), dom.Host, d.Verify)
 	v.Check = string(res)
+	// Whoever asked — the owner's Check, a claim, or the timer — the timer
+	// need not ask again until the host is next due.
+	if err := d.Owner.Store.MarkDomainChecked(ctx, dom.Host, time.Now()); err != nil {
+		d.Logger.Error("domain: mark checked", "host", dom.Host, "err", err)
+	}
 	switch res {
 	case domainverify.Verified:
 		if err := d.Owner.Store.MarkDomainVerified(ctx, dom.Host); err != nil {
@@ -305,26 +310,81 @@ func (d *Domains) fail(w http.ResponseWriter, what string, err error) {
 	http.Error(w, "unavailable", http.StatusServiceUnavailable)
 }
 
-// DomainChecker walks the unverified custom domains on a timer and marks the
-// ones that have come to point at us. The owner's GET does the same on demand;
-// this is for the customer who set the record and went to bed. Nothing here
-// ever *un*-verifies: see store.MarkDomainVerified for why.
-func DomainChecker(ctx context.Context, d *Domains, every time.Duration) {
-	t := time.NewTicker(every)
+// DomainChecker walks the unverified custom domains and marks the ones that
+// have come to point at us. The owner's GET does the same on demand; this is
+// for the customer who set the record and went to bed. Nothing here ever
+// *un*-verifies: see store.MarkDomainVerified for why.
+//
+// `tick` is how often it looks for work, not how often any one host is asked
+// about — that is checkInterval's job. The tick has to be shorter than the
+// shortest interval, and the work list is nearly always empty, so a short
+// tick costs one indexed read.
+func DomainChecker(ctx context.Context, d *Domains, tick time.Duration) {
+	t := time.NewTicker(tick)
 	defer t.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-t.C:
-			pending, err := d.Owner.Store.UnverifiedCustomDomains(ctx)
-			if err != nil {
-				d.Logger.Error("domain checker", "err", err)
-				continue
-			}
-			for _, dom := range pending {
-				d.view(ctx, dom, true)
-			}
+		case now := <-t.C:
+			d.checkDue(ctx, now)
 		}
 	}
+}
+
+// checkDue checks every unverified custom domain that is due at `now`.
+func (d *Domains) checkDue(ctx context.Context, now time.Time) {
+	pending, err := d.Owner.Store.UnverifiedCustomDomains(ctx)
+	if err != nil {
+		d.Logger.Error("domain checker", "err", err)
+		return
+	}
+	for _, dom := range pending {
+		if domainDue(dom, now) {
+			d.view(ctx, dom, true)
+		}
+	}
+}
+
+// checkInterval is how long to wait between checks of a host claimed `age`
+// ago.
+//
+// Fast while somebody is probably watching, slow once nobody is. An owner
+// claims a domain and goes straight to their DNS provider; the record is
+// usually live within a couple of minutes, and they are looking at the app
+// waiting for "Working". At the old flat five minutes, a record that went
+// live at minute one still waited four more — long enough to conclude it was
+// broken. After the first hour the owner has either finished or gone away,
+// and a host still unverified after a day is somebody's abandoned idea, not
+// a customer waiting. An owner who comes back and fixes a record a week later
+// taps Check, which asks DNS on the spot; the timer is for when nobody taps.
+func checkInterval(age time.Duration) time.Duration {
+	switch {
+	case age < 10*time.Minute:
+		return 20 * time.Second
+	case age < time.Hour:
+		return time.Minute
+	case age < 24*time.Hour:
+		return 5 * time.Minute
+	default:
+		return time.Hour
+	}
+}
+
+// domainDue says whether the timer should ask DNS about dom at `now`. A host
+// never checked is always due, and so is one whose times do not parse: a
+// wasted look is cheap, and a host never looked at again is the bug.
+func domainDue(dom store.Domain, now time.Time) bool {
+	if dom.LastCheckedAt == "" {
+		return true
+	}
+	checked, err := time.Parse(time.RFC3339, dom.LastCheckedAt)
+	if err != nil {
+		return true
+	}
+	created, err := time.Parse(time.RFC3339, dom.CreatedAt)
+	if err != nil {
+		return true
+	}
+	return now.Sub(checked) >= checkInterval(now.Sub(created))
 }
