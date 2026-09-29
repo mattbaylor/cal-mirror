@@ -102,6 +102,33 @@ public final class RequestPageCoordinator: @unchecked Sendable {
         page.queueETag = nil
     }
 
+    // MARK: Reconnect
+
+    /// Whether a key found in the Keychain still opens a page, asked when the
+    /// owner taps Reconnect and not before — that tap is the opt-in, so the
+    /// no-network-before-opting-in promise holds.
+    ///
+    /// The Keychain outlives the page. A page deleted after its grace, or by
+    /// hand, leaves its key syncing to every device the owner has, and a fresh
+    /// install would offer to reconnect to nothing — forever, because no
+    /// switch in Settings reaches a generic Keychain item. Found 29 September
+    /// 2026 trying to get a phone back to a first-run state for App Review.
+    ///
+    /// A 404 is the one answer that settles it: the service gives it for a
+    /// missing page and for a wrong key alike (§4c), and either way the key is
+    /// worthless, so it is removed. Anything else — offline, the service down —
+    /// is not evidence, and throws with the key left where it was.
+    public func keyStillOpensPage(slug: String) async throws -> Bool {
+        guard let token = try tokens.token(for: slug) else { return false }
+        do {
+            _ = try await client.queue(slug: slug, token: token, ifNoneMatch: nil)
+            return true
+        } catch AskwhenError.notFound {
+            try tokens.remove(for: slug)
+            return false
+        }
+    }
+
     // MARK: Domains
 
     /// The page's hostnames. Asking is what re-checks DNS on the service, so
