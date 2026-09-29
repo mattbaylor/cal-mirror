@@ -57,6 +57,26 @@ extension Store {
         save()
     }
 
+    /// Tapping Reconnect: ask the service whether the key still opens a page
+    /// before carrying on with it. True means reattached. False means the page
+    /// is gone and the key has been forgotten — the row then offers the next
+    /// key if the Keychain holds one, and otherwise this is a first run.
+    ///
+    /// Offline, or the service down, reattaches as it always did: that is not
+    /// evidence the page is gone, and an owner on a plane should not lose the
+    /// way back to their page over it.
+    func reconnectRequestPage() async -> Bool {
+        guard let slug = recoverableSlug else { return false }
+        do {
+            guard try await requestCoordinator().keyStillOpensPage(slug: slug) else {
+                findRecoverableRequestPage()
+                return false
+            }
+        } catch {}
+        reattachRequestPage()
+        return true
+    }
+
     /// Zero-decision setup (`decisions.md`, *Setup with zero decisions, and
     /// the preview before the offer*): turning the row on infers the rest,
     /// and the first thing shown is the preview. Writable calendars block;

@@ -25,6 +25,19 @@ VERSION = os.environ.get("CM_VERSION", "1.4.1")
 BUILD = os.environ.get("CM_BUILD", "10")
 APPLY = os.environ.get("CM_APPLY") == "1"
 SUBMIT = os.environ.get("CM_SUBMIT") == "1"
+# Which platforms to touch. The two no longer share a build number or a
+# release: on 28 Sept 2026 iOS was at build 15 in review while macOS 2.0 was
+# live at 12, and a run for both planned to attach a Mac build that does not
+# exist and to rewrite the live Mac version's description.
+ONLY = {p.strip().upper() for p in os.environ.get("CM_PLATFORMS", "IOS,MAC_OS").split(",") if p.strip()}
+
+# States in which a version is already out, or on its way out, and must not be
+# edited by this tool. A live version's metadata is locked (ASC answers 409),
+# and one mid-review is locked too; planning changes against either produces a
+# plan that cannot be applied and invites someone to try. Said once, skipped.
+UNTOUCHABLE = {"READY_FOR_DISTRIBUTION", "READY_FOR_SALE", "PROCESSING_FOR_DISTRIBUTION",
+               "PENDING_DEVELOPER_RELEASE", "PENDING_APPLE_RELEASE",
+               "WAITING_FOR_REVIEW", "IN_REVIEW", "REPLACED_WITH_NEW_VERSION"}
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "appstore")
 
 # Which metadata folder and screenshot folder feed each platform, and the
@@ -37,6 +50,9 @@ PLATFORMS = {
 
 TOK = None
 changes, problems = [], []
+# Platforms whose version is live or in review, skipped on purpose — kept
+# apart from a version that should exist and does not, which is a problem.
+skipped_live = set()
 
 
 def token():
@@ -101,10 +117,15 @@ def want(label, current, desired, doit):
 
 # --------------------------------------------------------------------- version
 def ensure_version(platform):
+    """The version's id, or None to mean "leave this platform alone"."""
     for v in get(f"/v1/apps/{APP}/appStoreVersions?limit=40").get("data", []):
         a = v["attributes"]
         if a.get("versionString") == VERSION and a.get("platform") == platform:
             state = a.get("appVersionState") or a.get("appStoreState")
+            if state in UNTOUCHABLE:
+                print(f"    = version is {state}; leaving it alone")
+                skipped_live.add(platform)
+                return None
             print(f"    = version exists ({state})")
             return v["id"]
     print(f"    + create {platform} {VERSION}")
@@ -399,10 +420,15 @@ def main():
     ensure_subtitle()
 
     for platform, cfg in PLATFORMS.items():
+        if platform not in ONLY:
+            print(f"\n{platform}\n    ~ skipped (CM_PLATFORMS={','.join(sorted(ONLY))})")
+            continue
         print(f"\n{platform}")
         vid = ensure_version(platform)
         if not vid:
-            if APPLY:
+            # A live or in-review version is a decision, not a failure. Only a
+            # version that should exist and does not is worth stopping for.
+            if APPLY and platform not in skipped_live:
                 problems.append(f"{platform}: no version id")
             continue
         lid = ensure_localization(vid, platform)
