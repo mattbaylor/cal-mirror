@@ -223,9 +223,14 @@ ship() {
   fi
 }
 
-VERSION="$(grep -m1 'MARKETING_VERSION' "$DIR/apple/ios/project.yml" | tr -d ' "' | cut -d: -f2)"
-BUILD="$(grep -m1 'CURRENT_PROJECT_VERSION' "$DIR/apple/ios/project.yml" | tr -d ' "' | cut -d: -f2)"
-echo "==> cal-mirror $VERSION (build $BUILD)"
+# Each platform's own numbers: the two can differ (Mac 2.0.1 shipped while
+# iOS 2.0 was still in review), and naming the Mac archive after the iOS
+# version would be a label that lies.
+setting() { grep -m1 "$1" "$DIR/apple/$2/project.yml" | tr -d ' "' | cut -d: -f2; }
+VERSION="$(setting MARKETING_VERSION ios)"
+MAC_VERSION="$(setting MARKETING_VERSION mac)"
+[ "$WANT_IOS" = 1 ] && echo "==> iOS $VERSION (build $(setting CURRENT_PROJECT_VERSION ios))"
+[ "$WANT_MAC" = 1 ] && echo "==> macOS $MAC_VERSION (build $(setting CURRENT_PROJECT_VERSION mac))"
 
 if [ "$WANT_IOS" = 1 ]; then
   build_target CalMirror "$DIR/apple/ios/CalMirror.xcodeproj" \
@@ -235,7 +240,7 @@ fi
 
 if [ "$WANT_MAC" = 1 ]; then
   build_target CalMirrorMac "$DIR/apple/mac/CalMirrorMac.xcodeproj" \
-    "CalMirrorMac-$VERSION" mac-export mac
+    "CalMirrorMac-$MAC_VERSION" mac-export mac
   ship "$DIST/mac-export/cal-mirror.pkg" macos
 fi
 

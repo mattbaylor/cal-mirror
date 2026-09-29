@@ -277,9 +277,22 @@ labelled as such; iOS syncs on open, pull to refresh, and background refresh.
 
 NEW_IOS = NEW_COMMON
 
-NEW_MAC = NEW_COMMON + """
-On the Mac: a sidebar, a toolbar and a Settings window; realtime syncing in the
-App Store build; Copy Times to Send in the menu bar.
+# The Mac is a release ahead of the phone: 2.0 went live on the Mac while the
+# iOS 2.0 was still in review, and 2.0.1 carries the fixes that review turned
+# up. When iOS and Mac next ship together, this goes back to NEW_COMMON plus
+# the Mac paragraph (git log has it).
+NEW_MAC = """
+Fixes for AskWhen.me.
+
+• The subscription screen loads its prices reliably. In 2.0 it could give up
+  before the App Store had answered, and show nothing to buy.
+• Every subscription on offer shows its price and how often it renews.
+• Choose your name on AskWhen.me before you pay for it: check that it is free,
+  and it is held for you while you subscribe.
+• Your page has Manage subscription, which opens your App Store
+  subscriptions.
+• A new Mac, or a reinstall, no longer offers to reconnect to a page that has
+  since been deleted.
 """
 
 def unwrap(t):
