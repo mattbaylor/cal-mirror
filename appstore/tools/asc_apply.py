@@ -300,18 +300,28 @@ def ensure_screenshots(lid, folder, display):
     local = {fn: hashlib.md5(open(os.path.join(ROOT, "screenshots", folder, fn), "rb").read()).hexdigest()
              for fn in files}
 
-    remote, order = {}, []
+    # A name can be on the set twice. Mac 2.0.1 inherited ten screenshots
+    # that covered nine names (29 Sept 2026), most likely a replacement
+    # uploaded while its predecessor could not be deleted. Keyed by name
+    # alone, the second copy vanished: the plan read "1 missing, 0 extra",
+    # the upload made eleven, and App Store Connect refused it. The first
+    # of each name is kept; any later one is an extra, and deleted.
+    remote, order, dupes = {}, [], []
     if st is not None:
         for sh in get(f"/v1/appScreenshotSets/{st['id']}/appScreenshots?limit=30").get("data", []):
             a = sh["attributes"]
-            remote[a.get("fileName")] = (sh["id"], a.get("sourceFileChecksum"),
-                                         (a.get("assetDeliveryState") or {}).get("state"))
-            order.append(a.get("fileName"))
+            fn = a.get("fileName")
+            if fn in remote:
+                dupes.append(sh["id"])
+                continue
+            remote[fn] = (sh["id"], a.get("sourceFileChecksum"),
+                          (a.get("assetDeliveryState") or {}).get("state"))
+            order.append(fn)
     missing = [fn for fn in files if fn not in remote]
     stale = [fn for fn in files if fn in remote and
              (remote[fn][1] != local[fn] or remote[fn][2] != "COMPLETE")]
     extra = [fn for fn in remote if fn not in local]
-    if st is not None and not missing and not stale and not extra:
+    if st is not None and not missing and not stale and not extra and not dupes:
         # The API returns the set in display order. A replacement was appended
         # when uploaded, so the order is checked and fixed on its own.
         if order == files:
@@ -326,7 +336,8 @@ def ensure_screenshots(lid, folder, display):
     if st is None:
         print(f"    + {display}: create set and upload {len(files)}")
     else:
-        print(f"    ~ {display}: {len(missing)} missing, {len(stale)} changed, {len(extra)} extra")
+        print(f"    ~ {display}: {len(missing)} missing, {len(stale)} changed, "
+              f"{len(extra)} extra, {len(dupes)} duplicate")
     changes.append(f"{display}: screenshots")
     if not APPLY:
         return
@@ -340,6 +351,12 @@ def ensure_screenshots(lid, folder, display):
         if not r:
             return
         st = r["data"]
+
+    for sid in dupes:
+        if call("DELETE", f"/v1/appScreenshots/{sid}") is None:
+            print(f"      kept a duplicate in {folder} — App Store Connect refused the change")
+            return
+        print(f"      removed a duplicate from {folder}")
 
     for fn in stale + extra:
         # A version in review refuses the delete (409, "Can't Delete
