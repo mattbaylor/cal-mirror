@@ -174,6 +174,53 @@ func TestDeletingThePageWithdrawsItsDomains(t *testing.T) {
 	}
 }
 
+// The checker's memory of when it last asked DNS: surfaced on the work list,
+// overwritten rather than duplicated, and gone with the domain — a host
+// released and later claimed again by someone else starts as never checked.
+func TestDomainCheckIsRecordedAndGoesWithTheDomain(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+	addPage(t, s, "x7f2k9")
+	addDomain(t, s, "ask.example.com", "x7f2k9", "custom", false)
+
+	lastChecked := func() string {
+		t.Helper()
+		pending, err := s.UnverifiedCustomDomains(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(pending) != 1 {
+			t.Fatalf("work list has %d hosts, want 1", len(pending))
+		}
+		return pending[0].LastCheckedAt
+	}
+
+	if got := lastChecked(); got != "" {
+		t.Fatalf("a host never checked reads %q, want empty", got)
+	}
+	first := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	if err := s.MarkDomainChecked(ctx, "ask.example.com", first); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.MarkDomainChecked(ctx, "ask.example.com", first.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if got := lastChecked(); got != "2026-09-29T12:01:00Z" {
+		t.Fatalf("last checked = %q, want the later check", got)
+	}
+
+	if _, err := s.ReleaseDomain(ctx, "ask.example.com", "x7f2k9"); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := s.DB().QueryRow(`SELECT count(*) FROM domain_check`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("domain_check rows after release = %d, want 0", n)
+	}
+}
+
 func TestDomainHostMustBeLowercase(t *testing.T) {
 	// schema.sql has CHECK (host = lower(host)). Storing a mixed-case host
 	// would make it permanently unmatchable, because the lookup is exact and

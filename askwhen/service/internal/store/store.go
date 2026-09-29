@@ -98,6 +98,10 @@ type Domain struct {
 	Kind       string // "subdomain" | "custom"
 	VerifiedAt string // RFC 3339, or "" while unverified
 	CreatedAt  string
+	// LastCheckedAt is when the checker last asked DNS about this host, or ""
+	// if it never has. Only meaningful for unverified custom domains; the
+	// queries that do not need it leave it empty.
+	LastCheckedAt string
 }
 
 // ErrDomainTaken means another page already claims that host.
@@ -255,14 +259,43 @@ func (s *Store) Domains(ctx context.Context, slug string) ([]Domain, error) {
 // UnverifiedCustomDomains is the checker's work list: every custom host
 // nobody has yet observed pointing at us.
 func (s *Store) UnverifiedCustomDomains(ctx context.Context) ([]Domain, error) {
+	// LEFT JOIN, not JOIN: a domain nobody has checked yet has no row in
+	// domain_check, and it is precisely the one most deserving of a look.
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT host, slug, kind, verified_at, created_at FROM domain
-		WHERE kind = 'custom' AND verified_at IS NULL ORDER BY created_at`)
+		SELECT d.host, d.slug, d.kind, d.verified_at, d.created_at, c.last_checked_at
+		FROM domain d LEFT JOIN domain_check c ON c.host = d.host
+		WHERE d.kind = 'custom' AND d.verified_at IS NULL
+		ORDER BY d.created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("unverified domains: %w", err)
 	}
 	defer rows.Close()
-	return scanDomains(rows)
+	out := []Domain{}
+	for rows.Next() {
+		var d Domain
+		var verified, checked sql.NullString
+		if err := rows.Scan(&d.Host, &d.Slug, &d.Kind, &verified, &d.CreatedAt, &checked); err != nil {
+			return nil, fmt.Errorf("unverified domains: %w", err)
+		}
+		d.VerifiedAt, d.LastCheckedAt = verified.String, checked.String
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
+// MarkDomainChecked records that DNS was asked about this host just now,
+// whether or not the answer was the one we wanted. The checker reads it to
+// decide who is due; an owner tapping Check writes it too, so the timer does
+// not immediately repeat work a human just did.
+func (s *Store) MarkDomainChecked(ctx context.Context, host string, now time.Time) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO domain_check (host, last_checked_at) VALUES (?, ?)
+		ON CONFLICT (host) DO UPDATE SET last_checked_at = excluded.last_checked_at`,
+		host, now.UTC().Format(time.RFC3339))
+	if err != nil {
+		return fmt.Errorf("mark domain checked: %w", err)
+	}
+	return nil
 }
 
 // SlugForHost answers "whose page is this hostname?" for a request that
