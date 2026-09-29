@@ -9,6 +9,9 @@ struct ContentView: View {
     /// sheet and pushes the setup at its first real step.
     @State private var showingExplainer = false
     @State private var pushingSetup = false
+    /// One round trip while Reconnect asks whether its page still exists;
+    /// the row is disabled for it so a second tap does not ask twice.
+    @State private var reconnecting = false
     /// The "Send times" line, recomputed after every sync. Local: the
     /// deriver against this device's calendars, no service.
     @State private var sendTimes: String?
@@ -166,8 +169,20 @@ struct ContentView: View {
                         }
                     } else if let slug = model.recoverableSlug {
                         // The key is here, the config is not: carry on at
-                        // the same address, straight to the calendars.
-                        Button { model.reattachRequestPage(); model.inferRequestPage(); pushingSetup = true } label: {
+                        // the same address, straight to the calendars — if
+                        // the page is still there. A dead key is forgotten
+                        // and, with no other, this is a first run.
+                        Button {
+                            reconnecting = true
+                            Task {
+                                if await model.reconnectRequestPage() {
+                                    model.inferRequestPage(); pushingSetup = true
+                                } else if model.recoverableSlug == nil {
+                                    showingExplainer = true
+                                }
+                                reconnecting = false
+                            }
+                        } label: {
                             HStack {
                                 RequestPageRow(page: nil, recoverable: slug)
                                 Image(systemName: "chevron.forward")
@@ -176,6 +191,7 @@ struct ContentView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        .disabled(reconnecting)
                     } else {
                         // Nothing yet: the row presents the explainer as a
                         // sheet, and Continue on it pushes the setup.

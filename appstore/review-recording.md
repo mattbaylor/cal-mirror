@@ -20,13 +20,13 @@ does not match, the app changed and this file did not — fix this file.
 
 | | Why |
 |---|---|
-| **Build 15 on the device, from TestFlight** | It must be the submitted binary. A build run from Xcode is signed differently and proves nothing about what Apple holds. TestFlight builds also transact against the StoreKit sandbox automatically — no sandbox sign-in, no charge. |
+| **Build 17 on the device, from TestFlight** | It must be the submitted binary. A build run from Xcode is signed differently and proves nothing about what Apple holds. TestFlight builds also transact against the StoreKit sandbox automatically — no sandbox sign-in, no charge. |
 | **An iPad, if you have one** | Apple reviewed on an iPad Air 11-inch and that is where they got lost. An iPhone recording meets the letter of the ask; an iPad one answers the complaint. |
 | **`AW_APPSTORE_SANDBOX` is `1`** on CT 112 | The service verifies Apple's signature against the sandbox root. At `0` it refuses the transaction and you record *"Apple said yes, AskWhen.me did not answer"* — PR #132 stays a draft until approval for exactly this reason. |
 | **A calendar with real events in the next two weeks** | The preview screen is drawn from the device's own calendar. An empty fortnight gives *"Your page would be empty"* and a reviewer sees a product with nothing in it. |
 | **Signed in as yourself** | TestFlight does *not* use the Sandbox Apple Accounts from App Store Connect — those are for locally signed development builds. A TestFlight build transacts against the sandbox backend with your **own** Apple ID, free, and there is nothing to sign out of. The sandbox tester in the demo-account fields is for the App Review reviewer, not for you; see below. |
 | **The Apple Account verified on the device first** | Settings › Apple Account. iOS does not ask until you are already mid-purchase, and then it replaces Apple's sheet with *"Apple Account Verification — Enter the password for … in Settings"*. Tapping Settings and entering it carries on fine; dismissing it is a cancellation, and the app says *"Nothing was bought and nothing changed."* Not a blocker — just an interruption you do not want in the middle of a take. |
-| **The app deleted first** | Every step below assumes a fresh install: the dormant row, the explainer, and — the point of the whole exercise — an offer screen with nothing yet owned. |
+| **The app deleted first, then the row tapped once** | Every step below assumes a fresh install: the dormant row, the explainer, and — the point of the whole exercise — an offer screen with nothing yet owned. A page's key survives the delete in iCloud Keychain, so after a page has existed the reinstalled row reads **Reconnect**; tap it once before recording. From build 17 it asks the service, finds the page gone, forgets the key, and the row reads **Off** from then on. (A page that still exists is reconnected instead — delete it on the service first.) |
 
 **Nothing here costs money, and you film as yourself.** A TestFlight build
 transacts against the sandbox backend using your own Apple ID: free, and absent
@@ -58,8 +58,10 @@ subscription outlived every estimate of when it would lapse.
 **So shoot the whole thing in one pass**, and rehearse the walk without tapping
 Subscribe. A second take also starts from a different place than the first: the
 page's write token is in the iCloud Keychain, so a reinstall after a successful
-purchase shows the row as **Reconnect** rather than **Off**, which is not the
-fresh install the reviewer was promised.
+purchase shows the row as **Reconnect** rather than **Off**. Before build 17
+there was no way out of that — no switch in Settings reaches a generic Keychain
+item. From build 17, tapping Reconnect on a page the service no longer has
+forgets the key; see the table above.
 
 A renewal caught mid-take is expected rather than wrong.
 

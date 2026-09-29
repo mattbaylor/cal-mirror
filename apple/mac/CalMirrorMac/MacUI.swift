@@ -113,11 +113,20 @@ struct ManageView: View {
                 // where the owner is already looking at their calendars.
                 Section("AskWhen.me") {
                     Button {
-                        // A key with no config: carry on at the same address.
-                        if !model.hasRequestPage, model.recoverableSlug != nil {
-                            model.reattachRequestPage(); model.inferRequestPage()
+                        // A key with no config: carry on at the same address,
+                        // if the page is still there. A dead key is forgotten,
+                        // and the setup then opens as a first run.
+                        guard !model.hasRequestPage, model.recoverableSlug != nil else {
+                            showingSetup = true
+                            return
                         }
-                        showingSetup = true
+                        Task {
+                            if await model.reconnectRequestPage() {
+                                model.inferRequestPage(); showingSetup = true
+                            } else if model.recoverableSlug == nil {
+                                showingSetup = true
+                            }
+                        }
                     } label: {
                         RequestPageRow(page: model.config.requestPage,
                                        recoverable: model.hasRequestPage ? nil : model.recoverableSlug)

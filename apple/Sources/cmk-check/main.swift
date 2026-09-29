@@ -1689,6 +1689,27 @@ do {
     t.answers = [(404, [:], "")]
     _ = try! run { try await coord.delete(page: &page) }.get()
     check(page.slug.isEmpty && (try? tokens.token(for: "x7f2k9")) == nil, "delete forgets slug and token, even on a 404")
+
+    // Reconnect. The Keychain outlives the page, so a key has to be asked
+    // about before a fresh install carries on with it.
+    try! tokens.store("tok_live", for: "live01")
+    t.answers = [(200, [:], #"{"requests":[]}"#)]
+    let live = try! run { try await coord.keyStillOpensPage(slug: "live01") }.get()
+    check(live && t.calls.last?.path == "/v1/pages/live01/queue"
+          && t.calls.last?.headers["Authorization"] == "Bearer tok_live",
+          "a key whose page answers is kept, asked with that key")
+    check((try? tokens.token(for: "live01")) == "tok_live", "and stays in the Keychain")
+
+    t.answers = [(404, [:], "")]
+    let dead = try! run { try await coord.keyStillOpensPage(slug: "live01") }.get()
+    check(!dead && (try? tokens.token(for: "live01")) == nil, "a 404 forgets the key, so Reconnect stops being offered")
+
+    try! tokens.store("tok_maybe", for: "maybe1")
+    t.answers = [(503, [:], "")]
+    let down = run { try await coord.keyStillOpensPage(slug: "maybe1") }
+    if case .failure = down { check(true, "the service down is not evidence: it throws") }
+    else { check(false, "expected a throw, got \(down)") }
+    check((try? tokens.token(for: "maybe1")) == "tok_maybe", "and the key is left where it was")
 }
 
 
