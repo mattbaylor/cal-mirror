@@ -157,6 +157,7 @@
     "nameLost": "%@ went while you were deciding, so nothing was bought. Try another name.",
     "nameClaimFailed": "Subscribed. %@ did not attach — open Address on your page to try it again, or pick another name there.",
     "restore": "Restore Purchases",
+    "redeem": "Redeem a Code",
     "restoring": "Checking with Apple…",
     "restoredNone": "Apple has no subscription on file for this Apple Account.",
     "cancelled": "Nothing was bought and nothing changed.",
