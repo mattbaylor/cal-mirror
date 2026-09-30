@@ -236,6 +236,7 @@ enum RequestCopy {
         static let nameLost = "%@ went while you were deciding, so nothing was bought. Try another name."
         static let nameClaimFailed = "Subscribed. %@ did not attach — open Address on your page to try it again, or pick another name there."
         static let restore = "Restore Purchases"
+        static let redeem = "Redeem a Code"
         static let restoring = "Checking with Apple…"
         static let restoredNone = "Apple has no subscription on file for this Apple Account."
         static let cancelled = "Nothing was bought and nothing changed."

@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 import CalMirrorKit
 
 /// Screens 7 and 8 — the offer, Apple's sheet, and the page that exists
@@ -216,6 +217,7 @@ struct RequestOfferView: View {
             // it is the only way back for an owner who reinstalled.
             Section {
                 Button(RequestCopy.Offer.restore) { Task { await restore() } }
+                RedeemCodeButton { Task { await redeemed() } }
             }
         }
     }
@@ -452,6 +454,20 @@ struct RequestOfferView: View {
         await load()
     }
 
+    /// Apple's sheet has taken a code. The subscription arrives as a
+    /// transaction a moment later, not with the sheet's completion, so wait a
+    /// few seconds for it before deciding what to show — otherwise the owner
+    /// who just redeemed is handed the price list for what they now own.
+    private func redeemed() async {
+        phase = .loading
+        for _ in 0..<5 {
+            if Task.isCancelled { return }
+            if await subscriptions.current().isActive { break }
+            do { try await Task.sleep(for: .seconds(1)) } catch { return }
+        }
+        await load()
+    }
+
     /// The page is created with Apple's signed transaction; the service
     /// verifies the signature itself and derives the entitlement. Only once it
     /// answers with a slug is the page turned on — `enabled` is the opt-in, and
@@ -488,3 +504,33 @@ struct RequestOfferView: View {
         await publish(t)
     }
 }
+
+/// An offer code — a promotion from App Store Connect — redeemed without
+/// leaving the app. Apple's own sheet takes the code and applies the offer;
+/// the subscription it creates is an ordinary one, so the page is created
+/// from it exactly as from a purchase.
+///
+/// The sheet is iOS 16 and macOS 15. On a Mac older than that the button is
+/// not shown: a code still works from the App Store's own Redeem, and a
+/// button that could only apologise is worse than none.
+struct RedeemCodeButton: View {
+    let onRedeemed: () -> Void
+    @State private var showing = false
+
+    var body: some View {
+        #if os(iOS)
+        button
+        #else
+        if #available(macOS 15.0, *) { button }
+        #endif
+    }
+
+    @available(macOS 15.0, *)
+    private var button: some View {
+        Button(RequestCopy.Offer.redeem) { showing = true }
+            .offerCodeRedemption(isPresented: $showing) { result in
+                if case .success = result { onRedeemed() }
+            }
+    }
+}
+
