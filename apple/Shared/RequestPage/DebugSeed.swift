@@ -168,11 +168,9 @@ enum DebugSeed {
         seedEvents(in: calendar, using: events)
 
         store.calendars = store.engine.calendars()
-        // The same CalRef the calendars screen builds — title *and* account —
-        // or the row's toggle compares unequal and shows the seeded calendar
-        // as not blocking while the deriver treats it as blocking.
+        // The same CalRef the calendars screen builds, identifier and all.
         let info = store.calendars.first { $0.title == calendarTitle }
-        let ref = CalRef(title: calendarTitle, account: info?.account)
+        let ref = info.map(CalRef.init) ?? CalRef(title: calendarTitle)
         var page = store.requestPage
         page.blocking = [ref]
         page.requestCalendar = ref

@@ -198,10 +198,9 @@ final class Model: ObservableObject {
     // Reverse-direction guard: does (source -> dest) reverse some other mirror
     // that goes dest -> source? Returns that mirror if so (config would loop).
     func calId(_ ref: CalRef) -> String? {
-        if let a = ref.account, let c = calendars.first(where: { $0.title == ref.title && $0.account == a }) {
-            return c.identifier
-        }
-        return calendars.first { $0.title == ref.title }?.identifier
+        ref.resolve(in: calendars.map {
+            CalendarInfo(title: $0.title, account: $0.account, identifier: $0.identifier, writable: $0.writable)
+        })?.identifier
     }
     func reverseConflict(source: CalRef, dest: CalRef, excluding id: String) -> Mirror? {
         guard let s = calId(source), let d = calId(dest) else { return nil }
@@ -570,7 +569,7 @@ struct MirrorDetail: View {
             get: { model.calId(isSource ? m.source : m.dest) ?? "" },
             set: { newId in
                 guard let c = model.calendars.first(where: { $0.identifier == newId }) else { return }
-                let ref = CalRef(title: c.title, account: c.account)
+                let ref = CalRef(title: c.title, account: c.account, identifier: c.identifier)
                 let newSource = isSource ? ref : m.source
                 let newDest = isSource ? m.dest : ref
                 if let clash = model.reverseConflict(source: newSource, dest: newDest, excluding: m.id) {

@@ -51,23 +51,19 @@ struct PairFields: View {
         }
     }
 
-    private func calId(_ title: String, _ account: String?) -> String {
-        if let a = account, let c = calendars.first(where: { $0.title == title && $0.account == a }) {
-            return c.identifier
-        }
-        return calendars.first(where: { $0.title == title })?.identifier ?? ""
+    private func calId(_ ref: CalRef) -> String {
+        ref.resolve(in: calendars)?.identifier ?? ""
     }
 
     private func pick(isSource: Bool) -> Binding<String> {
         Binding(
             get: {
-                isSource ? calId(mirror.source.title, mirror.source.account)
-                         : calId(mirror.dest.title, mirror.dest.account)
+                calId(isSource ? mirror.source : mirror.dest)
             },
             set: { id in
                 guard let c = calendars.first(where: { $0.identifier == id }) else { return }
-                let newSource = isSource ? CalRef(title: c.title, account: c.account) : mirror.source
-                let newDest   = isSource ? mirror.dest : CalRef(title: c.title, account: c.account)
+                let newSource = isSource ? CalRef(c) : mirror.source
+                let newDest   = isSource ? mirror.dest : CalRef(c)
                 if let clash = reverseConflict(newSource, newDest) {
                     conflict = "Can’t reverse “\(clash.name)” — the copy would loop back."
                     return

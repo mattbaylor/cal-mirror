@@ -35,7 +35,7 @@ enum SendTimesSource {
         // read-only ones (holidays, a sports feed) do not — the same
         // inference zero-decision setup will make.
         let blocking = page.blocking.isEmpty
-            ? calendars.filter(\.writable).map { CalRef(title: $0.title, account: $0.account) }
+            ? calendars.filter(\.writable).map(CalRef.init)
             : page.blocking
         let to = now.addingTimeInterval(TimeInterval(policy.horizonDays + 1) * 86400)
         let busy = engine.busyIntervals(in: blocking, from: now.addingTimeInterval(-86400), to: to)
