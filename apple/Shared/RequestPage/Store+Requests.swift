@@ -43,6 +43,8 @@ extension Store {
                 RequestNotifications.clear(gone)
             }
             pendingRequests = remaining
+        } catch RequestPageError.pageGone {
+            forgetGonePage()
         } catch {
             // A failed poll is polled again. Nothing is shown for it: the
             // owner did not ask for this to happen now, and an error about

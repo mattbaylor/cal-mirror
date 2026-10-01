@@ -15,10 +15,8 @@ extension Store {
         do {
             claimedDomains = try await requestCoordinator().domains(page: requestPage)
             domainError = nil
-        } catch let e as AskwhenError {
-            domainError = message(for: e)
         } catch {
-            domainError = RequestCopy.Domains.failed
+            domainFailed(error)
         }
     }
 
@@ -33,10 +31,8 @@ extension Store {
             claimedDomains.removeAll { $0.host == claimed.host }
             claimedDomains.append(claimed)
             domainError = nil
-        } catch let e as AskwhenError {
-            domainError = message(for: e)
         } catch {
-            domainError = RequestCopy.Domains.failed
+            domainFailed(error)
         }
     }
 
@@ -68,6 +64,7 @@ extension Store {
             claimedDomains.append(claimed)
             return .success(())
         } catch {
+            if case RequestPageError.pageGone = error { forgetGonePage() }
             return .failure(error)
         }
     }
@@ -79,21 +76,36 @@ extension Store {
             try await requestCoordinator().releaseDomain(host, page: requestPage)
             claimedDomains.removeAll { $0.host == host }
             domainError = nil
-        } catch let e as AskwhenError {
-            domainError = message(for: e)
         } catch {
-            domainError = RequestCopy.Domains.failed
+            domainFailed(error)
         }
     }
 
     /// The service's own words where it has any. A 409 means somebody already
     /// holds the name; a rejection carries the service's reason, and rewording
     /// it here would only make a real DNS problem harder to recognize.
+    ///
+    /// A 404 is not here: on a page-scoped call it means the page is gone, and
+    /// arrives as `RequestPageError.pageGone` (`domainFailed`).
     private func message(for error: AskwhenError) -> String {
         switch error {
         case .rejected(let reason): return reason.isEmpty ? RequestCopy.Domains.taken : reason
-        case .notFound: return RequestCopy.Domains.taken
         default: return RequestCopy.Domains.failed
+        }
+    }
+
+    /// The one place a domains call's failure becomes words. A page the
+    /// service no longer has is let go, and said so, rather than reported as
+    /// a name somebody else holds.
+    private func domainFailed(_ error: Error) {
+        switch error {
+        case RequestPageError.pageGone:
+            forgetGonePage()
+            domainError = RequestCopy.Domains.pageGone
+        case let e as AskwhenError:
+            domainError = message(for: e)
+        default:
+            domainError = RequestCopy.Domains.failed
         }
     }
 
@@ -136,7 +148,9 @@ extension Store {
     @discardableResult
     func publishIfNeeded() async throws -> PublishOutcome {
         var page = requestPage
-        let outcome = try await requestCoordinator().publishIfNeeded(page: &page)
+        let outcome: PublishOutcome
+        do { outcome = try await requestCoordinator().publishIfNeeded(page: &page) }
+        catch RequestPageError.pageGone { forgetGonePage(); throw RequestPageError.pageGone }
         requestPage = page
         save()
         return outcome

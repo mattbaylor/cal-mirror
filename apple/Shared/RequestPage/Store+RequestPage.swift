@@ -57,6 +57,25 @@ extension Store {
         save()
     }
 
+    /// The service answered with a 404 for this page's own key
+    /// (`RequestPageError.pageGone`): it deleted the page, or never knew the
+    /// key. Either way "Your page is live" would be a lie from here on, so the
+    /// slug and key go, and with them the requests and addresses that belonged
+    /// to the page. What the owner set up stays for a new one.
+    ///
+    /// Every caller that sees `pageGone` comes here, and the key is removed
+    /// here rather than in the coordinator, so a caller that ignores the error
+    /// leaves the key for the next poll to find the 404 again.
+    func forgetGonePage() {
+        var page = requestPage
+        try? requestCoordinator().forget(page: &page)
+        requestPage = page
+        for r in pendingRequests { RequestNotifications.clear(r.id) }
+        pendingRequests = []
+        claimedDomains = []
+        save()
+    }
+
     /// Tapping Reconnect: ask the service whether the key still opens a page
     /// before carrying on with it. True means reattached. False means the page
     /// is gone and the key has been forgotten — the row then offers the next

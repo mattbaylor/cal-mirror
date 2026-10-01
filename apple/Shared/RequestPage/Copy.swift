@@ -176,6 +176,7 @@ enum RequestCopy {
         static let upgrade = "Upgrade"
         static let upgradeNote = "An upgrade is charged straight away, with what is left of this year credited against it. Apple handles the arithmetic and shows you the number before you agree."
         static let taken = "That address is already claimed."
+        static let pageGone = "AskWhen.me no longer has this page, so there is nothing to add an address to. This device has let it go; your calendars and settings are still here for a new one."
         static let failed = "AskWhen.me did not answer. Nothing was claimed — try again."
     }
 
