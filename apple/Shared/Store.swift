@@ -90,7 +90,11 @@ final class Store: ObservableObject {
     func bootstrap() async {
         guard !fixture else { return }
         access = await engine.requestAccess()
-        if access { calendars = engine.calendars(); await syncNow() }
+        if access {
+            calendars = engine.calendars()
+            pinCalendars()
+            await syncNow()
+        }
         // Only once a page exists. StoreKit's update stream is local, but
         // starting it for an owner who never opted in would still be this app
         // reaching for something it has no business touching — and the slug is
@@ -100,6 +104,16 @@ final class Store: ObservableObject {
             await refreshSubscription()
         }
         findRecoverableRequestPage()
+    }
+
+    /// Fill in calendar identifiers a config saved before they were stored,
+    /// and catch up titles after a rename (`Config.pinningCalendars`). Saves
+    /// only when something changed.
+    func pinCalendars() {
+        let pinned = config.pinningCalendars(calendars)
+        guard pinned != config else { return }
+        config = pinned
+        save()
     }
 
     func save() {

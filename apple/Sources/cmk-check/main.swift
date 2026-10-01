@@ -1476,6 +1476,61 @@ do {
           "a 200 that is not the contract → malformed")
 }
 
+print("Calendar references:")
+do {
+    func cal(_ title: String, _ account: String, _ id: String) -> CalendarInfo {
+        CalendarInfo(title: title, account: account, identifier: id, writable: true)
+    }
+    // Two calendars called "Home" in two accounts, in EventKit's order.
+    let device = [cal("Work", "Exchange", "w1"), cal("Home", "iCloud", "h1"), cal("Home", "Google", "h2")]
+
+    let pickedGoogleHome = CalRef(device[2])
+    check(pickedGoogleHome.resolve(in: device)?.identifier == "h2", "a picked calendar resolves by identifier")
+    let renamed = [cal("Work", "Exchange", "w1"), cal("Home", "iCloud", "h1"), cal("Family", "Google", "h2")]
+    check(pickedGoogleHome.resolve(in: renamed)?.identifier == "h2", "a renamed calendar keeps its mirror")
+    check(CalRef(title: "Home", identifier: "h2").resolve(in: device)?.identifier == "h2",
+          "the identifier decides between two calendars with the same title")
+
+    // Configs written before identifiers: the name decides, exactly as before.
+    check(CalRef(title: "Home", account: "Google").resolve(in: device)?.identifier == "h2", "legacy: title and account")
+    check(CalRef(title: "Home").resolve(in: device)?.identifier == "h1", "legacy: title alone takes the first, as before")
+    check(CalRef(title: "Gone").resolve(in: device) == nil, "a calendar that is not there resolves to nothing")
+    // An identifier EventKit has reissued (a full resync) falls back to the name.
+    check(CalRef(title: "Work", account: "Exchange", identifier: "stale").resolve(in: device)?.identifier == "w1",
+          "a stale identifier falls back to title and account")
+
+    check(CalRef(title: "Home", account: "Google").refers(to: device[2], among: device),
+          "a legacy reference still shows as the calendar it names")
+    check(!CalRef(title: "Home", account: "Google").refers(to: device[1], among: device),
+          "and not as its namesake")
+
+    // Pinning fills identifiers only where the name fits one calendar.
+    check(CalRef(title: "Work").pinned(in: device) == CalRef(device[0]), "an unambiguous name is pinned")
+    check(CalRef(title: "Home", account: "iCloud").pinned(in: device) == CalRef(device[1]), "an account narrows to one, pinned")
+    check(CalRef(title: "Home").pinned(in: device) == CalRef(title: "Home"), "two calendars fit: left unpinned, not guessed")
+    check(pickedGoogleHome.pinned(in: renamed) == CalRef(renamed[2]), "a rename catches up the stored title")
+    let stale = CalRef(title: "Work", account: "Exchange", identifier: "stale")
+    check(stale.pinned(in: device) == stale, "a stale identifier is left for the name to find")
+
+    var cfg = Config.empty
+    cfg.mirrors = [Mirror(id: "m", name: "M", source: CalRef(title: "Work"), dest: CalRef(title: "Home", account: "Google"))]
+    cfg.requestPage = RequestPageConfig(blocking: [CalRef(title: "Home")], requestCalendar: CalRef(title: "Work"))
+    let pinned = cfg.pinningCalendars(device)
+    check(pinned.mirrors[0].source.identifier == "w1" && pinned.mirrors[0].dest.identifier == "h2", "a config's mirrors are pinned")
+    check(pinned.requestPage?.requestCalendar?.identifier == "w1" && pinned.requestPage?.blocking[0].identifier == nil,
+          "and its request page, ambiguous ones left alone")
+    check(cfg.pinningCalendars([]) == cfg, "no calendars, no change")
+    check(pinned.pinningCalendars(device) == pinned, "pinning twice changes nothing")
+
+    // Old configs decode; new ones round-trip the identifier.
+    let legacy = try! JSONDecoder().decode(CalRef.self, from: Data(#"{"title":"Work","account":"Exchange"}"#.utf8))
+    check(legacy == CalRef(title: "Work", account: "Exchange"), "a reference without an identifier decodes")
+    let round = try! JSONDecoder().decode(CalRef.self, from: try! JSONEncoder().encode(CalRef(device[0])))
+    check(round.identifier == "w1", "the identifier round-trips")
+    let bare = String(decoding: try! JSONEncoder().encode(CalRef(title: "Work")), as: UTF8.self)
+    check(!bare.contains("identifier"), "no identifier, no key written")
+}
+
 print("Zero-decision setup:")
 do {
     func cal(_ title: String, _ account: String, writable: Bool) -> CalendarInfo {
@@ -1486,7 +1541,8 @@ do {
     var page = RequestPageConfig()
     page.infer(calendars: device, receiver: cal("Personal", "iCloud", writable: true))
     check(page.blocking.map(\.title) == ["Work", "Personal"], "writable calendars block; subscribed and read-only do not")
-    check(page.requestCalendar == CalRef(title: "Personal", account: "iCloud"), "the calendar new events go to receives")
+    check(page.requestCalendar == CalRef(title: "Personal", account: "iCloud", identifier: "Personal"),
+          "the calendar new events go to receives, by identifier")
     check(!page.isReady && !page.enabled, "inference turns nothing on and publishes nothing — no name, no slug")
 
     var chosen = RequestPageConfig(blocking: [CalRef(title: "Work", account: "Exchange")],

@@ -55,20 +55,20 @@ struct RequestCalendarFields: View {
 
     // MARK: Bindings
 
-    /// `CalRef` carries the account so two calendars both called "Home" from
-    /// different accounts stay distinct — the same pairing `PairFields` uses.
-    private func ref(_ c: CalendarInfo) -> CalRef { CalRef(title: c.title, account: c.account) }
+    /// Compared by what each reference resolves to, not by `==`: a reference
+    /// saved before identifiers were stored has none, and must still show as
+    /// the calendar it names. New picks carry the identifier.
+    private func names(_ r: CalRef, _ c: CalendarInfo) -> Bool { r.refers(to: c, among: calendars) }
 
     private func blockingBinding(_ c: CalendarInfo) -> Binding<Bool> {
         Binding(
-            get: { page.blocking.contains(ref(c)) },
+            get: { page.blocking.contains { names($0, c) } },
             set: { on in
-                let r = ref(c)
                 if on {
-                    guard !page.blocking.contains(r) else { return }
-                    page.blocking.append(r)
+                    guard !page.blocking.contains(where: { names($0, c) }) else { return }
+                    page.blocking.append(CalRef(c))
                 } else {
-                    page.blocking.removeAll { $0 == r }
+                    page.blocking.removeAll { names($0, c) }
                 }
                 onChange()
             })
@@ -76,13 +76,13 @@ struct RequestCalendarFields: View {
 
     private func requestBinding(_ c: CalendarInfo) -> Binding<Bool> {
         Binding(
-            get: { page.requestCalendar == ref(c) },
+            get: { page.requestCalendar.map { names($0, c) } ?? false },
             set: { on in
                 // Assigning replaces whatever held it, which is what "exactly
                 // one" means; turning it off clears it and leaves the page
                 // unpublishable until another is picked, which `isReady`
                 // already enforces and the warning above already says.
-                page.requestCalendar = on ? ref(c) : nil
+                page.requestCalendar = on ? CalRef(c) : nil
                 onChange()
             })
     }

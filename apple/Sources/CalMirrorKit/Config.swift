@@ -1,13 +1,21 @@
 import Foundation
 
-/// A reference to a calendar by human-readable title (+ optional account name).
-/// Matching falls back to title-only when `account` is nil.
+/// A reference to a calendar: EventKit's `calendarIdentifier` when it is
+/// known, with the human-readable title (+ optional account name) kept beside
+/// it. The identifier is what survives a rename and tells apart two calendars
+/// with the same title; the name is the fallback for configs written before
+/// identifiers were stored, and for the day EventKit reissues them (a full
+/// resync of an account loses the old ones). Resolution lives in
+/// `CalRef.resolve(in:)`.
 public struct CalRef: Codable, Equatable, Hashable, Sendable {
     public var title: String
     public var account: String?
-    public init(title: String, account: String? = nil) {
+    /// Absent from configs written before identifiers were stored; decodes as nil.
+    public var identifier: String?
+    public init(title: String, account: String? = nil, identifier: String? = nil) {
         self.title = title
         self.account = account
+        self.identifier = identifier
     }
 }
 
