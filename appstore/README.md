@@ -32,6 +32,23 @@ rejection was about, and which purchase flow lives on which screen.
 question for 2.0, with the reasoning and what a reviewer may ask. Hand-entered
 in App Store Connect; there is no API for it.
 
+## The 2.0 In-App Event
+
+`event/card.png` (1920x1080) and `event/details.png` (1080x1920), from
+`tools/genevent.py`: the requester's request page (`site/img`, Dana Cho) on
+the warm gradient, with no copy of their own. The App Store lays the badge,
+name and short description over the lower ~40%, so the script fails if a
+capture runs past 60% of the height. Hand-entered in App Store Connect:
+
+| Field | Value |
+|---|---|
+| Event name (30) | Share When You're Free |
+| Short description (50) | Send your free times, or let people ask for one |
+| Long description (120) | One tap sends your next three free times as text. AskWhen.me, a separate subscription, lets people ask you for one. |
+| Badge | Major Update |
+| Purchase requirement | Yes — AskWhen.me is a subscription |
+| Deep link | `calendarmirror://` — registered from build 18 (#181) |
+
 ## Listing fields — how to fill them in, and what to avoid
 
 Paste these from `metadata/<platform>/`. Two of the fields carry traps.
