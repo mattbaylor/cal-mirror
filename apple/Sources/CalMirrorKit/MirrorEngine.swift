@@ -91,10 +91,7 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
     }
 
     public func calendars() -> [CalendarInfo] {
-        store.calendars(for: .event).map {
-            CalendarInfo(title: $0.title, account: $0.source.title,
-                         identifier: $0.calendarIdentifier, writable: $0.allowsContentModifications)
-        }.sorted { ($0.account, $0.title) < ($1.account, $1.title) }
+        store.calendars(for: .event).map(Self.info).sorted { ($0.account, $0.title) < ($1.account, $1.title) }
     }
 
     /// The calendar the system would put a new event in — what zero-decision
@@ -234,11 +231,17 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
 
     // MARK: - Internals
 
+    /// EventKit's own order, unsorted, so a name-only match picks the same
+    /// calendar it always did.
     private func findCalendar(_ ref: CalRef) -> EKCalendar? {
         let all = store.calendars(for: .event)
-        if let acct = ref.account,
-           let c = all.first(where: { $0.title == ref.title && $0.source.title == acct }) { return c }
-        return all.first { $0.title == ref.title }
+        guard let hit = ref.resolve(in: all.map(Self.info)) else { return nil }
+        return all.first { $0.calendarIdentifier == hit.identifier }
+    }
+
+    private static func info(_ c: EKCalendar) -> CalendarInfo {
+        CalendarInfo(title: c.title, account: c.source.title,
+                     identifier: c.calendarIdentifier, writable: c.allowsContentModifications)
     }
 
     private func keyFor(_ ev: EKEvent, now: Date) -> String {

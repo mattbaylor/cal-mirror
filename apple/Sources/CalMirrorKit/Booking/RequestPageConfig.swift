@@ -122,11 +122,11 @@ extension RequestPageConfig {
     public mutating func infer(calendars: [CalendarInfo], receiver: CalendarInfo?) {
         let writable = calendars.filter(\.writable)
         if blocking.isEmpty {
-            blocking = writable.map { CalRef(title: $0.title, account: $0.account) }
+            blocking = writable.map(CalRef.init)
         }
         if requestCalendar == nil {
             let target = receiver.flatMap { $0.writable ? $0 : nil } ?? writable.first
-            if let target { requestCalendar = CalRef(title: target.title, account: target.account) }
+            if let target { requestCalendar = CalRef(target) }
         }
     }
 }
