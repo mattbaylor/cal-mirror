@@ -1,7 +1,6 @@
-Fixes for AskWhen.me.
+Fixes.
 
-• The subscription screen loads its prices reliably. In 2.0 it could give up before the App Store had answered, and show nothing to buy.
-• Every subscription on offer shows its price and how often it renews.
-• Choose your name on AskWhen.me before you pay for it: check that it is free, and it is held for you while you subscribe.
-• Your page has Manage subscription, which opens your App Store subscriptions.
-• A new Mac, or a reinstall, no longer offers to reconnect to a page that has since been deleted.
+• Rename a calendar and its mirrors keep working. With two calendars of the same name, copies go to the one you picked.
+• Copies into a calendar kept only on this device are no longer rewritten on every sync.
+• If a calendar refuses a copy, the mirror says so instead of showing as healthy.
+• If AskWhen.me no longer has your page, the app stops showing it as live.
