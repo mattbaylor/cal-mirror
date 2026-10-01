@@ -162,20 +162,74 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
     }
 
     /// Remove ALL mirror-tagged events from every configured destination.
-    @discardableResult
-    public func purge(_ config: Config, now: Date = Date()) -> Int {
-        let wide = 800.0 * 86400
+    ///
+    /// One commit per mirror, and every one reported: a destination EventKit
+    /// refuses is named in `failures` and its removals are not counted, and it
+    /// does not take the other destinations' removals down with it. The span
+    /// is at least 800 days either side and never narrower than the mirror's
+    /// own window, fetched a year at a time (`events(in:from:to:)`).
+    public func purge(_ config: Config, now: Date = Date(),
+                      log: ((String) -> Void)? = nil) -> (removed: Int, failures: [String]) {
         var removed = 0
+        var failures: [String] = []
         for m in config.mirrors {
-            guard let dest = findCalendar(m.dest) else { continue }
-            let evs = store.events(matching: store.predicateForEvents(
-                withStart: now.addingTimeInterval(-wide), end: now.addingTimeInterval(wide), calendars: [dest]))
-            for ev in evs where Markers.isMirrorTag(ev.url) {
-                try? store.remove(ev, span: .thisEvent, commit: false); removed += 1
+            guard let dest = findCalendar(m.dest) else {
+                log?("[\(m.id)] purge: destination not found, skipped")
+                continue
+            }
+            let past = max(800, m.windowPastDays + 1) * 86400
+            let future = max(800, m.windowFutureDays + 1) * 86400
+            let tagged = events(in: dest, from: now.addingTimeInterval(-past), to: now.addingTimeInterval(future))
+                .filter { Markers.isMirrorTag($0.url) }
+            var staged = 0
+            var refused: String?
+            for ev in tagged {
+                do { try store.remove(ev, span: .thisEvent, commit: false); staged += 1 }
+                catch { refused = refused ?? error.localizedDescription }
+            }
+            do {
+                try store.commit()
+            } catch {
+                store.reset()
+                failures.append("[\(m.id)] \(dest.title): nothing removed, commit failed: \(error.localizedDescription)")
+                continue
+            }
+            removed += staged
+            log?("[\(m.id)] purge: removed \(staged) of \(tagged.count) from \(dest.title)")
+            if let refused {
+                failures.append("[\(m.id)] \(dest.title): \(tagged.count - staged) not removed: \(refused)")
             }
         }
-        try? store.commit()
-        return removed
+        return (removed, failures)
+    }
+
+    /// Every event in `cal` between two instants. EventKit matches at most
+    /// four years per predicate and drops the rest without saying so, so a
+    /// wide span is fetched a year at a time. An event that straddles a
+    /// boundary comes back from both years; it is kept once.
+    private func events(in cal: EKCalendar, from: Date, to: Date) -> [EKEvent] {
+        var out: [EKEvent] = []
+        var seen = Set<String>()
+        for (start, end) in Self.yearSpans(from: from, to: to) {
+            for ev in store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: [cal]))
+            where seen.insert("\(ev.calendarItemIdentifier)#\(ev.startDate?.timeIntervalSince1970 ?? 0)").inserted {
+                out.append(ev)
+            }
+        }
+        return out
+    }
+
+    /// `from`..<`to` cut into consecutive spans of at most 365 days, the last
+    /// one short. Public for cmk-check.
+    public static func yearSpans(from: Date, to: Date) -> [(start: Date, end: Date)] {
+        var spans: [(start: Date, end: Date)] = []
+        var start = from
+        while start < to {
+            let end = min(start.addingTimeInterval(365 * 86400), to)
+            spans.append((start, end))
+            start = end
+        }
+        return spans
     }
 
     // MARK: Request page
@@ -356,9 +410,13 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
     /// Carry out whatever `HeartbeatPolicy` decided. Pinned to today, so a
     /// standing warning moves forward once a day rather than stranding itself on
     /// the date the outage began — presence is the signal here, not position.
+    ///
+    /// Throws when EventKit refuses the write. A warning that cannot be
+    /// raised, or one left standing that cannot be cleared, is something the
+    /// owner has to hear about from the app, since the calendar cannot say it.
     private func applyBanner(_ health: HeartbeatPolicy.Health, mirror m: Mirror,
                              dest: EKCalendar, existing: EKEvent?, now: Date,
-                             lookUpIfMissing: Bool = true) {
+                             lookUpIfMissing: Bool = true) throws {
         // The success path has already scanned the destination and passes what it
         // found, so it opts out of the lookup: searching again on every healthy
         // cycle would be a wide query per mirror for a banner that is almost
@@ -379,17 +437,17 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
             // outage costs, and it costs it once a day.
             if case .failing = health, let b = banner, b.startDate != dayStart {
                 b.isAllDay = true; b.startDate = dayStart; b.endDate = dayStart
-                try? store.save(b, span: .thisEvent, commit: true)
+                try store.save(b, span: .thisEvent, commit: true)
             }
         case .remove:
-            if let b = banner { try? store.remove(b, span: .thisEvent, commit: true) }
+            if let b = banner { try store.remove(b, span: .thisEvent, commit: true) }
         case .write(let title):
             let ev = banner ?? EKEvent(eventStore: store)
             ev.calendar = dest
             ev.isAllDay = true; ev.startDate = dayStart; ev.endDate = dayStart
             ev.title = title
             ev.url = Markers.heartbeatURL(mirrorId: m.id)
-            try? store.save(ev, span: .thisEvent, commit: true)
+            try store.save(ev, span: .thisEvent, commit: true)
         }
     }
 
@@ -444,9 +502,25 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
         }
         func fail(_ why: String) -> MirrorResult {
             r.ok = false; r.error = why
-            applyBanner(.failing(why), mirror: m, dest: dest,
-                        existing: findBanner(dest: dest, mirror: m, now: now), now: now)
+            // Looked up again: after a failed commit the store has been reset,
+            // and the calendar fetched before it is no longer one to save into.
+            let target = findCalendar(m.dest) ?? dest
+            do {
+                try applyBanner(.failing(why), mirror: m, dest: target,
+                                existing: findBanner(dest: target, mirror: m, now: now), now: now)
+            } catch {
+                r.error = "\(why) (the warning could not be written: \(error.localizedDescription))"
+                log?("[\(m.id)] ERROR — warning not written: \(error.localizedDescription)")
+            }
             return r
+        }
+        // Synced or deferred, but the banner write was refused: the copies are
+        // fine, a stale warning may be standing in the calendar, and only the
+        // app can say so.
+        func bannerFailed(_ error: Error) {
+            r.ok = false
+            r.error = "The warning in this calendar could not be updated: \(error.localizedDescription)"
+            log?("[\(m.id)] ERROR — warning not updated: \(error.localizedDescription)")
         }
         guard let source = findCalendar(m.source) else { return fail("Source not found") }
         if source.calendarIdentifier == dest.calendarIdentifier {
@@ -536,7 +610,8 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
             log?("[\(m.id)] DEFER — \(why)")
             // .unknown, deliberately: a deferral neither raises a warning nor
             // clears one that is already up.
-            applyBanner(.unknown, mirror: m, dest: dest, existing: nil, now: now)
+            do { try applyBanner(.unknown, mirror: m, dest: dest, existing: nil, now: now) }
+            catch { bannerFailed(error) }
             return r
         }
 
@@ -598,9 +673,33 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
             if s.copyAlarms, let alarms = src.alarms { for a in alarms { copy.addAlarm(cloneAlarm(a)) } }
             copy.url = Markers.copyURL(mirrorId: m.id, key: key); copy.calendar = dest
         }
+        // A write counts once EventKit takes it. A refused save used to be
+        // counted as done, and the mirror shown healthy, while the copy never
+        // landed; now the first refusal becomes the mirror's error.
         var pending = 0
+        var refusedWrites = 0
+        var firstRefusal: String?
+        var aborted = false
+        func attempt(_ write: () throws -> Void) -> Bool {
+            do { try write(); return true } catch {
+                refusedWrites += 1
+                firstRefusal = firstRefusal ?? error.localizedDescription
+                return false
+            }
+        }
         func maybeCommit(_ force: Bool = false) {
-            if force || pending >= 50 { try? store.commit(); pending = 0 }
+            guard !aborted, force || pending >= 50 else { return }
+            do {
+                try store.commit(); pending = 0
+            } catch {
+                // What was staged since the last commit is lost. Reset so it
+                // cannot fail the next mirror's commit too; the events fetched
+                // above are invalid after a reset, so this cycle stops writing
+                // and the next one reconciles from what actually landed.
+                store.reset()
+                refusedWrites += pending; pending = 0; aborted = true
+                firstRefusal = firstRefusal ?? "commit failed: \(error.localizedDescription)"
+            }
         }
 
         // Pure planner decides create/match/delete and collapses duplicates.
@@ -608,6 +707,7 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
         var changedFields: [String: Int] = [:]
         var staleKeys = 0
         for (di, ref) in plan.match {
+            if aborted { break }
             let copy = owned[ref], src = srcList[di], s = snaps[di], key = desiredList[di].key
             let fields = diffFields(copy, src, s, key: key)
 
@@ -631,30 +731,46 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
             } else if !fields.isEmpty {
                 for f in fields { changedFields[f, default: 0] += 1 }
                 apply(copy, src, s, key: key)
-                try? store.save(copy, span: .thisEvent, commit: false); pending += 1
-                r.updated += 1
+                if attempt({ try store.save(copy, span: .thisEvent, commit: false) }) {
+                    pending += 1; r.updated += 1
+                }
             } else { r.unchanged += 1 }
             maybeCommit()
         }
         for di in plan.create {
+            if aborted { break }
             let c = EKEvent(eventStore: store); apply(c, srcList[di], snaps[di], key: desiredList[di].key)
-            try? store.save(c, span: .thisEvent, commit: false); pending += 1
-            r.created += 1
+            if attempt({ try store.save(c, span: .thisEvent, commit: false) }) {
+                pending += 1; r.created += 1
+            }
             maybeCommit()
         }
         for ref in plan.delete {             // duplicate twins + stale copies (owned-only, safe)
-            try? store.remove(owned[ref], span: .thisEvent, commit: false); pending += 1
-            r.deleted += 1
+            if aborted { break }
+            if attempt({ try store.remove(owned[ref], span: .thisEvent, commit: false) }) {
+                pending += 1; r.deleted += 1
+            }
             maybeCommit()
         }
         maybeCommit(true)
+
+        // Not a clean cycle, so none of the baselines below move: the change
+        // digest especially, or a change-driven cycle would skip this mirror
+        // as up to date and leave the refused writes unretried until the floor.
+        if refusedWrites > 0 {
+            let why = "\(refusedWrites) write\(refusedWrites == 1 ? "" : "s") refused by the calendar: \(firstRefusal ?? "no reason given")"
+            log?("[\(m.id)] ERROR — \(why)")
+            return fail(why)
+        }
 
         // Status banner. Healthy is silent — this only clears whatever an
         // earlier failure left behind.
         lastSuccessAt[m.id] = now
         lastSourceDigest[m.id] = digest
-        applyBanner(.ok, mirror: m, dest: dest, existing: heartbeat, now: now,
-                    lookUpIfMissing: false)
+        do {
+            try applyBanner(.ok, mirror: m, dest: dest, existing: heartbeat, now: now,
+                            lookUpIfMissing: false)
+        } catch { bannerFailed(error) }
 
         // Trust this cycle's owned-copy count as the baseline the guard compares
         // future (possibly stale) snapshots against.

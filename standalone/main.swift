@@ -122,9 +122,10 @@ if listOnly {
 
 if doPurge {
     let cfg = ConfigStore.load(from: CONFIG_URL)
-    let removed = engine.purge(cfg)
+    let (removed, failures) = engine.purge(cfg, log: log)
     log("purge: removed \(removed) mirror-tagged events")
-    exit(0)
+    for f in failures { log("purge FAILED: \(f)") }
+    exit(failures.isEmpty ? 0 : 1)
 }
 
 // ---- One sync cycle ------------------------------------------------------
