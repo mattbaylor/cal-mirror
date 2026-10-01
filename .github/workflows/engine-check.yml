@@ -47,7 +47,8 @@ jobs:
           grep -q 'targetEnvironment(simulator)' "$f" || { echo "EngineCheck must gate on the simulator"; exit 1; }
           while IFS= read -r caller; do
             grep -q '#if DEBUG' "$caller" || { echo "$caller calls EngineCheck outside #if DEBUG"; exit 1; }
-          done < <(grep -rl 'EngineCheck' apple --include='*.swift' | grep -v 'EngineCheck.swift')
+          # Calls, not mentions: comments elsewhere name the check.
+          done < <(grep -rl 'EngineCheck\.' apple --include='*.swift' | grep -v 'EngineCheck.swift')
           echo "gates intact"
 
       - name: Run the engine check
