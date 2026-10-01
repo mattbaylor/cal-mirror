@@ -275,9 +275,11 @@ Mirrors…"). Realtime syncing (on calendar change) is macOS only and is
 labelled as such; iOS syncs on open, pull to refresh, and background refresh.
 """
 
-# iOS 2.0.1 (build 18): fixes only. The AskWhen.me fixes in the Mac's 2.0.1
-# were already in iOS 2.0, which shipped as build 17.
-NEW_IOS = """
+# iOS 2.0.1 (18) and Mac 2.0.2 (14) carry the same fixes, so they share the
+# notes. The AskWhen.me fixes in the Mac's 2.0.1 were already in iOS 2.0
+# (build 17). When the two next ship features, this goes back to NEW_COMMON
+# plus the Mac paragraph (git log has it).
+NEW_FIXES = """
 Fixes.
 
 • Rename a calendar and its mirrors keep working. With two calendars of the
@@ -288,24 +290,8 @@ Fixes.
   healthy.
 • If AskWhen.me no longer has your page, the app stops showing it as live.
 """
-
-# The Mac is a release ahead of the phone: 2.0 went live on the Mac while the
-# iOS 2.0 was still in review, and 2.0.1 carries the fixes that review turned
-# up. When iOS and Mac next ship together, this goes back to NEW_COMMON plus
-# the Mac paragraph (git log has it).
-NEW_MAC = """
-Fixes for AskWhen.me.
-
-• The subscription screen loads its prices reliably. In 2.0 it could give up
-  before the App Store had answered, and show nothing to buy.
-• Every subscription on offer shows its price and how often it renews.
-• Choose your name on AskWhen.me before you pay for it: check that it is free,
-  and it is held for you while you subscribe.
-• Your page has Manage subscription, which opens your App Store
-  subscriptions.
-• A new Mac, or a reinstall, no longer offers to reconnect to a page that has
-  since been deleted.
-"""
+NEW_IOS = NEW_FIXES
+NEW_MAC = NEW_FIXES
 
 def unwrap(t):
     """Join hard-wrapped prose into real paragraphs, keeping bullets and blank
