@@ -12,6 +12,11 @@ public enum RequestPageError: Error, Equatable, Sendable {
     /// it too; failing here means the owner is told rather than the page
     /// quietly going dark.
     case invalidDump([String])
+    /// The service answered a call made with this page's key with a 404: it
+    /// has deleted the page, or does not know the key, and says the same for
+    /// both on purpose (§4c). Either way the key opens nothing and the slug
+    /// names nothing. `forget(page:)` is the answer.
+    case pageGone
 }
 
 /// What one publish attempt did.
@@ -102,6 +107,26 @@ public final class RequestPageCoordinator: @unchecked Sendable {
         page.queueETag = nil
     }
 
+    /// Drops a page the service no longer has: the key and the slug, and what
+    /// was remembered about publishing it. Nothing is sent. What the owner set
+    /// up — calendars, name, policy — stays, so a new page starts from it.
+    public func forget(page: inout RequestPageConfig) throws {
+        if !page.slug.isEmpty { try tokens.remove(for: page.slug) }
+        page.slug = ""
+        page.lastPublishedFingerprint = nil
+        page.lastPublishedAt = nil
+        page.queueETag = nil
+    }
+
+    /// A call made with the page's own key, where a 404 can only mean the page
+    /// is gone (`RequestPageError.pageGone`). Resolve and release do not come
+    /// through here: their 404 means the request or the hostname was already
+    /// dealt with, which is success.
+    private func pageScoped<T>(_ call: () async throws -> T) async throws -> T {
+        do { return try await call() }
+        catch AskwhenError.notFound { throw RequestPageError.pageGone }
+    }
+
     // MARK: Reconnect
 
     /// Whether a key found in the Keychain still opens a page, asked when the
@@ -137,7 +162,7 @@ public final class RequestPageCoordinator: @unchecked Sendable {
     public func domains(page: RequestPageConfig) async throws -> [AskwhenClient.ClaimedDomain] {
         guard !page.slug.isEmpty else { throw RequestPageError.notCreated }
         guard let token = try tokens.token(for: page.slug) else { throw RequestPageError.noToken }
-        return try await client.domains(slug: page.slug, token: token)
+        return try await pageScoped { try await client.domains(slug: page.slug, token: token) }
     }
 
     /// Claims a hostname. A subdomain of askwhen.me comes back verified with
@@ -152,8 +177,9 @@ public final class RequestPageCoordinator: @unchecked Sendable {
                             hold: String? = nil) async throws -> AskwhenClient.ClaimedDomain {
         guard !page.slug.isEmpty else { throw RequestPageError.notCreated }
         guard let token = try tokens.token(for: page.slug) else { throw RequestPageError.noToken }
-        return try await client.claimDomain(Self.normalize(host), slug: page.slug,
-                                            token: token, hold: hold)
+        return try await pageScoped {
+            try await client.claimDomain(Self.normalize(host), slug: page.slug, token: token, hold: hold)
+        }
     }
 
     /// Is this label free? The one question asked before a page exists, so it
@@ -210,7 +236,8 @@ public final class RequestPageCoordinator: @unchecked Sendable {
                                              lastPublishedAt: page.lastPublishedAt, now: now)
         guard case .publish(let reason) = decision else { return .unchanged }
 
-        _ = try await client.publish(try dump.encoded(), slug: page.slug, token: token)
+        let body = try dump.encoded(), slug = page.slug
+        _ = try await pageScoped { try await client.publish(body, slug: slug, token: token) }
         page.lastPublishedFingerprint = fingerprint
         page.lastPublishedAt = now
         return .published(slots: dump.slots.count, reason: reason)
@@ -227,7 +254,8 @@ public final class RequestPageCoordinator: @unchecked Sendable {
         guard page.isReady else { throw RequestPageError.notCreated }
         guard let token = try tokens.token(for: page.slug) else { throw RequestPageError.noToken }
         _ = try await publishIfNeeded(page: &page, now: now)
-        return try await client.createLink(slug: page.slug, token: token)
+        let slug = page.slug
+        return try await pageScoped { try await client.createLink(slug: slug, token: token) }
     }
 
     /// A request through a personal link, accepted the way the owner already
@@ -247,7 +275,8 @@ public final class RequestPageCoordinator: @unchecked Sendable {
     public func collect(page: inout RequestPageConfig) async throws -> [IncomingRequest]? {
         guard page.isReady else { return nil }
         guard let token = try tokens.token(for: page.slug) else { throw RequestPageError.noToken }
-        switch try await client.queue(slug: page.slug, token: token, ifNoneMatch: page.queueETag) {
+        let slug = page.slug, etag = page.queueETag
+        switch try await pageScoped({ try await client.queue(slug: slug, token: token, ifNoneMatch: etag) }) {
         case .unchanged:
             return nil
         case .changed(let requests, let etag):

@@ -1593,6 +1593,60 @@ do {
     check(carried.enabled && !carried.isReady, "a carried-over page is on but not ready to publish")
 }
 
+print("A page the service no longer has:")
+do {
+    let t = FakeTransport()
+    let tokens = InMemoryTokenStore()
+    final class NoCalendar: CalendarAccess {
+        func busyIntervals(in: [CalRef], from: Date, to: Date) -> [BusyInterval] { [] }
+        func writeAcceptedEvent(requestID: String, title: String, location: String?, notes: String?,
+                                start: Date, end: Date, into ref: CalRef) throws -> String { "e" }
+    }
+    let coord = RequestPageCoordinator(engine: NoCalendar(),
+                                       client: AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t),
+                                       tokens: tokens, busySource: { _, _, _ in [] })
+    var page = RequestPageConfig(slug: "gone01", enabled: true, policy: reqPolicy(weekdays: [.wed]),
+                                 displayName: "Dana Cho", meetingTitle: "Chat", blocking: [CalRef(title: "Work")],
+                                 requestCalendar: CalRef(title: "Work"), lastPublishedFingerprint: "f",
+                                 lastPublishedAt: wed, queueETag: "W/\"1\"")
+    try! tokens.store("tok_gone", for: "gone01")
+    func gone(_ r: Result<some Any, Error>) -> Bool { (r.failure as? RequestPageError) == .pageGone }
+
+    t.answers = [(404, [:], "")]
+    check(gone(run { try await coord.collect(page: &page) }), "a 404 on the queue → page gone")
+    check((try? tokens.token(for: "gone01")) == "tok_gone" && page.slug == "gone01",
+          "and nothing is dropped until the caller forgets it")
+    t.answers = [(404, [:], "")]
+    page.lastPublishedFingerprint = nil
+    check(gone(run { try await coord.publishIfNeeded(page: &page, now: wed) }), "a 404 on publish → page gone")
+    t.answers = [(404, [:], "")]
+    check(gone(run { try await coord.domains(page: page) }), "a 404 listing domains → page gone, not \"already claimed\"")
+    t.answers = [(404, [:], "")]
+    check(gone(run { try await coord.claimDomain("dana.askwhen.me", page: page) }), "a 404 on a claim → page gone")
+    t.answers = [(409, [:], "that hostname is not available")]
+    check((run { try await coord.claimDomain("dana.askwhen.me", page: page) }.failure as? AskwhenError)
+          == .rejected("that hostname is not available"), "a name somebody else holds is still a 409, in the service's words")
+
+    // Resolve and release keep their meaning: a 404 there is already done.
+    let req = IncomingRequest(id: "r1", slot: Slot(start: mtn(2026, 9, 2, 14), end: mtn(2026, 9, 2, 15)),
+                              name: "Ada", email: "ada@example.com", note: nil, holdUntil: wed, personal: false)
+    t.answers = [(404, [:], "")]
+    check(run { try await coord.decline(req, page: &page) }.failure == nil, "declining something already gone is still success")
+    t.answers = [(404, [:], "")]
+    check(run { try await coord.releaseDomain("dana.askwhen.me", page: page) }.failure == nil, "so is releasing a hostname already gone")
+
+    let sent = t.calls.count
+    try! coord.forget(page: &page)
+    check(page.slug.isEmpty && page.lastPublishedFingerprint == nil && page.lastPublishedAt == nil && page.queueETag == nil,
+          "forget drops the slug and what was remembered about publishing")
+    check((try? tokens.token(for: "gone01")) == nil, "and the key")
+    check(page.displayName == "Dana Cho" && page.requestCalendar == CalRef(title: "Work") && page.enabled,
+          "and keeps what the owner set up")
+    check(t.calls.count == sent, "without a word to the service")
+    check(!page.isReady && (try? run { try await coord.collect(page: &page) }.get()) == nil && t.calls.count == sent,
+          "after which the page polls nothing")
+}
+
 print("RequestPageCoordinator:")
 do {
     let t = FakeTransport()
