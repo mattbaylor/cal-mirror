@@ -1,0 +1,58 @@
+name: engine-check
+
+# Runs the real MirrorEngine against real EventKit in an iOS simulator
+# (apple/ios/CalMirror/EngineCheck.swift): copies, edits, deletes, busy
+# blocks, calendars found by identifier, the warning banner, accepted
+# requests and purge, on calendars the check makes and deletes.
+#
+# cmk-check covers what can be made pure. This covers the layer that cannot,
+# which is where a bug reaches somebody's calendar. Its first run found one:
+# a destination that cannot hold an availability had every copy rewritten on
+# every cycle.
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        description: Simulator to use
+        default: iPhone 16 Pro
+        type: string
+  pull_request:
+    paths:
+      - 'apple/Sources/CalMirrorKit/**'
+      - 'apple/Shared/**'
+      - 'apple/ios/**'
+      - 'apple/tools/engine-check.sh'
+      - '.github/workflows/engine-check.yml'
+
+jobs:
+  engine:
+    name: engine check (EventKit)
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      # It creates and deletes calendars. Checked here rather than trusted to
+      # the #if, as the screenshots job does for DebugSeed.
+      - name: The check is debug-only and simulator-only
+        run: |
+          set -euo pipefail
+          f=apple/ios/CalMirror/EngineCheck.swift
+          head -1 "$f" | grep -qx '#if DEBUG' || { echo "EngineCheck.swift must open with #if DEBUG"; exit 1; }
+          tail -1 "$f" | grep -qx '#endif'    || { echo "EngineCheck.swift must close its #if DEBUG"; exit 1; }
+          grep -q 'targetEnvironment(simulator)' "$f" || { echo "EngineCheck must gate on the simulator"; exit 1; }
+          while IFS= read -r caller; do
+            grep -q '#if DEBUG' "$caller" || { echo "$caller calls EngineCheck outside #if DEBUG"; exit 1; }
+          # Calls, not mentions: comments elsewhere name the check.
+          done < <(grep -rl 'EngineCheck\.' apple --include='*.swift' | grep -v 'EngineCheck.swift')
+          echo "gates intact"
+
+      - name: Run the engine check
+        env:
+          DEVICE: ${{ inputs.device || 'iPhone 16 Pro' }}
+          DERIVED_DATA: ${{ runner.temp }}/dd
+        run: apple/tools/engine-check.sh

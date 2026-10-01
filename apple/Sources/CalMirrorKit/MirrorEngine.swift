@@ -32,7 +32,7 @@ public struct MirrorResult: Identifiable, Sendable {
 /// sync, and callers serialize syncs (the Store's `!syncing` guard), so the one
 /// long-lived engine can be handed to a background task safely.
 public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
-    private let store = EKEventStore()
+    private let store: EKEventStore
     /// Owned-copy count from each mirror's last successful sync, used by
     /// `SnapshotGuard` to veto reconciling against a collapsed/stale view.
     /// Meaningful only on a long-lived engine (reuse one instance across syncs).
@@ -44,7 +44,11 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
     /// The source digest from each mirror's last completed cycle, so a
     /// change-driven pass can skip mirrors whose source hasn't moved.
     private var lastSourceDigest: [String: UInt64] = [:]
-    public init() {}
+    /// `store` is for the engine check (`EngineCheck`), which writes its
+    /// fixtures through the same store the engine reads, so a fixture is
+    /// never waiting on another store instance to notice it. Everything else
+    /// takes the default.
+    public init(store: EKEventStore = EKEventStore()) { self.store = store }
 
     // MARK: Change notifications
 
@@ -653,6 +657,21 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
         // every run is a real bug — wasted writes on a calendar you share, and
         // under realtime a periodic write is the one shape that can re-trigger
         // the sync that made it — and "~3" alone gives you nothing to chase.
+        // A destination reads back only the availabilities it can hold. A local
+        // ("On My iPhone/Mac") calendar holds none and reads .notSupported; one
+        // that holds busy and free cannot keep a source's tentative. Comparing
+        // against a value that cannot be stored flags it on every cycle and
+        // rewrites every copy forever. Found by the engine check (EngineCheck).
+        let holds = dest.supportedEventAvailabilities
+        func storable(_ a: EKEventAvailability) -> Bool {
+            switch a {
+            case .busy: return holds.contains(.busy)
+            case .free: return holds.contains(.free)
+            case .tentative: return holds.contains(.tentative)
+            case .unavailable: return holds.contains(.unavailable)
+            default: return false
+            }
+        }
         func diffFields(_ copy: EKEvent, _ src: EKEvent, _ s: Snap, key: String) -> [String] {
             var out: [String] = []
             if copy.title != s.title { out.append("title") }
@@ -661,7 +680,7 @@ public final class MirrorEngine: CalendarAccess, @unchecked Sendable {
             if copy.isAllDay != src.isAllDay { out.append("allDay") }
             if (copy.location ?? "") != (s.location ?? "") { out.append("location") }
             if (copy.notes ?? "") != (s.notes ?? "") { out.append("notes") }
-            if copy.availability != s.availability { out.append("availability") }
+            if storable(s.availability), copy.availability != s.availability { out.append("availability") }
             if alarmSig(copy.alarms) != s.alarmSig { out.append("alarms") }
             if copy.url != Markers.copyURL(mirrorId: m.id, key: key) { out.append("marker") }
             return out
