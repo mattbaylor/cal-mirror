@@ -275,7 +275,19 @@ Mirrors…"). Realtime syncing (on calendar change) is macOS only and is
 labelled as such; iOS syncs on open, pull to refresh, and background refresh.
 """
 
-NEW_IOS = NEW_COMMON
+# iOS 2.0.1 (build 18): fixes only. The AskWhen.me fixes in the Mac's 2.0.1
+# were already in iOS 2.0, which shipped as build 17.
+NEW_IOS = """
+Fixes.
+
+• Rename a calendar and its mirrors keep working. With two calendars of the
+  same name, copies go to the one you picked.
+• Copies into a calendar kept only on this device are no longer rewritten on
+  every sync.
+• If a calendar refuses a copy, the mirror says so instead of showing as
+  healthy.
+• If AskWhen.me no longer has your page, the app stops showing it as live.
+"""
 
 # The Mac is a release ahead of the phone: 2.0 went live on the Mac while the
 # iOS 2.0 was still in review, and 2.0.1 carries the fixes that review turned

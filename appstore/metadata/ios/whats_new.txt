@@ -1,9 +1,6 @@
-Send times, and a request page you can turn on.
+Fixes.
 
-SEND TIMES — "When are you free?" One tap gives you your next three free times as a line of text, ready to paste into a message. Worked out on your device; nothing leaves it. Also a Shortcuts action and a Siri phrase.
-
-ASKWHEN.ME — a separate subscription you can turn on from inside the app: a page where people ask you for a time, served by a server that never sees your calendar. Your device chooses what to offer and answers every request; nothing lands in your calendar until it has looked. Off by default; no network request of any kind until you turn on AskWhen.me. Free for 90 days.
-
-Setup asks nothing: turn it on, and the first thing you see is your own week. Send times can carry a personal link — one use, one week, no email confirmation, accepted for you if the time is still clear.
-
-Also: the settings read the way Apple's do, and the key to your page follows your iCloud Keychain to a new device.
+• Rename a calendar and its mirrors keep working. With two calendars of the same name, copies go to the one you picked.
+• Copies into a calendar kept only on this device are no longer rewritten on every sync.
+• If a calendar refuses a copy, the mirror says so instead of showing as healthy.
+• If AskWhen.me no longer has your page, the app stops showing it as live.
