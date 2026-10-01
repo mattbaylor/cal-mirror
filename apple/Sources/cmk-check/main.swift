@@ -1559,6 +1559,18 @@ do {
     check(nothing.blocking.isEmpty && nothing.requestCalendar == nil, "a device with nothing writable infers nothing, and says so on the preview")
 }
 
+print("Purge spans:")
+do {
+    let t0 = Date(timeIntervalSince1970: 1_800_000_000), day = 86400.0
+    let wide = MirrorEngine.yearSpans(from: t0.addingTimeInterval(-800 * day), to: t0.addingTimeInterval(800 * day))
+    check(wide.count == 5, "±800 days is five fetches, none wider than EventKit's four years")
+    check(wide.allSatisfy { $0.end.timeIntervalSince($0.start) <= 365 * day }, "each span is at most a year")
+    check(wide.first?.start == t0.addingTimeInterval(-800 * day) && wide.last?.end == t0.addingTimeInterval(800 * day),
+          "together they cover the whole range")
+    check(zip(wide, wide.dropFirst()).allSatisfy { $0.end == $1.start }, "with no gap between them")
+    check(MirrorEngine.yearSpans(from: t0, to: t0).isEmpty, "an empty range fetches nothing")
+}
+
 print("TokenStore:")
 do {
     // slugs() is how a fresh install learns which page its iCloud Keychain
