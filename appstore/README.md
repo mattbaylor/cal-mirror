@@ -47,7 +47,7 @@ capture runs past 60% of the height. Hand-entered in App Store Connect:
 | Long description (120) | One tap sends your next three free times as text. AskWhen.me, a separate subscription, lets people ask you for one. |
 | Badge | Major Update |
 | Purchase requirement | Yes — AskWhen.me is a subscription |
-| Deep link | `calendarmirror://` — registered from build 18 (#181) |
+| Deep link | `calendarmirror://send-times` — the scheme is registered from iOS build 18 (#181). App Store Connect refuses a bare `calendarmirror://` as invalid; it wants a path. The app routes no paths, so any path opens the main list |
 
 ## Listing fields — how to fill them in, and what to avoid
 
