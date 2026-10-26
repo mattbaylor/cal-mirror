@@ -1,19 +1,23 @@
 import Foundation
 
-/// The three AskWhen.me subscriptions, as App Store Connect knows them
+/// The two paid AskWhen.me subscriptions, as App Store Connect knows them
 /// (`design/billing.md`, group 22387296). What each buys mirrors
 /// `internal/api/tier.go` on the service — the service enforces, this only
 /// describes, and `cmk-check` asserts the two agree with `AskWhen.storekit`.
+///
+/// The Request Page is not a tier here: since 26 Oct 2026 it is free to
+/// anyone who bought Calendar Mirror, claimed with the app transaction
+/// (`SubscriptionStore.appTransaction()`), and not an App Store product.
 public enum AskWhenTier: String, CaseIterable, Sendable, Codable {
-    case page = "me.askwhen.page.annual"
     case subdomain = "me.askwhen.subdomain.annual"
     case domain = "me.askwhen.domain.annual"
 
-    public var pages: Int { self == .page ? 1 : 5 }
-    public var includesSubdomain: Bool { self != .page }
+    public var pages: Int { 5 }
+    public var includesSubdomain: Bool { true }
     public var includesCustomDomain: Bool { self == .domain }
-    /// Only the base tier carries the free trial (Matt, 15 Sept 2026).
-    public var hasTrial: Bool { self == .page }
+    /// Neither paid tier has a trial: the free page is how AskWhen.me is
+    /// tried (decisions.md, 26 Oct 2026).
+    public var hasTrial: Bool { false }
 
     /// Higher is more. The order App Store Connect ranks them in.
     public var rank: Int { Self.allCases.firstIndex(of: self) ?? 0 }
@@ -32,11 +36,12 @@ public struct SubscriptionOffer: Equatable, Sendable {
     public let tier: AskWhenTier
     public let displayName: String
     public let description: String
-    /// "$19.99", "€22.99" — Apple's string for the storefront.
+    /// "$19.99", "€21.99" — Apple's string for the storefront.
     public let displayPrice: String
-    /// "3 months free", or nil. Present only when this customer is eligible:
-    /// Apple grants one introductory offer per customer per group, so a
-    /// returning subscriber sees no trial even on the Page tier.
+    /// "3 months free", or nil. Present only when App Store Connect has an
+    /// introductory offer on the product and this customer is eligible. No
+    /// tier carries one today; the field stays so a future offer shows
+    /// without a code change.
     public let trial: String?
 
     public init(tier: AskWhenTier, displayName: String, description: String, displayPrice: String, trial: String?) {
@@ -88,6 +93,11 @@ public enum PurchaseOutcome: Equatable, Sendable {
 public protocol SubscriptionStore: Sendable {
     /// The offers, with Apple's prices. Network.
     func offers() async throws -> [SubscriptionOffer]
+    /// Apple's signed proof that this Apple Account has Calendar Mirror —
+    /// `AppTransaction.shared`'s jwsRepresentation — which is what the free
+    /// Request Page is claimed with. May be a network request; called only
+    /// when the owner taps Turn on.
+    func appTransaction() async throws -> String
     /// Present Apple's purchase sheet for a tier.
     func purchase(_ tier: AskWhenTier) async throws -> PurchaseOutcome
     /// What is owned now, from the device's own StoreKit cache. No network.
@@ -111,20 +121,26 @@ public final class FakeSubscriptions: SubscriptionStore, @unchecked Sendable {
     public init(state: SubscriptionState = .none, offers: [SubscriptionOffer]? = nil) {
         self.state = state
         self.offersToReturn = offers ?? [
-            SubscriptionOffer(tier: .page, displayName: "AskWhen.me Request Page",
-                              description: "Anyone can ask you for a time. Your calendar stays put.",
-                              displayPrice: "$19.99", trial: "3 months free"),
             SubscriptionOffer(tier: .subdomain, displayName: "AskWhen.me Custom Subdomain",
                               description: "Your own name.askwhen.me, and more than one page.",
-                              displayPrice: "$34.99", trial: nil),
+                              displayPrice: "$19.99", trial: nil),
             SubscriptionOffer(tier: .domain, displayName: "AskWhen.me Custom Domain",
                               description: "Your page on your own domain, and several pages.",
-                              displayPrice: "$69.99", trial: nil),
+                              displayPrice: "$34.99", trial: nil),
         ]
     }
 
     public func offers() async throws -> [SubscriptionOffer] {
         synced { offersFetched += 1; return offersToReturn }
+    }
+
+    /// Nil makes `appTransaction()` throw, as StoreKit does for a build
+    /// that did not come from the App Store and has no app transaction.
+    public var appTransactionToReturn: String? = "fake.app.jws"
+
+    public func appTransaction() async throws -> String {
+        guard let jws = synced({ appTransactionToReturn }) else { throw SubscriptionError.unverified }
+        return jws
     }
 
     public func purchase(_ tier: AskWhenTier) async throws -> PurchaseOutcome {

@@ -186,24 +186,24 @@ def build(c, fx):
             + ftr(prv["cappedNote"]) + ftr(prv["stale"]) + pinned("See what it costs"))))
 
     steps.append(step(7, "Publishing", "apple",
-        "The offer. The Request Page trial is the prominent action; the two paid tiers sit below it with a plain Subscribe each, so all three products are buyable from this one screen (App Review, 2.1(b), 22 Sept). Every price names its period, because 3.1.2 wants the length of a subscription where it is sold.",
-        "Apple grants one introductory offer per customer per group, so a three-way picker with one free option is a free option with two decoys.",
+        "The offer. The free Request Page is the prominent action: anyone who bought Calendar Mirror gets one page, claimed with Apple\u2019s signed app transaction (26 Oct 2026). The two paid tiers sit below it with a plain Subscribe each, so both products are buyable from this one screen (App Review, 2.1(b)). Every price names its period, because 3.1.2 wants the length of a subscription where it is sold.",
+        "Free is the way in now; the paid tiers are for an address of your own or more pages, and neither carries a trial.",
         phone(nav(esc(off["section"])) + grp(pad(
             f'<h4>{esc(off["heading"])}</h4><p class="body sm">{esc(off["lede"])}</p>'))
-            + grp(pad('<p class="body"><b>AskWhen.me Request Page</b></p>'
-                      f'<p class="body"><b>{esc(fmt(off["trialLine"], "3 months free", "$19.99"))}</b></p>'
-                      f'<div class="btn">{esc(off["buyWithTrial"])}</div>'))
-            + ftr(off["renews"])
+            + grp(pad(f'<p class="body"><b>{esc(off["freeName"])}</b></p>'
+                      f'<p class="body"><b>{esc(off["freePrice"])}</b></p>'
+                      f'<div class="btn">{esc(off["freeAction"])}</div>'))
+            + ftr(off["freeNote"])
             + grp(f'<div class="hdr">{esc(off["upgradesHeading"])}</div>'
                   '<div class="row"><div class="rowmain"><span class="t">Custom Subdomain</span></div>'
-                  f'<p class="cap"><b>{esc(fmt(off["noTrialLine"], "$34.99"))}</b></p></div>'
+                  f'<p class="cap"><b>{esc(fmt(off["noTrialLine"], "$19.99"))}</b></p></div>'
                   f'<div class="row"><div class="rowmain"><span class="t">{esc(off["buyWithoutTrial"])}</span></div></div>'
                   '<div class="row"><div class="rowmain"><span class="t">Custom Domain</span></div>'
-                  f'<p class="cap"><b>{esc(fmt(off["noTrialLine"], "$69.99"))}</b></p></div>'
+                  f'<p class="cap"><b>{esc(fmt(off["noTrialLine"], "$34.99"))}</b></p></div>'
                   f'<div class="row"><div class="rowmain"><span class="t">{esc(off["buyWithoutTrial"])}</span></div></div>')
             + ftr(off["upgradesNote"])
             + grp(f'<div class="row"><div class="rowmain"><span class="t">{esc(off["restore"])}</span></div></div>')),
-        open_q="A returning owner has no trial left, and sees the price plainly instead. That variant is 7b on the contact sheet."))
+        open_q="When the App Store does not answer, the free page is still offered and only the paid tiers wait. That variant is 7b on the contact sheet."))
 
     steps.append(step(8, "Apple's sheet, then the page", "service",
         "StoreKit takes the payment method; the device sends Apple's signed transaction and askwhen.me returns a slug and a write token.",

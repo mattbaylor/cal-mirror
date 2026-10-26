@@ -138,7 +138,7 @@ struct RequestPageSetupView: View {
             Form {
                 RequestOfferView(page: model.requestPageBinding,
                                  subscriptions: model.subscriptions,
-                                 createPage: { await model.createRequestPage(transaction: $0) },
+                                 createPage: { await model.createRequestPage($0) },
                                  onPublished: { step = .live },
                                  names: SubdomainActions(
                                     check: { await model.subdomainAvailability($0) },
