@@ -216,7 +216,9 @@ Small enough to be boring: object storage plus a request handler.
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
+| `POST` | `/v1/pages` | Apple's signature | Create a page: a subscription `transaction`, or an `app_transaction` for the free tier |
 | `PUT` | `/v1/pages/{slug}` | write token | Publish the policy dump |
+| `PUT` | `/v1/pages/{slug}/entitlement` | write token + Apple's signature | Move the page onto a paid subscription (upgrade from free) |
 | `DELETE` | `/v1/pages/{slug}` | write token | Remove page + queue, permanently |
 | `GET` | `/{slug}` | — | The Lit app shell |
 | `GET` | `/p/{slug}.json` | — | The policy dump (same origin — no CORS) |

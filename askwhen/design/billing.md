@@ -30,7 +30,14 @@ Business Program) on the subscription price, whichever of these you use.
 ## Part 1 — App Store Connect
 
 One-time setup, all in the browser. Decisions already made
-(`decisions.md`): annual only, 90-day free trial, three tiers.
+(`decisions.md`): annual only, two paid tiers, no trial.
+
+> **Since 26 Oct 2026** the Request Page tier is free to anyone who bought
+> Calendar Mirror and is not an App Store product: the service checks the
+> app transaction instead (`POST /v1/pages` below). `me.askwhen.page.annual`
+> comes off sale with the release after 21 Nov 2026, and the 90-day trial
+> goes with it. The steps below describe the original three-tier setup; the
+> table has the current prices.
 
 ### 1. Agreements
 
@@ -56,9 +63,9 @@ yours forever, so pick them once:
 
 | Reference name | Product ID | Duration | Price (USD) |
 |---|---|---|---|
-| AskWhen.me — Request page | `me.askwhen.page.annual` | 1 year | $19.99 |
-| AskWhen.me — Custom subdomain | `me.askwhen.subdomain.annual` | 1 year | $34.99 |
-| AskWhen.me — Custom domain | `me.askwhen.domain.annual` | 1 year | $69.99 |
+| AskWhen.me — Request page | `me.askwhen.page.annual` | 1 year | retired (was $19.99) |
+| AskWhen.me — Custom subdomain | `me.askwhen.subdomain.annual` | 1 year | $19.99 (was $34.99) |
+| AskWhen.me — Custom domain | `me.askwhen.domain.annual` | 1 year | $34.99 (was $69.99) |
 
 The display name a customer sees on the purchase sheet is set per
 localisation and should lead with **AskWhen.me** too, so the receipt Apple
@@ -194,6 +201,18 @@ Today it accepts any 64-hex string as `entitlement_hash`. After:
    many pages as its tier allows (one at `page`, several from `subdomain`).
 5. Store `entitlement_hash = SHA-256(originalTransactionId)`, the tier, and
    `expires_at`. Issue the slug and the write token as now.
+
+The free tier takes `app_transaction: <jws>` instead — StoreKit's
+`AppTransaction.shared`, signed by the same chain. The service checks the
+bundle id and `receiptType` (Production, or Sandbox when allowed; never
+Xcode), stores `entitlement_hash = SHA-256("app:" + appTransactionId)` under
+product id `me.askwhen.free` with `expires_at` 90 days out, and moves that
+forward on every publish and resolve. One page per app purchase. Exactly one
+of the two fields; both or neither is a 400.
+
+`PUT /v1/pages/{slug}/entitlement` (write token, body `transaction: <jws>`)
+moves an existing page onto a paid subscription, so an upgrade keeps the
+link. Same checks as create, including the page limit.
 
 Domain claims (`PUT …/domains/{host}`) check the tier the same way:
 `subdomain` needs the middle tier, `custom` the top.

@@ -121,6 +121,38 @@ func TestAGenuineChainAndSignatureVerify(t *testing.T) {
 	}
 }
 
+func TestAnAppTransactionVerifiesAndHashesApartFromSubscriptions(t *testing.T) {
+	f := newFakeApple(t, true)
+	v := NewWithRoots(f.roots, true)
+	a, err := v.DecodeAppTransaction(f.sign(t, map[string]any{
+		"appTransactionId":     "704280000123456789",
+		"bundleId":             "io.github.mattbaylor.cal-mirror",
+		"receiptType":          "Production",
+		"originalPurchaseDate": time.Now().Add(-30 * 24 * time.Hour).UnixMilli(),
+		"signedDate":           time.Now().UnixMilli(),
+	}))
+	if err != nil {
+		t.Fatalf("refused a genuine app transaction: %v", err)
+	}
+	if a.AppTransactionID != "704280000123456789" || a.ReceiptType != "Production" {
+		t.Fatalf("decoded %+v", a)
+	}
+	// Prefixed, so an app transaction id that happened to equal a
+	// subscription's originalTransactionId still names a different entitlement.
+	plain := sha256.Sum256([]byte("704280000123456789"))
+	if string(a.Hash()) == string(plain[:]) {
+		t.Fatal("app transaction hash collides with the subscription namespace")
+	}
+
+	// An app transaction without its id is useless as an identity.
+	if _, err := v.DecodeAppTransaction(f.sign(t, map[string]any{
+		"bundleId": "io.github.mattbaylor.cal-mirror", "receiptType": "Production",
+		"signedDate": time.Now().UnixMilli(),
+	})); err == nil {
+		t.Fatal("accepted an app transaction with no appTransactionId")
+	}
+}
+
 func TestRefusesEverythingThatIsNotApple(t *testing.T) {
 	f := newFakeApple(t, true)
 	v := NewWithRoots(f.roots, true)

@@ -39,7 +39,7 @@ func withExpiry(tx string, expires time.Time) string {
 func TestLapseIsAWeekOfNotTakingRequestsThenGone(t *testing.T) {
 	o := setupOwner(t)
 	display := map[string]string{"name": "Matt", "tz": "UTC"}
-	tx := transaction("me.askwhen.page.annual", time.Now().Add(24*time.Hour))
+	tx := transaction("me.askwhen.subdomain.annual", time.Now().Add(24*time.Hour))
 	w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": tx, "display": display}, "", nil, nil)
 	var out createResponse
 	json.Unmarshal(w.Body.Bytes(), &out)
@@ -93,7 +93,7 @@ func TestLapseIsAWeekOfNotTakingRequestsThenGone(t *testing.T) {
 func TestGraceRunsOutAndTheSweepDeletesThePage(t *testing.T) {
 	o := setupOwner(t)
 	display := map[string]string{"name": "Matt", "tz": "UTC"}
-	tx := transaction("me.askwhen.page.annual", time.Now().Add(24*time.Hour))
+	tx := transaction("me.askwhen.subdomain.annual", time.Now().Add(24*time.Hour))
 	w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": tx, "display": display}, "", nil, nil)
 	var out createResponse
 	json.Unmarshal(w.Body.Bytes(), &out)
@@ -120,7 +120,7 @@ func TestOverdueSubscriptionsLapseWithoutANotification(t *testing.T) {
 	// from Apple has lapsed.
 	o := setupOwner(t)
 	display := map[string]string{"name": "Matt", "tz": "UTC"}
-	tx := transaction("me.askwhen.page.annual", time.Now().Add(time.Hour))
+	tx := transaction("me.askwhen.subdomain.annual", time.Now().Add(time.Hour))
 	w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": tx, "display": display}, "", nil, nil)
 	var out createResponse
 	json.Unmarshal(w.Body.Bytes(), &out)
@@ -142,7 +142,7 @@ func TestOverdueSubscriptionsLapseWithoutANotification(t *testing.T) {
 func TestTheHookIsPickyAboutWhoAndWhere(t *testing.T) {
 	o := setupOwner(t)
 	hook := &AppStoreHook{Store: o.Store, Verify: fakeApple{}, Environment: "Production", Grace: LapseGrace, Logger: o.Logger}
-	tx := transaction("me.askwhen.page.annual", time.Now().Add(time.Hour))
+	tx := transaction("me.askwhen.subdomain.annual", time.Now().Add(time.Hour))
 
 	// A sandbox notification at the production door: acknowledged, ignored.
 	if w := notify(hook, "EXPIRED", "", tx); w.Code != http.StatusOK {

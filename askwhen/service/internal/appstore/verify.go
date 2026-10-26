@@ -1,6 +1,7 @@
 // Package appstore verifies what Apple signs: the transaction a device
-// presents to prove it paid, and the notification Apple sends when a
-// subscription changes.
+// presents to prove it paid, the app transaction that proves it bought
+// Calendar Mirror, and the notification Apple sends when a subscription
+// changes.
 //
 // Both are JWS (RFC 7515) in compact form, ES256, with the signing
 // certificate chain in the header's x5c. Apple's chain is leaf → intermediate
@@ -210,6 +211,38 @@ func (v *Verifier) DecodeTransaction(jws string) (Transaction, error) {
 		return Transaction{}, fmt.Errorf("%w: transaction payload", ErrMalformed)
 	}
 	return t, nil
+}
+
+// AppTransaction is the decoded JWSAppTransactionDecodedPayload: Apple's
+// signed word that this Apple Account bought (or was given) the app. It is
+// what the free tier is claimed with — StoreKit's AppTransaction.shared,
+// jwsRepresentation, signed by the same chain as a transaction.
+type AppTransaction struct {
+	AppTransactionID     string `json:"appTransactionId"`
+	BundleID             string `json:"bundleId"`
+	ReceiptType          string `json:"receiptType"` // "Production" | "Sandbox" | "Xcode"
+	OriginalPurchaseDate int64  `json:"originalPurchaseDate"`
+	SignedDate           int64  `json:"signedDate"`
+}
+
+// Hash is the entitlement identity for the free tier: SHA-256 of the app
+// transaction id, prefixed so it can never equal a subscription's hash.
+func (a AppTransaction) Hash() []byte {
+	sum := sha256.Sum256([]byte("app:" + a.AppTransactionID))
+	return sum[:]
+}
+
+// DecodeAppTransaction verifies a signed app transaction and returns it.
+func (v *Verifier) DecodeAppTransaction(jws string) (AppTransaction, error) {
+	payload, err := v.Verify(jws)
+	if err != nil {
+		return AppTransaction{}, err
+	}
+	var a AppTransaction
+	if err := json.Unmarshal(payload, &a); err != nil || a.AppTransactionID == "" || a.BundleID == "" {
+		return AppTransaction{}, fmt.Errorf("%w: app transaction payload", ErrMalformed)
+	}
+	return a, nil
 }
 
 // Notification is a decoded App Store Server Notification V2, with its
