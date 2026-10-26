@@ -66,11 +66,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # release.yml takes the newest release Xcode and refuses one older than
-      # 27.1; the image's default may be older, so name it here.
-      - name: Select Xcode 27.1
-        run: |
-          sudo xcode-select -s /Applications/Xcode_27.1.app/Contents/Developer
-          xcodebuild -version
+      # 27.1; the image's default may be older, so select the same way here.
+      - name: Select the newest release Xcode (27.1 or later)
+        run: .github/select-xcode.sh
       - name: Install xcodegen
         run: brew install xcodegen
       - name: Generate Xcode projects

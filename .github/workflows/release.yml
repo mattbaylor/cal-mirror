@@ -40,32 +40,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select the newest RELEASE Xcode
-        run: |
-          set -euo pipefail
-          best=""; bestver=""
-          for app in /Applications/Xcode*.app; do
-            [ -d "$app" ] || continue
-            ver="$(defaults read "$app/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || echo)"
-            build="$("$app/Contents/Developer/usr/bin/xcodebuild" -version 2>/dev/null | sed -n 2p || echo)"
-            case "$ver" in *[Bb]eta*) continue;; esac
-            case "$app" in *beta*) continue;; esac
-            [ -n "$ver" ] || continue
-            if [ -z "$bestver" ] || [ "$(printf '%s\n%s\n' "$bestver" "$ver" | sort -V | tail -1)" = "$ver" ]; then
-              best="$app"; bestver="$ver"
-            fi
-          done
-          [ -n "$best" ] || { echo "::error::no release Xcode found on this runner"; exit 1; }
-          # The iOS 27.1 SDK is the floor: it is the first with the iPhone
-          # Duo, and Apple asks for builds against it. An image that quietly
-          # drops back to an older Xcode would ship without it, so fail here.
-          if [ "$(printf '%s\n%s\n' 27.1 "$bestver" | sort -V | head -1)" != 27.1 ]; then
-            echo "::error::newest release Xcode on this runner is $bestver ($best); App Store builds need Xcode 27.1 or later"
-            exit 1
-          fi
-          echo "Using $best ($bestver)"
-          echo "CM_XCODEBUILD=$best/Contents/Developer/usr/bin/xcodebuild" >> "$GITHUB_ENV"
-          sudo xcode-select -s "$best/Contents/Developer"
+      - name: Select the newest RELEASE Xcode (27.1 or later)
+        run: .github/select-xcode.sh
 
       - name: Verify release toolchain and OS
         run: |
