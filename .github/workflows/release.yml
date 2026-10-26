@@ -33,7 +33,9 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-15
+    # macos-26 for Xcode 27.1: the iPhone Duo needs the iOS 27.1 SDK, and
+    # the step below refuses anything older.
+    runs-on: macos-26
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +56,13 @@ jobs:
             fi
           done
           [ -n "$best" ] || { echo "::error::no release Xcode found on this runner"; exit 1; }
+          # The iOS 27.1 SDK is the floor: it is the first with the iPhone
+          # Duo, and Apple asks for builds against it. An image that quietly
+          # drops back to an older Xcode would ship without it, so fail here.
+          if [ "$(printf '%s\n%s\n' 27.1 "$bestver" | sort -V | head -1)" != 27.1 ]; then
+            echo "::error::newest release Xcode on this runner is $bestver ($best); App Store builds need Xcode 27.1 or later"
+            exit 1
+          fi
           echo "Using $best ($bestver)"
           echo "CM_XCODEBUILD=$best/Contents/Developer/usr/bin/xcodebuild" >> "$GITHUB_ENV"
           sudo xcode-select -s "$best/Contents/Developer"
