@@ -11,7 +11,7 @@ for app in /Applications/Xcode*.app; do
   ver="$(defaults read "$app/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || echo)"
   echo "found $app ${ver:-?}"
   case "$ver" in *[Bb]eta*) continue;; esac
-  case "$app" in *beta*|*Beta*) continue;; esac
+  case "$app" in *beta*|*Beta*|*Release_Candidate*) continue;; esac
   [ -n "$ver" ] || continue
   if [ -z "$bestver" ] || [ "$(printf '%s\n%s\n' "$bestver" "$ver" | sort -V | tail -1)" = "$ver" ]; then
     best="$app"; bestver="$ver"
