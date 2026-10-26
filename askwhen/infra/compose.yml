@@ -85,9 +85,10 @@ services:
       AW_EDGE_IPS: "64.111.27.242"
 
       # Apple. Transactions must be for this bundle. AW_APPSTORE_SANDBOX=1
-      # lets Sandbox transactions create pages, which is how the purchase
-      # flow is proven before launch; set it to "0" at launch, or anyone
-      # with a sandbox account for the bundle gets free pages.
+      # lets Sandbox transactions create pages, and it stays "1": App Review
+      # buys with sandbox accounts, so every submission that touches
+      # AskWhen.me needs it. A sandbox transaction for this bundle can only
+      # come from our own development, TestFlight or review builds.
       AW_BUNDLE_ID: "io.github.mattbaylor.cal-mirror"
       AW_APPSTORE_SANDBOX: "1"
 
