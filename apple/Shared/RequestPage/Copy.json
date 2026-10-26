@@ -42,7 +42,7 @@
         "line": "Every request comes to this device, and you answer it here."
       }
     ],
-    "footnote": "Setup is free and stays on this device. Publishing needs an AskWhen.me subscription, free for the first 90 days.",
+    "footnote": "Setup is free and stays on this device. A page on AskWhen.me is free too, because you have Calendar Mirror.",
     "primary": "Continue",
     "secondary": "Not now"
   },
@@ -131,19 +131,25 @@
     "section": "Publishing",
     "heading": "Publish your page",
     "lede": "Everything so far has stayed on this device. Publishing puts the times you previewed on AskWhen.me.",
-    "loading": "Asking Apple for the price…",
+    "loading": "Asking Apple for the prices…",
     "purchasing": "Waiting for Apple…",
     "failedTitle": "Could not reach the App Store",
     "failedBody": "Apple did not answer, so there is no price to show. Your page is still here, on this device.",
     "retry": "Try again",
     "trialLine": "%@, then %@ a year.",
     "noTrialLine": "%@ a year.",
-    "noTrialNote": "Apple gives one free trial per person, and you have used yours. The price below is what it costs from today.",
-    "buyWithTrial": "Start the free trial",
+    "freeName": "AskWhen.me Request Page",
+    "freeDescription": "Anyone can ask you for a time. Your calendar stays put.",
+    "freePrice": "Free with Calendar Mirror.",
+    "freeAction": "Turn on my page",
+    "freeNote": "Free for as long as you use it. A page that goes 90 days without publishing stops taking requests, and is removed a week after that.",
+    "checkingApp": "Checking with Apple that you have Calendar Mirror…",
+    "freeFailedTitle": "Apple could not confirm Calendar Mirror",
+    "freeFailedBody": "The free page needs Apple’s word that this Apple Account has Calendar Mirror, and Apple did not give it. Check you are signed in to the App Store, then try again. Nothing was bought.",
     "buyWithoutTrial": "Subscribe",
-    "renews": "Renews yearly until you cancel in Settings. Nothing is charged during the trial.",
     "upgradesHeading": "More pages, or your own address",
-    "upgradesNote": "Each renews yearly until you cancel in Settings. Either includes everything above; neither carries a trial, and either can also be taken later from your page.",
+    "upgradesNote": "Each renews yearly until you cancel in Settings. Either includes everything above, and either can also be taken later from your page.",
+    "upgradesUnavailable": "Apple did not answer, so the paid tiers cannot be shown right now. The free page does not need them.",
     "nameAsk": "Your name on AskWhen.me",
     "nameField": "dana",
     "nameCheck": "Check it",
@@ -169,6 +175,8 @@
     "creating": "Creating your page…",
     "createFailedTitle": "Apple said yes, AskWhen.me did not answer",
     "createFailedBody": "Your subscription went through and you will not be charged twice. Try again; nothing is lost.",
+    "createFailedFreeTitle": "AskWhen.me did not answer",
+    "createFailedFreeBody": "Nothing was bought, and your page is still here on this device. Try again; nothing is lost.",
     "tokenWarning": "The page’s key goes into your iCloud Keychain, so a new device finds it. There is no account and no password."
   },
   "live": {
@@ -292,8 +300,8 @@
         "Nothing lands in your calendar until you accept. Every request comes to this device and you answer it here — askwhen.me cannot write to your calendar, because you never give it access.",
         "Turning this on means a server holds two things: the times you chose to offer, and requests from people who asked for one. It never sees your calendar, your events, your address, or your name beyond the label you pick."
       ],
-      "cost": "Setting it up is free and happens entirely on this device. Publishing a page needs a subscription — free for the first 90 days — and that comes at the end, after you have seen the page you would be publishing.",
-      "footnote": "Nothing has been sent anywhere. Setting this up does not send anything either — the first time this app touches the network is the moment you ask to see the price.",
+      "cost": "Setting it up is free and happens entirely on this device. Publishing one page is free too, because you have Calendar Mirror — and that comes at the end, after you have seen the page you would be publishing. Your own name.askwhen.me, your own domain or more pages are a yearly subscription.",
+      "footnote": "Nothing has been sent anywhere. Setting this up does not send anything either — the first time this app touches the network is the moment you reach the screen that publishes.",
       "costHeading": "What it costs"
     },
     "calendars": {
@@ -331,9 +339,9 @@
     },
     "offer": {
       "lede": "Everything so far has stayed on this device. Publishing puts the times you just previewed on askwhen.me, where the people you send the link to can ask for one.",
-      "network": "Loading the price asks Apple what a subscription costs in your currency — nothing about you, your calendar or your page is sent. Checking whether a name is free asks askwhen.me about that name, and nothing else.",
-      "renews": "Renews yearly until you cancel. Cancel any time in Settings — during the free trial nothing is charged at all.",
-      "upgradesNote": "Either of these includes everything the Request Page does. Neither carries a free trial. You can take one now, or later from your page when you want the address — Apple credits what is left of the year you already paid for.",
+      "network": "Loading the prices asks Apple what a subscription costs in your currency — nothing about you, your calendar or your page is sent. Turning on the free page asks Apple to confirm you have Calendar Mirror, and sends askwhen.me only Apple’s signed yes. Checking whether a name is free asks askwhen.me about that name, and nothing else.",
+      "free": "The page is free for as long as you use it. If nothing is published to it for 90 days it stops taking requests, and a week later it is removed.",
+      "upgradesNote": "Either of these includes everything the Request Page does, and renews yearly until you cancel in Settings. You can take one now, or later from your page when you want the address — your page keeps its link either way.",
       "tokenWarning": "Your page is kept alive by a key held only on this device, in its keychain. There is no account and no password, so it cannot be emailed to you or recovered — if you lose this device, you make a new page.",
       "createFailedTitle": "Apple said yes, askwhen.me did not answer",
       "createFailedBody": "Your subscription went through — you have not been charged twice and you will not be. The page itself could not be created just now. Try again; nothing is lost and nothing is duplicated.",

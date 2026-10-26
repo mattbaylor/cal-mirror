@@ -169,10 +169,10 @@ extension Store {
     /// Returns rather than throws so the offer screen can show what happened —
     /// the one failure here (Apple charged, the service did not answer) needs
     /// its own words, not a generic alert.
-    func createRequestPage(transaction: String) async -> Result<Void, Error> {
+    func createRequestPage(_ proof: AskwhenClient.Proof) async -> Result<Void, Error> {
         var page = requestPage
         do {
-            try await requestCoordinator().create(page: &page, transaction: transaction)
+            try await requestCoordinator().create(page: &page, proof: proof)
             requestPage = page
             save()
             return .success(())

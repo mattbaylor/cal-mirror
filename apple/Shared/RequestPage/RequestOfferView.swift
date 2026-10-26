@@ -18,10 +18,10 @@ import CalMirrorKit
 /// loading products early, would break it and the screen would still look
 /// fine, which is why the load hangs off `task` and the phase guard.
 ///
-/// The trial is never hardcoded. `SubscriptionOffer.trial` is nil for a
-/// customer who has used their one introductory offer, so a returning owner is
-/// told the price plainly instead of being promised something Apple will not
-/// give them.
+/// The Request Page is free to anyone who bought Calendar Mirror (decisions.md,
+/// 26 Oct 2026), claimed with Apple's signed app transaction rather than a
+/// purchase. It does not depend on the price list: when Apple does not answer
+/// for the paid tiers, the free page is still offered.
 /// The three things this screen can ask askwhen.me before anything is bought:
 /// whether a name is free, to keep it for the length of a purchase, and to
 /// turn that reservation into the real thing once the page exists.
@@ -41,7 +41,7 @@ struct RequestOfferView: View {
     let subscriptions: SubscriptionStore
     /// Publishing is the caller's — this view knows how to buy, not how to
     /// talk to askwhen.me, and the coordinator holds the token store.
-    let createPage: (_ transaction: String) async -> Result<Void, Error>
+    let createPage: (_ proof: AskwhenClient.Proof) async -> Result<Void, Error>
     let onPublished: () -> Void
     /// Asking for a name before paying for one. Closures rather than a
     /// protocol, because `createPage` already set that shape here and the
@@ -72,7 +72,12 @@ struct RequestOfferView: View {
         /// already subscribes a price list they do not need.
         case checking
         case loading
+        /// Empty when Apple did not answer for the paid tiers; the free page
+        /// is offered all the same.
         case offering([SubscriptionOffer])
+        /// Asking StoreKit for the app transaction, before the free page.
+        case checkingApp
+        case freeFailed
         case failed
         case alreadySubscribed(SubscriptionState)
         case purchasing
@@ -90,6 +95,12 @@ struct RequestOfferView: View {
                 progress(RequestCopy.Offer.loading)
             case .offering(let offers), .cancelled(let offers):
                 offerList(offers, cancelled: isCancelled)
+            case .checkingApp:
+                progress(RequestCopy.Offer.checkingApp)
+            case .freeFailed:
+                failure(RequestCopy.Offer.freeFailedTitle, RequestCopy.Offer.freeFailedBody) {
+                    await turnOnFree()
+                }
             case .failed:
                 failure(RequestCopy.Offer.failedTitle, RequestCopy.Offer.failedBody) {
                     await load()
@@ -105,9 +116,18 @@ struct RequestOfferView: View {
             case .creating:
                 progress(RequestCopy.Offer.creating)
             case .createFailed(let detail):
-                failure(RequestCopy.Offer.createFailedTitle,
-                        RequestCopy.Offer.createFailedBody + "\n\n" + detail) {
-                    await republish()
+                // Nothing was bought on the free path, and the sentence about
+                // not being charged twice would be about money nobody spent.
+                if case .app? = lastProof {
+                    failure(RequestCopy.Offer.createFailedFreeTitle,
+                            RequestCopy.Offer.createFailedFreeBody + "\n\n" + detail) {
+                        await republish()
+                    }
+                } else {
+                    failure(RequestCopy.Offer.createFailedTitle,
+                            RequestCopy.Offer.createFailedBody + "\n\n" + detail) {
+                        await republish()
+                    }
                 }
             case .done:
                 Color.clear.onAppear(perform: onPublished)
@@ -155,38 +175,34 @@ struct RequestOfferView: View {
                 }
             }
 
-            if let base = offers.first(where: { $0.tier == .page }) {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(base.displayName).font(.headline)
-                        Text(base.description).font(.callout).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(priceLine(base)).font(.callout.weight(.medium))
-                        if base.trial == nil {
-                            Text(RequestCopy.Offer.noTrialNote)
-                                .font(.caption).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    Button { Task { await buy(.page) } } label: {
-                        Text(base.trial == nil ? RequestCopy.Offer.buyWithoutTrial
-                                               : RequestCopy.Offer.buyWithTrial)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .askWhenProminent()
-                } footer: {
-                    Text(RequestCopy.Offer.renews)
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(RequestCopy.Offer.freeName).font(.headline)
+                    Text(RequestCopy.Offer.freeDescription).font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(RequestCopy.Offer.freePrice).font(.callout.weight(.medium))
                 }
+                Button { Task { await turnOnFree() } } label: {
+                    Text(RequestCopy.Offer.freeAction).frame(maxWidth: .infinity)
+                }
+                .askWhenProminent()
+            } footer: {
+                Text(RequestCopy.Offer.freeNote)
             }
 
-            // The Request Page trial stays the one prominent action
-            // (decisions.md), but these two are buyable here as well, not only
-            // from the address screen after a page exists. App Review rejected
-            // 2.0 under 2.1(b) because it could not find them in the binary: a
-            // product that can only be bought once another has been bought and
-            // a server has answered is, to a reviewer, not there.
+            // The free page stays the one prominent action (decisions.md), but
+            // these two are buyable here as well, not only from the address
+            // screen after a page exists. App Review rejected 2.0 under 2.1(b)
+            // because it could not find them in the binary: a product that can
+            // only be bought once a page exists is, to a reviewer, not there.
             Section {
-                ForEach(offers.filter { $0.tier != .page }, id: \.tier) { offer in
+                if offers.isEmpty {
+                    Text(RequestCopy.Offer.upgradesUnavailable)
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button(RequestCopy.Offer.retry) { Task { await load() } }
+                }
+                ForEach(offers, id: \.tier) { offer in
                     VStack(alignment: .leading, spacing: 3) {
                         Text(offer.displayName).font(.callout)
                         Text(offer.description).font(.caption).foregroundStyle(.secondary)
@@ -210,7 +226,7 @@ struct RequestOfferView: View {
             } header: {
                 Text(RequestCopy.Offer.upgradesHeading)
             } footer: {
-                Text(RequestCopy.Offer.upgradesNote)
+                if !offers.isEmpty { Text(RequestCopy.Offer.upgradesNote) }
             }
 
             // Apple's guidelines require this on any subscription screen, and
@@ -290,7 +306,7 @@ struct RequestOfferView: View {
             }
             Button {
                 guard case .active(_, _, let transaction) = state else { return }
-                Task { await publish(transaction) }
+                Task { await publish(.subscription(transaction)) }
             } label: {
                 Text(RequestCopy.Offer.publish).frame(maxWidth: .infinity)
             }
@@ -332,7 +348,8 @@ struct RequestOfferView: View {
         }
     }
 
-    /// "3 months free, then $19.99 a year." Both halves come from Apple, so
+    /// "$19.99 a year." — or, if a tier ever carries an introductory offer
+    /// again, "3 months free, then $19.99 a year." Both halves come from Apple, so
     /// the currency, the storefront rounding and the trial's own wording are
     /// whatever Apple says they are rather than what this file assumes.
     private func priceLine(_ o: SubscriptionOffer) -> String {
@@ -367,18 +384,33 @@ struct RequestOfferView: View {
             }
             if Task.isCancelled { return }
             // StoreKit answers an unknown product id with silence, not an
-            // error — an empty list, or one without the page tier — and the
-            // screen that would render is a heading over nothing with no way
-            // forward. Seen first in a simulator with no .storekit file
-            // attached; on a device it is the App Store unreachable.
-            if let offers = try? await subscriptions.offers(),
-               offers.contains(where: { $0.tier == .page }) {
+            // error — an empty list — so empty counts as "try again". Seen
+            // first in a simulator with no .storekit file attached; on a
+            // device it is the App Store unreachable.
+            if let offers = try? await subscriptions.offers(), !offers.isEmpty {
                 phase = .offering(offers)
                 return
             }
         }
         if Task.isCancelled { return }
-        phase = .failed
+        // Not a dead end any more: the free page needs no price, so the
+        // screen offers it and says the paid tiers will have to wait.
+        phase = .offering([])
+    }
+
+    /// The free page. Apple's signed app transaction is the proof; nothing is
+    /// bought and no sheet appears. An unverified or missing one — a build
+    /// that did not come from the App Store, or no network — gets its own
+    /// screen, because "Could not reach the App Store" would blame the
+    /// wrong thing for a TestFlight-less development build.
+    private func turnOnFree() async {
+        phase = .checkingApp
+        guard let jws = try? await subscriptions.appTransaction() else {
+            if Task.isCancelled { return }
+            phase = .freeFailed
+            return
+        }
+        await publish(.app(jws))
     }
 
     /// Asks, and reserves nothing. The service's own sentence is shown for a
@@ -431,7 +463,7 @@ struct RequestOfferView: View {
             switch try await subscriptions.purchase(tier) {
             case .purchased(let state):
                 guard case .active(_, _, let transaction) = state else { phase = previous; return }
-                await publish(transaction)
+                await publish(.subscription(transaction))
             case .cancelled:
                 // Not an error and not a dead end: back to the same offers,
                 // with a line saying nothing happened.
@@ -468,13 +500,15 @@ struct RequestOfferView: View {
         await load()
     }
 
-    /// The page is created with Apple's signed transaction; the service
-    /// verifies the signature itself and derives the entitlement. Only once it
-    /// answers with a slug is the page turned on — `enabled` is the opt-in, and
-    /// a page enabled without a slug would poll nothing forever.
-    private func publish(_ transaction: String) async {
+    /// The page is created with Apple's signature — a subscription's
+    /// transaction or the app transaction; the service verifies it itself and
+    /// derives the entitlement. Only once it answers with a slug is the page
+    /// turned on — `enabled` is the opt-in, and a page enabled without a slug
+    /// would poll nothing forever.
+    private func publish(_ proof: AskwhenClient.Proof) async {
         phase = .creating
-        switch await createPage(transaction) {
+        lastProof = proof
+        switch await createPage(proof) {
         case .success:
             page.enabled = true
             // The reservation becomes the real thing now that there is a page
@@ -489,19 +523,18 @@ struct RequestOfferView: View {
             }
             phase = .done
         case .failure(let error):
-            lastTransaction = transaction
             phase = .createFailed(String(describing: error))
         }
     }
 
-    @State private var lastTransaction: String?
+    @State private var lastProof: AskwhenClient.Proof?
 
     /// Retrying after the service failed. `create` is safe to call again — it
     /// mints a new slug only if the last attempt never produced one, and the
     /// subscription is already bought either way, so this cannot double-charge.
     private func republish() async {
-        guard let t = lastTransaction else { await load(); return }
-        await publish(t)
+        guard let proof = lastProof else { await load(); return }
+        await publish(proof)
     }
 }
 
