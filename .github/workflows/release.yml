@@ -33,9 +33,9 @@ permissions:
 
 jobs:
   release:
-    # macos-26 for Xcode 27.1: the iPhone Duo needs the iOS 27.1 SDK, and
+    # xcode-27 (macOS 27) for Xcode 27.1: the iPhone Duo needs the iOS 27.1 SDK, and
     # the step below refuses anything older.
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
