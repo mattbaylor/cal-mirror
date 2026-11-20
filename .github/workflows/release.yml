@@ -33,30 +33,15 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-15
+    # xcode-27 (macOS 27) for Xcode 27.1: the iPhone Duo needs the iOS 27.1 SDK, and
+    # the step below refuses anything older.
+    runs-on: xcode-27
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select the newest RELEASE Xcode
-        run: |
-          set -euo pipefail
-          best=""; bestver=""
-          for app in /Applications/Xcode*.app; do
-            [ -d "$app" ] || continue
-            ver="$(defaults read "$app/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || echo)"
-            build="$("$app/Contents/Developer/usr/bin/xcodebuild" -version 2>/dev/null | sed -n 2p || echo)"
-            case "$ver" in *[Bb]eta*) continue;; esac
-            case "$app" in *beta*) continue;; esac
-            [ -n "$ver" ] || continue
-            if [ -z "$bestver" ] || [ "$(printf '%s\n%s\n' "$bestver" "$ver" | sort -V | tail -1)" = "$ver" ]; then
-              best="$app"; bestver="$ver"
-            fi
-          done
-          [ -n "$best" ] || { echo "::error::no release Xcode found on this runner"; exit 1; }
-          echo "Using $best ($bestver)"
-          echo "CM_XCODEBUILD=$best/Contents/Developer/usr/bin/xcodebuild" >> "$GITHUB_ENV"
-          sudo xcode-select -s "$best/Contents/Developer"
+      - name: Select the newest RELEASE Xcode (27.1 or later)
+        run: .github/select-xcode.sh
 
       - name: Verify release toolchain and OS
         run: |

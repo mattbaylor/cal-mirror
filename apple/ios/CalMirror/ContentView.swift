@@ -15,6 +15,14 @@ struct ContentView: View {
     /// The "Send times" line, recomputed after every sync. Local: the
     /// deriver against this device's calendars, no service.
     @State private var sendTimes: String?
+    /// Regular width — iPad, and the iPhone Duo's inner display — puts the
+    /// list in a sidebar with this beside it. Compact pushes, as it always
+    /// has, and never reads it.
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    @State private var selection: Pane?
+
+    /// What the detail column shows.
+    enum Pane: Hashable { case mirror(String), requestPage }
 
     var body: some View {
         #if DEBUG
@@ -48,15 +56,23 @@ struct ContentView: View {
             // owner's calendar and — with -AskWhenRequest — a request waiting
             // in the queue, so Accept and Decline can be walked where they
             // actually live.
-            mainList.task { await DebugSeed.apply(to: model) }
-        }
+            mainList.task { await DebugSeed.apply(to: model) }        }
         #else
         mainList
         #endif
     }
 
     private var mainList: some View {
-        NavigationStack { mainListBody }
+        Group {
+            if sizeClass == .regular {
+                splitView
+            } else {
+                NavigationStack { mainListBody }
+            }
+        }
+        // Up here rather than on the list, so a fold or a resize that swaps
+        // the stack for the split does not take a sheet down with it.
+        .sheet(isPresented: $showingExplainer) { explainerSheet }
         .sheet(item: $model.conflict) { conflict in
             RequestConflictSheet(
                 conflict: conflict,
@@ -77,12 +93,82 @@ struct ContentView: View {
 
     private var explainerSheet: some View {
         RequestPageExplainer(
-            onContinue: { model.inferRequestPage(); showingExplainer = false; pushingSetup = true },
+            onContinue: { model.inferRequestPage(); showingExplainer = false; openSetup() },
             onDismiss: { showingExplainer = false })
     }
 
-    private var mainListBody: some View {
-            List {
+    /// The setup at its first real step: pushed on the stack, or into the
+    /// detail column beside the list.
+    private func openSetup() {
+        if sizeClass == .regular { selection = .requestPage } else { pushingSetup = true }
+    }
+
+    /// The Mac's `ManageView` shape: the same list as the sidebar, the
+    /// selected mirror or the request page beside it. Balanced, so both
+    /// columns stay up in portrait rather than the sidebar hiding behind a
+    /// button. Nothing is placed around the fold by hand: the split view's
+    /// columns are what adapt to it, and no public API says where it is.
+    private var splitView: some View {
+        NavigationSplitView {
+            listBody(sidebar: $selection)
+        } detail: {
+            // A stack per selection, so the editor's own pushes stay in this
+            // column and a new selection starts at its root.
+            NavigationStack { detail }
+                .id(selection)
+        }
+        .navigationSplitViewStyle(.balanced)
+        .onAppear {
+            // As on the Mac: an empty pane beside a list of mirrors says nothing.
+            if selection == nil { selection = model.config.mirrors.first.map { .mirror($0.id) } }
+        }
+    }
+
+    @ViewBuilder private var detail: some View {
+        switch selection {
+        case .mirror(let id):
+            if let i = model.config.mirrors.firstIndex(where: { $0.id == id }) {
+                MirrorEditView(mirror: $model.config.mirrors[i])
+            } else {
+                noSelection
+            }
+        case .requestPage:
+            RequestPageSetupView(page: model.config.requestPage)
+        case nil:
+            noSelection
+        }
+    }
+
+    private var noSelection: some View {
+        ContentUnavailableView("No Mirror Selected", systemImage: "arrow.left.arrow.right",
+                               description: Text("Pick a mirror in the list, or add one."))
+    }
+
+    /// A row that pushes its screen on the stack, or selects it for the
+    /// detail column in the split.
+    @ViewBuilder
+    private func link<Destination: View, Label: View>(
+        _ pane: Pane, split: Bool,
+        @ViewBuilder destination: @escaping () -> Destination,
+        @ViewBuilder label: () -> Label) -> some View {
+        if split {
+            NavigationLink(value: pane, label: label)
+        } else {
+            NavigationLink(destination: destination, label: label)
+        }
+    }
+
+    @ViewBuilder
+    private func list<Rows: View>(sidebar: Binding<Pane?>?, @ViewBuilder rows: () -> Rows) -> some View {
+        if let sidebar { List(selection: sidebar, content: rows) } else { List(content: rows) }
+    }
+
+    private var mainListBody: some View { listBody(sidebar: nil) }
+
+    /// The list: the root of the stack, or, given a selection, the sidebar.
+    private func listBody(sidebar: Binding<Pane?>?) -> some View {
+        let split = sidebar != nil
+        return list(sidebar: sidebar) {
                 Section {
                     if !model.access {
                         Label("Grant Calendar access to enable syncing", systemImage: "exclamationmark.triangle.fill")
@@ -105,7 +191,7 @@ struct ContentView: View {
                 ForEach(destinationGroups, id: \.name) { group in
                     Section("\(group.name) · \(group.indices.count)") {
                         ForEach(group.indices, id: \.self) { i in
-                            NavigationLink {
+                            link(.mirror(model.config.mirrors[i].id), split: split) {
                                 MirrorEditView(mirror: $model.config.mirrors[i])
                             } label: {
                                 MirrorRow(mirror: model.config.mirrors[i],
@@ -162,7 +248,7 @@ struct ContentView: View {
                     if model.hasRequestPage {
                         // A page that exists, or a setup that was started:
                         // straight to it. The pitch is over.
-                        NavigationLink {
+                        link(.requestPage, split: split) {
                             RequestPageSetupView(page: model.config.requestPage)
                         } label: {
                             RequestPageRow(page: model.config.requestPage)
@@ -176,7 +262,7 @@ struct ContentView: View {
                             reconnecting = true
                             Task {
                                 if await model.reconnectRequestPage() {
-                                    model.inferRequestPage(); pushingSetup = true
+                                    model.inferRequestPage(); openSetup()
                                 } else if model.recoverableSlug == nil {
                                     showingExplainer = true
                                 }
@@ -232,7 +318,11 @@ struct ContentView: View {
                         Label("Sync now", systemImage: "arrow.clockwise")
                     }
                     .disabled(model.syncing)
-                    Button { model.addMirror() } label: { Label("Add mirror", systemImage: "plus") }
+                    Button {
+                        model.addMirror()
+                        // Beside the list, the new mirror opens for editing.
+                        if split { selection = model.config.mirrors.last.map { .mirror($0.id) } }
+                    } label: { Label("Add mirror", systemImage: "plus") }
                 }
             }
             .refreshable { await model.syncNow(); await model.collectRequests() }
@@ -247,7 +337,6 @@ struct ContentView: View {
             .navigationDestination(isPresented: $pushingSetup) {
                 RequestPageSetupView(start: .preview, page: model.config.requestPage)
             }
-            .sheet(isPresented: $showingExplainer) { explainerSheet }
     }
 
     /// Mirrors bucketed by destination, in first-appearance order so the list
