@@ -28,17 +28,17 @@ SEND TIMES
 
 ASKWHEN.ME — A SEPARATE PRODUCT YOU CAN TURN ON
 
-Off by default; until you turn it on, the app makes no network request of any kind. AskWhen.me is a subscription with its own server: a page at askwhen.me/yourpage where people can ask you for a time.
+Off by default; until you turn it on, the app makes no network request of any kind. AskWhen.me is a separate product with its own server: a page at askwhen.me/yourpage where people can ask you for a time.
 
 A request page, not a booking page. Your device works out which times to offer and sends only those — never your calendar, your events, your address, or your name beyond the label you choose. Someone picks a time and says who they are; the request comes to your device, and nothing lands in your calendar until you accept. Your device re-checks the time against your real calendar first.
 
 Send times can carry a personal link: it opens your page once, for a week, and because you sent it there is no email confirmation — if the time is still clear, your device accepts it for you and they get the calendar file.
 
-Free for 90 days, then $19.99 a year; your own name on askwhen.me, or your own domain, are upgrades. Payment is Apple's. The privacy page says what the server holds, and for how long.
+One page is free with Calendar Mirror; your own name on askwhen.me, or your own domain, are upgrades. Payment is Apple's. The privacy page says what the server holds, and for how long.
 
 WHAT IT DOES NOT DO
 
-• No scheduling links unless you turn on AskWhen.me, a separate subscription.
+• No scheduling links unless you turn on AskWhen.me, a separate product.
 • No unified calendar view — it makes copies; your calendar app shows them.
 • No team, admin or SSO features. It is a single-person utility.
 • Attendees are never copied: Apple's calendar framework cannot set guests.
