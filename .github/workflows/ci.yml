@@ -45,7 +45,7 @@ jobs:
     # The engine and the menu-bar UI: plain swiftc, ad-hoc signed. No project
     # generation and no package resolution, so this is the fast signal.
     name: build standalone apps
-    runs-on: macos-14
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
       - name: Show Swift version
