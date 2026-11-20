@@ -33,6 +33,14 @@ public final class StoreKitSubscriptions: SubscriptionStore, @unchecked Sendable
         return out.sorted { $0.tier.rank < $1.tier.rank }
     }
 
+    public func appTransaction() async throws -> String {
+        // Verified on the device as a transaction is, and again by the
+        // service. An unverified one is not proof of anything.
+        let result = try await AppTransaction.shared
+        guard case .verified = result else { throw SubscriptionError.unverified }
+        return result.jwsRepresentation
+    }
+
     public func purchase(_ tier: AskWhenTier) async throws -> PurchaseOutcome {
         guard let product = try await Product.products(for: [tier.rawValue]).first else {
             throw SubscriptionError.productUnavailable

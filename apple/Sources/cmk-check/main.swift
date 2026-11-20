@@ -1366,13 +1366,15 @@ do {
     let c = AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t)
 
     t.answers = [(201, [:], #"{"slug":"x7f2k9","write_token":"tok_123"}"#)]
-    let created = try! run { try await c.createPage(transaction: "eyJ.signed.byApple",
+    let created = try! run { try await c.createPage(.subscription("eyJ.signed.byApple"),
                                                     display: .init(name: "Matt", tz: "America/Denver")) }.get()
     check(created.slug == "x7f2k9" && created.writeToken == "tok_123", "create parses slug and token")
     check(t.calls[0].method == "POST" && t.calls[0].path == "/v1/pages" && t.calls[0].headers["Authorization"] == nil,
           "create is POST /v1/pages with no bearer")
     check(String(decoding: t.calls[0].body!, as: UTF8.self).contains(#""transaction":"eyJ.signed.byApple"#),
           "and carries Apple's signed transaction, not a hash")
+    check(!String(decoding: t.calls[0].body!, as: UTF8.self).contains("app_transaction"),
+          "a subscription create sends no app transaction")
 
     t.answers = [(204, ["ETag": "\"deadbeef\""], "")]
     let etag = try! run { try await c.publish(Data("{\"v\":1}".utf8), slug: "x7f2k9", token: "tok_123") }.get()
@@ -1460,7 +1462,7 @@ do {
     check(t.calls.last?.headers["X-Askwhen-Hold"] == nil, "and an unheld name sends no hold header at all")
 
     t.answers = [(402, [:], #"{"error":"subscription has expired"}"#)]
-    check((run { try await c.createPage(transaction: "eyJ.old", display: .init(name: "M", tz: "UTC")) }.failure as? AskwhenError)
+    check((run { try await c.createPage(.subscription("eyJ.old"), display: .init(name: "M", tz: "UTC")) }.failure as? AskwhenError)
           == .rejected(#"{"error":"subscription has expired"}"#), "402 → rejected, with the service's reason")
     t.answers = [(404, [:], "404 page not found")]
     check((run { try await c.resolve(requestID: "r1", slug: "x7f2k9", decision: .accept, token: "bad") }.failure as? AskwhenError) == .notFound,
@@ -1686,7 +1688,7 @@ do {
     try! tokens.remove(for: "x7f2k9")
 
     t.answers = [(201, [:], #"{"slug":"x7f2k9","write_token":"tok_123"}"#)]
-    _ = try! run { try await coord.create(page: &page, transaction: "eyJ.signed.byApple") }.get()
+    _ = try! run { try await coord.create(page: &page, proof: .subscription("eyJ.signed.byApple")) }.get()
     check(page.slug == "x7f2k9" && (try? tokens.token(for: "x7f2k9")) == "tok_123", "create sets the slug and stores the token")
 
     t.answers = [(204, ["ETag": "\"a\""], "")]
@@ -1835,6 +1837,33 @@ do {
 }
 
 
+print("Free Request Page:")
+do {
+    let t = FakeTransport()
+    let c = AskwhenClient(baseURL: URL(string: "https://askwhen.test")!, transport: t)
+
+    t.answers = [(201, [:], #"{"slug":"fr33pg01","write_token":"tok_free"}"#)]
+    let created = try! run { try await c.createPage(.app("eyJ.app.byApple"), display: .init(name: "M", tz: "UTC")) }.get()
+    let body = String(decoding: t.calls[0].body!, as: UTF8.self)
+    check(created.slug == "fr33pg01", "a free page is created like any other")
+    check(body.contains(#""app_transaction":"eyJ.app.byApple"#) && !body.contains(#""transaction""#),
+          "with the app transaction and no subscription transaction")
+
+    t.answers = [(204, [:], "")]
+    _ = try! run { try await c.upgradePage(slug: "fr33pg01", token: "tok_free", transaction: "eyJ.sub") }.get()
+    check(t.calls[1].method == "PUT" && t.calls[1].path == "/v1/pages/fr33pg01/entitlement"
+          && t.calls[1].headers["Authorization"] == "Bearer tok_free",
+          "upgrade is PUT /v1/pages/{slug}/entitlement with the bearer")
+    check(String(decoding: t.calls[1].body!, as: UTF8.self).contains(#""transaction":"eyJ.sub"#),
+          "and carries the new subscription's transaction")
+
+    let fake = FakeSubscriptions()
+    check((try? run { try await fake.appTransaction() }.get()) == "fake.app.jws", "the fake hands over an app transaction")
+    fake.appTransactionToReturn = nil
+    check(run { try await fake.appTransaction() }.failure != nil,
+          "and refuses like StoreKit when there is none (a build not from the App Store)")
+}
+
 print("Subscriptions:")
 do {
     // The tier table, the service's tier.go and App Store Connect must agree.
@@ -1865,36 +1894,38 @@ do {
             guard let id = s["productID"] as? String, let p = s["displayPrice"] as? String else { return nil }
             return (id, p)
         })
-        check(prices[AskWhenTier.page.rawValue] == "19.99" && prices[AskWhenTier.subdomain.rawValue] == "34.99"
-              && prices[AskWhenTier.domain.rawValue] == "69.99", "prices are the decided $20 / $35 / $70: \(prices)")
+        check(prices[AskWhenTier.subdomain.rawValue] == "19.99" && prices[AskWhenTier.domain.rawValue] == "34.99",
+              "prices are the decided $20 / $35 (26 Oct 2026): \(prices)")
     } else {
         check(false, "AskWhen.storekit is present beside Package.swift and parses (run cmk-check from apple/)")
     }
 
     // What each tier buys, as tier.go has it.
-    check(AskWhenTier.page.pages == 1 && AskWhenTier.subdomain.pages == 5 && AskWhenTier.domain.pages == 5, "pages per tier: 1 / 5 / 5")
-    check(!AskWhenTier.page.includesSubdomain && AskWhenTier.subdomain.includesSubdomain && AskWhenTier.domain.includesSubdomain, "subdomains from $35")
-    check(!AskWhenTier.subdomain.includesCustomDomain && AskWhenTier.domain.includesCustomDomain, "custom domains at $70 only")
-    check(AskWhenTier.page.rank < AskWhenTier.subdomain.rank && AskWhenTier.subdomain.rank < AskWhenTier.domain.rank, "ranked Page < Subdomain < Domain")
+    // The free page is not a tier: no App Store product carries it.
+    check(AskWhenTier(rawValue: "me.askwhen.page.annual") == nil, "the retired Page product is not a tier")
+    check(AskWhenTier.subdomain.pages == 5 && AskWhenTier.domain.pages == 5, "pages per paid tier: 5 / 5")
+    check(AskWhenTier.subdomain.includesSubdomain && AskWhenTier.domain.includesSubdomain, "subdomains on both paid tiers")
+    check(!AskWhenTier.subdomain.includesCustomDomain && AskWhenTier.domain.includesCustomDomain, "custom domains at $35 only")
+    check(AskWhenTier.subdomain.rank < AskWhenTier.domain.rank, "ranked Subdomain < Domain")
 
     // The fake, which is what the UI is built against.
     let fake = FakeSubscriptions()
     check(fake.offersFetched == 0, "nothing is fetched until asked — opt-in")
     let offers = try! run { try await fake.offers() }.get()
-    check(offers.map(\.tier) == [.page, .subdomain, .domain] && offers[0].trial == "3 months free" && offers[1].trial == nil,
-          "offers carry Apple's price and the trial only on Page")
+    check(offers.map(\.tier) == [.subdomain, .domain] && offers.allSatisfy { $0.trial == nil },
+          "offers carry Apple's price and no trial")
     check((run { await fake.current() }.value) == SubscriptionState.none, "nothing owned to start")
-    let bought = try! run { try await fake.purchase(.page) }.get()
+    let bought = try! run { try await fake.purchase(.subdomain) }.get()
     if case .purchased(let st) = bought, case .active(let tier, _, let jws) = st {
-        check(tier == .page && jws.hasPrefix("fake.jws."), "purchase → active with a transaction to hand to create")
+        check(tier == .subdomain && jws.hasPrefix("fake.jws."), "purchase → active with a transaction to hand to create")
     } else { check(false, "purchase did not yield an active state: \(bought)") }
     check((run { await fake.current() }.value)?.isActive == true, "current reflects the purchase")
 
     // Apple later says it expired; whoever is listening hears it.
     let stream = fake.updates()
-    fake.set(.expired(tier: .page, at: Date()))
+    fake.set(.expired(tier: .subdomain, at: Date()))
     let heard = run { await stream.first(where: { _ in true }) }.value
-    if case .expired(let tier, _)? = heard { check(tier == .page, "updates stream delivers Apple's later word") }
+    if case .expired(let tier, _)? = heard { check(tier == .subdomain, "updates stream delivers Apple's later word") }
     else { check(false, "updates stream heard \(String(describing: heard))") }
     check((run { await fake.current() }.value)?.isActive == false, "and current agrees")
     check(SubscriptionState.revoked(tier: .domain).tier == .domain && !SubscriptionState.revoked(tier: .domain).isActive, "revoked is not active")

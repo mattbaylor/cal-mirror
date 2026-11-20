@@ -11,6 +11,35 @@ is only worth anything if the line is real.
 
 ## Settled
 
+**The Request Page is free to anyone who bought Calendar Mirror.** *(26 Oct
+2026, Matt. Supersedes the price line of "Billing — StoreKit, annual only,
+90-day trial", "The trial is on the Request Page tier only" and "The offer
+screen sells the Request Page trial"; amends "All three tiers are buyable".)*
+The bottom tier is gone as a product: `me.askwhen.page.annual` comes off sale
+(it never had a subscriber — checked on CT 112 the same day), and an owner who
+bought the app turns AskWhen.me on and gets one page for nothing. It is still
+AskWhen.me, a separate product the owner opts in to; buying the app turns
+nothing on, and the app makes no request until the owner does.
+
+- **Proof of purchase** is StoreKit's signed app transaction
+  (`AppTransaction.shared`), sent to `POST /v1/pages` as `app_transaction`
+  instead of a subscription `transaction`. One page per app purchase, keyed by
+  the hash of the app transaction id. Recorded as an entitlement with product
+  id `me.askwhen.free`, which is the service's name, not an App Store product.
+- **It lapses when idle.** 90 days with no publish and no resolved request,
+  then the same 7-day grace and deletion as an expired subscription. Any
+  publish restarts the clock and lifts an idle grace.
+- **Prices move down a tier.** Custom Subdomain $34.99 → $19.99, Custom
+  Domain $69.99 → $34.99. Annual, no trial on either: the free page is how
+  AskWhen.me is tried now.
+- **Upgrading keeps the page.** A free-tier owner who buys a paid tier keeps
+  the same page and link: `PUT /v1/pages/{slug}/entitlement` moves it onto
+  the subscription.
+- **Ships after 21 Nov 2026**, when the In-App Event that advertises the
+  90-day trial ends.
+- **App Store only.** The standalone Developer ID build has no AskWhen.me,
+  and no app transaction to present.
+
 **Name and domain — `askwhen.me`.** *(1 Sept 2026)*
 The request page URL is the one thing strangers see, and they have never heard of the
 product. "Ask when" states the honest promise before anyone clicks: this is a

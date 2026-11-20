@@ -177,16 +177,33 @@ public struct AskwhenClient: Sendable {
         public let writeToken: String
     }
 
-    /// `transaction` is the signed transaction StoreKit hands the device
-    /// (`Transaction.jwsRepresentation`). The service verifies Apple's
-    /// signature itself and derives the entitlement from it; the device sends
-    /// no hash and no receipt. A 402 means the subscription does not buy this
-    /// — expired, refunded, for another product, or already holding as many
-    /// pages as its tier allows — and `AskwhenError.rejected` carries which.
-    public func createPage(transaction: String, display: PolicyDump.Display) async throws -> Created {
+    /// What a page is created with: a paid subscription's signed transaction,
+    /// or — for the free Request Page — the signed app transaction that says
+    /// this Apple Account has Calendar Mirror.
+    public enum Proof: Equatable, Sendable {
+        case subscription(String)
+        case app(String)
+    }
+
+    /// The proof is what StoreKit hands the device (`jwsRepresentation`). The
+    /// service verifies Apple's signature itself and derives the entitlement
+    /// from it; the device sends no hash and no receipt. A 402 means the proof
+    /// does not buy this — expired, refunded, for another product, or already
+    /// holding as many pages as it allows — and `AskwhenError.rejected`
+    /// carries which.
+    public func createPage(_ proof: Proof, display: PolicyDump.Display) async throws -> Created {
         var req = request("POST", "/v1/pages", token: nil)
-        struct Body: Encodable { let transaction: String; let display: PolicyDump.Display }
-        req.httpBody = try JSONEncoder().encode(Body(transaction: transaction, display: display))
+        struct Body: Encodable {
+            var transaction: String?
+            var app_transaction: String?
+            let display: PolicyDump.Display
+        }
+        var body = Body(display: display)
+        switch proof {
+        case .subscription(let jws): body.transaction = jws
+        case .app(let jws): body.app_transaction = jws
+        }
+        req.httpBody = try JSONEncoder().encode(body)
         let (data, resp) = try await exchange(req)
         guard resp.statusCode == 201 else { throw failure(resp, data) }
         struct Reply: Decodable { let slug: String; let write_token: String }
@@ -194,6 +211,17 @@ public struct AskwhenClient: Sendable {
             throw AskwhenError.malformed
         }
         return Created(slug: r.slug, writeToken: r.write_token)
+    }
+
+    /// Moves an existing page onto a paid subscription, so an owner who
+    /// upgrades from the free page keeps its address. Safe to repeat: the
+    /// service answers 204 when the page is already on that subscription.
+    public func upgradePage(slug: String, token: String, transaction: String) async throws {
+        var req = request("PUT", "/v1/pages/\(slug)/entitlement", token: token)
+        struct Body: Encodable { let transaction: String }
+        req.httpBody = try JSONEncoder().encode(Body(transaction: transaction))
+        let (data, resp) = try await exchange(req)
+        guard resp.statusCode == 204 else { throw failure(resp, data) }
     }
 
     // MARK: Publish

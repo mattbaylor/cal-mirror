@@ -38,7 +38,7 @@ enum RequestCopy {
             Feature(symbol: "lock.shield", headline: "The server never sees your calendar", line: "It holds the times you offer and the requests that come in. Nothing else."),
             Feature(symbol: "checkmark.circle", headline: "Nothing lands until you accept", line: "Every request comes to this device, and you answer it here."),
         ]
-        static let footnote = "Setup is free and stays on this device. Publishing needs an AskWhen.me subscription, free for the first 90 days."
+        static let footnote = "Setup is free and stays on this device. A page on AskWhen.me is free too, because you have Calendar Mirror."
         static let primary = "Continue"
         static let secondary = "Not now"
     }
@@ -211,19 +211,25 @@ enum RequestCopy {
         static let section = "Publishing"
         static let heading = "Publish your page"
         static let lede = "Everything so far has stayed on this device. Publishing puts the times you previewed on AskWhen.me."
-        static let loading = "Asking Apple for the price…"
+        static let loading = "Asking Apple for the prices…"
         static let purchasing = "Waiting for Apple…"
         static let failedTitle = "Could not reach the App Store"
         static let failedBody = "Apple did not answer, so there is no price to show. Your page is still here, on this device."
         static let retry = "Try again"
         static let trialLine = "%@, then %@ a year."
         static let noTrialLine = "%@ a year."
-        static let noTrialNote = "Apple gives one free trial per person, and you have used yours. The price below is what it costs from today."
-        static let buyWithTrial = "Start the free trial"
+        static let freeName = "AskWhen.me Request Page"
+        static let freeDescription = "Anyone can ask you for a time. Your calendar stays put."
+        static let freePrice = "Free with Calendar Mirror."
+        static let freeAction = "Turn on my page"
+        static let freeNote = "Free for as long as you use it. A page that goes 90 days without publishing stops taking requests, and is removed a week after that."
+        static let checkingApp = "Checking with Apple that you have Calendar Mirror…"
+        static let freeFailedTitle = "Apple could not confirm Calendar Mirror"
+        static let freeFailedBody = "The free page needs Apple’s word that this Apple Account has Calendar Mirror, and Apple did not give it. Check you are signed in to the App Store, then try again. Nothing was bought."
         static let buyWithoutTrial = "Subscribe"
-        static let renews = "Renews yearly until you cancel in Settings. Nothing is charged during the trial."
         static let upgradesHeading = "More pages, or your own address"
-        static let upgradesNote = "Each renews yearly until you cancel in Settings. Either includes everything above; neither carries a trial, and either can also be taken later from your page."
+        static let upgradesNote = "Each renews yearly until you cancel in Settings. Either includes everything above, and either can also be taken later from your page."
+        static let upgradesUnavailable = "Apple did not answer, so the paid tiers cannot be shown right now. The free page does not need them."
         static let nameAsk = "Your name on AskWhen.me"
         static let nameField = "dana"
         static let nameCheck = "Check it"
@@ -249,6 +255,8 @@ enum RequestCopy {
         static let creating = "Creating your page…"
         static let createFailedTitle = "Apple said yes, AskWhen.me did not answer"
         static let createFailedBody = "Your subscription went through and you will not be charged twice. Try again; nothing is lost."
+        static let createFailedFreeTitle = "AskWhen.me did not answer"
+        static let createFailedFreeBody = "Nothing was bought, and your page is still here on this device. Try again; nothing is lost."
         static let tokenWarning = "The page’s key goes into your iCloud Keychain, so a new device finds it. There is no account and no password."
     }
 

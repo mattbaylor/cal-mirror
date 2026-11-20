@@ -265,32 +265,31 @@ def gen_sheet(c: dict) -> str:
 
     off, lv = c["offer"], c["live"]
 
-    def offer_screen(trial):
-        price = (off["trialLine"].replace("%@", "{}").format("3 months free", "$19.99")
-                 if trial else off["noTrialLine"].replace("%@", "{}").format("$19.99"))
-        note = "" if trial else f'<p class="cap">{esc(off["noTrialNote"])}</p>'
-        btn = off["buyWithTrial"] if trial else off["buyWithoutTrial"]
+    def offer_screen(paid):
         ups = ""
-        for name, pr, desc in [
-            ("AskWhen.me Custom Subdomain", "$34.99", "Your own name.askwhen.me, and more than one page."),
-            ("AskWhen.me Custom Domain", "$69.99", "Your page on your own domain, and several pages.")]:
-            per = off["noTrialLine"].replace("%@", "{}").format(pr)
-            ups += (f'<div class="row"><div class="rowmain"><span class="t">{esc(name)}</span></div>'
-                    f'<p class="cap">{esc(desc)}</p>'
-                    f'<p class="cap"><b>{esc(per)}</b></p></div>'
-                    + row(off["buyWithoutTrial"], None, "none"))
+        if paid:
+            for name, pr, desc in [
+                ("AskWhen.me Custom Subdomain", "$19.99", "Your own name.askwhen.me, and more than one page."),
+                ("AskWhen.me Custom Domain", "$34.99", "Your page on your own domain, and several pages.")]:
+                per = off["noTrialLine"].replace("%@", "{}").format(pr)
+                ups += (f'<div class="row"><div class="rowmain"><span class="t">{esc(name)}</span></div>'
+                        f'<p class="cap">{esc(desc)}</p>'
+                        f'<p class="cap"><b>{esc(per)}</b></p></div>'
+                        + row(off["buyWithoutTrial"], None, "none"))
+        else:
+            ups = f'<div class="pad14"><p class="cap">{esc(off["upgradesUnavailable"])}</p></div>'
         return ('<div class="scr"><div class="nav">' + esc(off["section"]) + "</div>"
                 + '<div class="grp"><div class="pad14">'
                 + f'<h4>{esc(off["heading"])}</h4>'
                 + f'<p class="body sm">{esc(off["lede"])}</p></div></div>'
                 + '<div class="grp"><div class="pad14">'
-                + '<p class="body"><b>AskWhen.me Request Page</b></p>'
-                + '<p class="cap">Anyone can ask you for a time. Your calendar stays put.</p>'
-                + f'<p class="body" style="margin-top:8px"><b>{esc(price)}</b></p>{note}'
-                + f'<div class="btn">{esc(btn)}</div></div></div>'
-                + ftr(off["renews"])
+                + f'<p class="body"><b>{esc(off["freeName"])}</b></p>'
+                + f'<p class="cap">{esc(off["freeDescription"])}</p>'
+                + f'<p class="body" style="margin-top:8px"><b>{esc(off["freePrice"])}</b></p>'
+                + f'<div class="btn">{esc(off["freeAction"])}</div></div></div>'
+                + ftr(off["freeNote"])
                 + '<div class="grp"><div class="hdr">' + esc(off["upgradesHeading"]) + "</div>"
-                + ups + "</div>" + ftr(off["upgradesNote"])
+                + ups + "</div>" + (ftr(off["upgradesNote"]) if paid else "")
                 + '<div class="grp">' + row(off["restore"], None, "none") + "</div></div>")
 
     s7 = offer_screen(True)
@@ -320,7 +319,7 @@ def gen_sheet(c: dict) -> str:
         ("5 · Your day", "Asked as a sentence, not a form. Bounds are product decisions.", s5),
         ("6 · What people see", "Real dates from the real calendar, before anyone else sees them.", s6),
         ("7 · Publishing", "The first network request of the app's life, and it is to Apple.", s7),
-        ("7b · No trial left", "Apple gives one per person per group. A returning owner must not be promised one.", s7b),
+        ("7b · App Store unreachable", "The free page needs no price, so it stays on offer when Apple does not answer; only the paid tiers wait.", s7b),
         ("9 · Your page is live", "Where screen 8 lands. The key warning is said once, here.", s9),
     ]
     body = "".join(

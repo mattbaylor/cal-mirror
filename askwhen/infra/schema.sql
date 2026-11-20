@@ -73,10 +73,16 @@ PRAGMA busy_timeout = 5000;
 -- create (appstore.Verifier), and App Store Server Notifications as the
 -- subscription renews, changes tier, lapses or is refunded. Both are Apple's
 -- signature, verified offline against Apple's pinned root.
+--
+-- The free tier is a row here too: product_id `me.askwhen.free`, keyed by
+-- the hash of the app transaction id (Apple's signed proof the owner bought
+-- Calendar Mirror), and expires_at is not Apple's — it is 90 days past the
+-- owner's last publish or resolve, so a page nobody tends lapses on its own.
 
 CREATE TABLE IF NOT EXISTS entitlement (
   hash         BLOB PRIMARY KEY,
-  -- me.askwhen.page.annual | me.askwhen.subdomain.annual | me.askwhen.domain.annual
+  -- me.askwhen.free | me.askwhen.subdomain.annual | me.askwhen.domain.annual
+  -- (me.askwhen.page.annual is retired: never sold to anyone)
   product_id   TEXT NOT NULL,
   environment  TEXT NOT NULL CHECK (environment IN ('Production', 'Sandbox')),
   -- When Apple says the current period ends. Renewals move it forward;
@@ -94,7 +100,8 @@ CREATE TABLE IF NOT EXISTS page (
                       CHECK (length(slug) BETWEEN 6 AND 32
                              AND slug NOT GLOB '*[^a-z0-9]*'),
 
-  -- SHA-256 of the StoreKit originalTransactionId, never the id itself. The
+  -- SHA-256 of the StoreKit originalTransactionId (or, on the free tier, of
+  -- the app transaction id), never the id itself. The
   -- service only ever needs to answer "is this the same subscription as before",
   -- which a hash answers, and it deliberately cannot answer "whose".
   entitlement_hash  BLOB NOT NULL,

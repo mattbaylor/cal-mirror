@@ -79,16 +79,25 @@ public final class RequestPageCoordinator: @unchecked Sendable {
     // MARK: Create
 
     /// Creates the page and stores its token. The only place the token is ever
-    /// seen in the clear; `page.slug` is set on return. `transaction` is the
-    /// signed StoreKit transaction for the AskWhen.me subscription.
-    public func create(page: inout RequestPageConfig, transaction: String) async throws {
+    /// seen in the clear; `page.slug` is set on return. `proof` is the signed
+    /// StoreKit transaction for a paid tier, or the app transaction for the
+    /// free Request Page.
+    public func create(page: inout RequestPageConfig, proof: AskwhenClient.Proof) async throws {
         let display = PolicyDump.Display(name: page.displayName, blurb: page.blurb, tz: page.policy.timeZone)
-        let created = try await client.createPage(transaction: transaction, display: display)
+        let created = try await client.createPage(proof, display: display)
         try tokens.store(created.writeToken, for: created.slug)
         page.slug = created.slug
         page.lastPublishedFingerprint = nil
         page.lastPublishedAt = nil
         page.queueETag = nil
+    }
+
+    /// Puts the page on a paid subscription after an upgrade. Nothing to do
+    /// without a page or its token.
+    public func upgrade(page: RequestPageConfig, transaction: String) async throws {
+        guard !page.slug.isEmpty, let token = try tokens.token(for: page.slug) else { return }
+        do { try await client.upgradePage(slug: page.slug, token: token, transaction: transaction) }
+        catch AskwhenError.notFound { throw RequestPageError.pageGone }
     }
 
     /// Deletes the page — its queue and domains go with it — and forgets the

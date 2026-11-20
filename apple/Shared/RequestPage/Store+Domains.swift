@@ -126,11 +126,22 @@ extension Store {
                                          pageExists: !requestPage.slug.isEmpty)
     }
 
-    /// Buying an upgrade from where the want appeared. Apple prorates; the
-    /// device only has to notice the tier changed.
+    /// Buying an upgrade from where the want appeared. Apple prorates a move
+    /// between paid tiers; from the free page there is nothing to prorate, and
+    /// the page has to be moved onto the new subscription to keep its address.
     func upgrade(to tier: AskWhenTier) async {
         guard case .purchased(let state) = (try? await subscriptions.purchase(tier)) else { return }
         subscriptionState = state
+        await bindPage(to: state)
+    }
+
+    /// Tells askwhen.me which subscription the page is on now. Harmless when
+    /// it already is (the service answers 204), so every tier change calls it
+    /// rather than this device trying to know whether the page was free.
+    func bindPage(to state: SubscriptionState) async {
+        guard case .active(_, _, let transaction) = state, !requestPage.slug.isEmpty else { return }
+        do { try await requestCoordinator().upgrade(page: requestPage, transaction: transaction) }
+        catch { domainFailed(error) }
     }
 
     /// Keeps the tier honest while the app runs — a renewal, an upgrade bought
@@ -138,7 +149,11 @@ extension Store {
     /// launch.
     func watchSubscription() async {
         for await state in subscriptions.updates() {
+            // An upgrade bought on another device arrives here, and the page
+            // follows it. A renewal of the same tier needs nothing.
+            let tierChanged = state.isActive && state.tier != subscriptionState.tier
             subscriptionState = state
+            if tierChanged { await bindPage(to: state) }
             // A page that has come back to life should start publishing again
             // without the owner doing anything.
             if state.isActive, requestPage.isReady { _ = try? await publishIfNeeded() }
