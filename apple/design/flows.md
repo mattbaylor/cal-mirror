@@ -29,6 +29,11 @@ buyer of the store app does not get the window in the store listing.
 
 `NavigationStack` → `List` with large title **Calendar Mirror**.
 
+At regular width (iPad, and the iPhone Duo's inner display) the same list is
+the sidebar of a balanced `NavigationSplitView`, and a mirror or the request
+page opens in the detail column beside it, the first mirror selected on
+arrival, as on the Mac. Compact is the stack described here, unchanged.
+
 - Toolbar: **Sync now** (leading, text) · **+** (trailing).
 - Row: *Last sync …* (status only).
 - One section per **destination** calendar, headed `<dest> · <count>`; each

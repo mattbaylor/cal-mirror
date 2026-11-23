@@ -16,7 +16,7 @@ on:
     inputs:
       device:
         description: Simulator to use
-        default: iPhone 16 Pro
+        default: iPhone 17 Pro
         type: string
   pull_request:
     paths:
@@ -27,10 +27,13 @@ on:
 jobs:
   shots:
     name: request-page screenshots
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      - name: Select the newest release Xcode (27.1 or later)
+        run: .github/select-xcode.sh
 
       - name: Install xcodegen
         run: brew install xcodegen
@@ -59,7 +62,7 @@ jobs:
         id: sim
         run: |
           set -euo pipefail
-          UDID=$(python3 apple/tools/pick-sim.py "${{ inputs.device || 'iPhone 16 Pro' }}")
+          UDID=$(python3 apple/tools/pick-sim.py "${{ inputs.device || 'iPhone 17 Pro' }}")
           [ -n "$UDID" ] || { echo "no iOS simulator available on this runner"; exit 1; }
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
           xcrun simctl boot "$UDID"
