@@ -54,8 +54,8 @@
           "billingPlans" : [
             {
               "billingPlanType" : "BILLED_UPFRONT",
-              "commitmentDisplayPrice" : "69.99",
-              "displayPrice" : "69.99",
+              "commitmentDisplayPrice" : "34.99",
+              "displayPrice" : "34.99",
               "internalID" : "6812424182_BILLED_UPFRONT",
               "isEnabled" : true
             }
@@ -63,7 +63,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "69.99",
+          "displayPrice" : "34.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "6812424182",
@@ -93,8 +93,8 @@
           "billingPlans" : [
             {
               "billingPlanType" : "BILLED_UPFRONT",
-              "commitmentDisplayPrice" : "34.99",
-              "displayPrice" : "34.99",
+              "commitmentDisplayPrice" : "19.99",
+              "displayPrice" : "19.99",
               "internalID" : "6812424073_BILLED_UPFRONT",
               "isEnabled" : true
             }
@@ -102,7 +102,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "34.99",
+          "displayPrice" : "19.99",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "6812424073",
@@ -119,58 +119,6 @@
           "productID" : "me.askwhen.subdomain.annual",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "AskWhen.me - Custom Subdomain",
-          "subscriptionGroupID" : "22387296",
-          "type" : "RecurringSubscription",
-          "winbackOffers" : [
-
-          ]
-        },
-        {
-          "adHocOffers" : [
-
-          ],
-          "billingPlans" : [
-            {
-              "billingPlanType" : "BILLED_UPFRONT",
-              "commitmentDisplayPrice" : "19.99",
-              "displayPrice" : "19.99",
-              "internalID" : "6812415329_BILLED_UPFRONT",
-              "isEnabled" : true
-            }
-          ],
-          "codeOffers" : [
-
-          ],
-          "displayPrice" : "19.99",
-          "familyShareable" : false,
-          "groupNumber" : 3,
-          "internalID" : "6812415329",
-          "introductoryOffer" : {
-            "billingPlanType" : "BILLED_UPFRONT",
-            "internalID" : "eyJzIjoiNjgxMjQxNTMyOSIsImQiOjE3ODk0NTU2MDAsImkiOiJVUyIsInQiOiIiLCJwIjoiMCJ9",
-            "numberOfPeriods" : 1,
-            "paymentMode" : "free",
-            "subscriptionPeriod" : "P3M"
-          },
-          "introductoryOffers" : [
-            {
-              "billingPlanType" : "BILLED_UPFRONT",
-              "internalID" : "eyJzIjoiNjgxMjQxNTMyOSIsImQiOjE3ODk0NTU2MDAsImkiOiJVUyIsInQiOiIiLCJwIjoiMCJ9",
-              "numberOfPeriods" : 1,
-              "paymentMode" : "free",
-              "subscriptionPeriod" : "P3M"
-            }
-          ],
-          "localizations" : [
-            {
-              "description" : "Anyone can ask you for a time. Your calendar stays put.",
-              "displayName" : "AskWhen.me Request Page",
-              "locale" : "en_US"
-            }
-          ],
-          "productID" : "me.askwhen.page.annual",
-          "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "AskWhen.me - Request Page",
           "subscriptionGroupID" : "22387296",
           "type" : "RecurringSubscription",
           "winbackOffers" : [

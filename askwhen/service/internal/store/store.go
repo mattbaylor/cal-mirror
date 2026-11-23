@@ -1087,6 +1087,61 @@ func (s *Store) LapseOverdue(ctx context.Context, now time.Time, slack time.Dura
 	return res.RowsAffected()
 }
 
+// TouchFree moves a free-tier page's idle clock: its entitlement's expires_at
+// becomes until, and a grace the idleness started is lifted, because the
+// owner is back. A page on a paid subscription is left alone — Apple owns
+// that expiry. Reports whether the page is on the free tier at all.
+func (s *Store) TouchFree(ctx context.Context, slug, freeProduct string, until time.Time) (bool, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("touch free: %w", err)
+	}
+	defer tx.Rollback()
+	res, err := tx.ExecContext(ctx, `
+		UPDATE entitlement SET expires_at = ?, updated_at = ?
+		WHERE product_id = ? AND revoked_at IS NULL
+		  AND hash = (SELECT entitlement_hash FROM page WHERE slug = ?)`,
+		until.UTC().Format(time.RFC3339), nowRFC3339(), freeProduct, slug)
+	if err != nil {
+		return false, fmt.Errorf("touch free: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return false, nil
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE page SET grace_until = NULL WHERE slug = ?`, slug); err != nil {
+		return false, fmt.Errorf("touch free: %w", err)
+	}
+	return true, tx.Commit()
+}
+
+// LapseIdle starts the grace on free-tier pages whose idle clock has run out.
+// No slack, unlike LapseOverdue: there is no Apple billing retry to wait for.
+func (s *Store) LapseIdle(ctx context.Context, now time.Time, freeProduct string, graceUntil time.Time) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE page SET grace_until = ?
+		WHERE grace_until IS NULL AND entitlement_hash IN (
+		  SELECT hash FROM entitlement WHERE product_id = ? AND expires_at < ?)`,
+		graceUntil.UTC().Format(time.RFC3339), freeProduct, now.UTC().Format(time.RFC3339))
+	if err != nil {
+		return 0, fmt.Errorf("lapse idle: %w", err)
+	}
+	return res.RowsAffected()
+}
+
+// Rebind moves a page onto another entitlement — a free-tier owner who
+// bought a paid tier keeps the page and its link — and lifts any grace.
+func (s *Store) Rebind(ctx context.Context, slug string, hash []byte) error {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE page SET entitlement_hash = ?, grace_until = NULL WHERE slug = ?`, hash, slug)
+	if err != nil {
+		return fmt.Errorf("rebind: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNoPage
+	}
+	return nil
+}
+
 // DeleteLapsed removes every page whose grace has run out. Requests, domains
 // and deliveries cascade; the token dies with the page. Returns the slugs,
 // for the log.

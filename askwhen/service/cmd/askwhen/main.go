@@ -104,8 +104,8 @@ func loadConfig() (config, error) {
 		edgeIPs:      strings.Fields(strings.ReplaceAll(envOr("AW_EDGE_IPS", "64.111.27.242"), ",", " ")),
 
 		bundleID: envOr("AW_BUNDLE_ID", "io.github.mattbaylor.cal-mirror"),
-		// Default on: the sandbox is how the flow is proven before launch.
-		// compose.yml flips it to "0" at launch (TASKS.md).
+		// Default on, and on in production: App Review buys with a sandbox
+		// account on every submission (compose.yml).
 		appstoreSandbox: envOr("AW_APPSTORE_SANDBOX", "1") == "1",
 	}
 
@@ -459,6 +459,7 @@ func routes(st *store.Store, cfg config, post *mail.Postal, shell *api.Shell, do
 	mux.HandleFunc("POST /v1/pages", owner.Create)
 	mux.HandleFunc("PUT /v1/pages/{slug}", owner.Publish)
 	mux.HandleFunc("DELETE /v1/pages/{slug}", owner.Delete)
+	mux.HandleFunc("PUT /v1/pages/{slug}/entitlement", owner.Upgrade)
 	mux.HandleFunc("GET /v1/pages/{slug}/queue", owner.Queue)
 	mux.HandleFunc("POST /v1/pages/{slug}/links", owner.Links)
 	mux.HandleFunc("POST /v1/requests/{id}/resolve", owner.Resolve)

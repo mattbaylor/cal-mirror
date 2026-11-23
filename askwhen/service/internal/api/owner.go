@@ -46,13 +46,14 @@ type Entitler struct {
 	// Verify checks Apple's signature; appstore.New() in production.
 	Verify interface {
 		DecodeTransaction(jws string) (appstore.Transaction, error)
+		DecodeAppTransaction(jws string) (appstore.AppTransaction, error)
 	}
 	// BundleID is ours. A genuine transaction for somebody else's app is
 	// still somebody else's.
 	BundleID string
-	// Sandbox is whether Sandbox transactions may create pages. On until
-	// launch, so the flow can be proven with a sandbox tester; off after,
-	// or anyone with a sandbox account for our bundle gets free pages.
+	// Sandbox is whether Sandbox transactions may create pages. On in
+	// production: App Review buys with a sandbox account, and a sandbox
+	// transaction for our bundle can only come from our own builds.
 	Sandbox bool
 }
 
@@ -101,7 +102,11 @@ type createRequest struct {
 	// Verified here against Apple's root; the entitlement hash the service
 	// stores is derived from it, not trusted from the device.
 	Transaction string `json:"transaction"`
-	Display     struct {
+	// Or, for the free tier, the signed app transaction (AppTransaction.shared,
+	// jwsRepresentation): proof the owner bought Calendar Mirror. Exactly one
+	// of the two.
+	AppTransaction string `json:"app_transaction"`
+	Display        struct {
 		Name  string `json:"name"`
 		Blurb string `json:"blurb"`
 		TZ    string `json:"tz"`
@@ -147,7 +152,18 @@ func (o *Owner) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"page creation is not available"}`, http.StatusServiceUnavailable)
 		return
 	}
-	ent, tier, problem := o.Entitle.check(r.Context(), o.Store, in.Transaction, time.Now())
+	var ent []byte
+	var tier Tier
+	var problem string
+	switch {
+	case in.Transaction != "" && in.AppTransaction == "":
+		ent, tier, problem = o.Entitle.check(r.Context(), o.Store, in.Transaction, time.Now())
+	case in.AppTransaction != "" && in.Transaction == "":
+		ent, tier, problem = o.Entitle.checkApp(r.Context(), o.Store, in.AppTransaction, time.Now())
+	default:
+		http.Error(w, `{"error":"send a transaction or an app_transaction, not both"}`, http.StatusBadRequest)
+		return
+	}
 	if problem != "" {
 		// 402 for a subscription that does not buy this; the device shows
 		// the owner what to do. Never says which of "not ours", "expired" or
@@ -275,6 +291,14 @@ func (o *Owner) Publish(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err := time.LoadLocation(env.Display.TZ); err != nil || env.Display.TZ == "" {
 		http.Error(w, "display.tz must be an IANA zone", http.StatusBadRequest)
+		return
+	}
+
+	// A free page's owner publishing is the owner tending it: the idle clock
+	// restarts, and a grace that idleness started is lifted.
+	if _, err := o.Store.TouchFree(r.Context(), slug, FreeProduct, time.Now().Add(FreeIdle)); err != nil {
+		o.Logger.Error("owner: touch free", "err", err)
+		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
 	}
 
@@ -433,6 +457,11 @@ func (o *Owner) Resolve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	o.Logger.Info("owner: resolved", "slug", in.Slug, "decision", state)
+	if _, err := o.Store.TouchFree(r.Context(), in.Slug, FreeProduct, time.Now().Add(FreeIdle)); err != nil {
+		// The answer stands; a missed touch costs at most an early lapse
+		// warning, and the next publish touches again.
+		o.Logger.Error("owner: touch free", "err", err)
+	}
 
 	// The answer is recorded before the email goes, and a failed send does not
 	// unrecord it: the owner's device has already written the event, and a 5xx
@@ -512,6 +541,104 @@ func (e *Entitler) check(ctx context.Context, st *store.Store, jws string, now t
 	return ent.Hash, tier, ""
 }
 
+// checkApp is check for the free tier: the app transaction proves the owner
+// bought Calendar Mirror, and the entitlement it records expires FreeIdle
+// from now, moved forward by every publish and resolve.
+func (e *Entitler) checkApp(ctx context.Context, st *store.Store, jws string, now time.Time) ([]byte, Tier, string) {
+	a, err := e.Verify.DecodeAppTransaction(jws)
+	if err != nil {
+		return nil, Tier{}, "app transaction did not verify"
+	}
+	if a.BundleID != e.BundleID {
+		return nil, Tier{}, "app transaction is for another app"
+	}
+	switch a.ReceiptType {
+	case "Production":
+	case "Sandbox":
+		if !e.Sandbox {
+			return nil, Tier{}, "sandbox transactions are not accepted"
+		}
+	default:
+		// "Xcode": a local StoreKit test signs with its own certificate and
+		// never reaches here verified, but say no by name all the same.
+		return nil, Tier{}, "app transaction did not verify"
+	}
+	ent := store.Entitlement{Hash: a.Hash(), ProductID: FreeProduct, Environment: a.ReceiptType, ExpiresAt: now.Add(FreeIdle)}
+	if err := st.UpsertEntitlement(ctx, ent); err != nil {
+		return nil, Tier{}, "unavailable"
+	}
+	return ent.Hash, tiers[FreeProduct], ""
+}
+
+// ------------------------------------------- PUT /v1/pages/{slug}/entitlement
+
+// Upgrade moves a page onto a paid subscription: the free-tier owner who buys
+// Subdomain or Domain keeps the page and the link they already handed out.
+// Authenticated by the write token like every owner call; the body is
+// {"transaction": jws} for the subscription just bought.
+func (o *Owner) Upgrade(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	slug := r.PathValue("slug")
+	if !validSlug(slug) {
+		http.NotFound(w, r)
+		return
+	}
+	if !o.authenticate(w, r, slug) {
+		return
+	}
+	var in struct {
+		Transaction string `json:"transaction"`
+	}
+	// The same 64 KiB as create, for the same x5c reason.
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil || in.Transaction == "" {
+		http.Error(w, `{"error":"malformed"}`, http.StatusBadRequest)
+		return
+	}
+	if o.Entitle == nil {
+		http.Error(w, `{"error":"upgrades are not available"}`, http.StatusServiceUnavailable)
+		return
+	}
+	current, err := o.Store.EntitlementForPage(r.Context(), slug)
+	if err != nil {
+		o.Logger.Error("owner: upgrade entitlement", "err", err)
+		http.Error(w, `{"error":"unavailable"}`, http.StatusServiceUnavailable)
+		return
+	}
+	ent, tier, problem := o.Entitle.check(r.Context(), o.Store, in.Transaction, time.Now())
+	if problem != "" {
+		http.Error(w, `{"error":"`+problem+`"}`, http.StatusPaymentRequired)
+		return
+	}
+	if current != nil && string(current.Hash) == string(ent) {
+		// Already on it: a retry after a dropped response.
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	held, err := o.Store.PagesFor(r.Context(), ent)
+	if err != nil {
+		o.Logger.Error("owner: pages for", "err", err)
+		http.Error(w, `{"error":"unavailable"}`, http.StatusServiceUnavailable)
+		return
+	}
+	if held >= tier.Pages {
+		http.Error(w, `{"error":"this subscription already has as many pages as it allows"}`, http.StatusPaymentRequired)
+		return
+	}
+	if err := o.Store.Rebind(r.Context(), slug, ent); err != nil {
+		if errors.Is(err, store.ErrNoPage) {
+			http.NotFound(w, r)
+			return
+		}
+		o.Logger.Error("owner: rebind", "err", err)
+		http.Error(w, `{"error":"unavailable"}`, http.StatusServiceUnavailable)
+		return
+	}
+	o.Logger.Info("owner: page upgraded", "slug", slug, "tier", tier.Product)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ------------------------------------------------------------------ helpers
 
 // newSlug is 8 characters of [a-z0-9]: 36^8 ≈ 2.8 trillion, and the schema
@@ -559,6 +686,11 @@ func Sweeper(ctx context.Context, st *store.Store, every, confirmedFor time.Dura
 			// Lapse. Subscriptions Apple last said expired more than its own
 			// 16-day billing grace ago start our 7-day grace even if the
 			// EXPIRED notification never arrived; pages whose grace ran out go.
+			if n, err := st.LapseIdle(ctx, now, FreeProduct, now.Add(LapseGrace)); err != nil {
+				log.Error("sweep: lapse idle", "err", err)
+			} else if n > 0 {
+				log.Info("sweep: idle free pages entered grace", "pages", n)
+			}
 			if n, err := st.LapseOverdue(ctx, now, 16*24*time.Hour, now.Add(LapseGrace)); err != nil {
 				log.Error("sweep: lapse overdue", "err", err)
 			} else if n > 0 {

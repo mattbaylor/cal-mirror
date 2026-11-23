@@ -73,6 +73,15 @@ func (fakeApple) DecodeTransaction(jws string) (appstore.Transaction, error) {
 	return t, nil
 }
 
+// An "app transaction" is plain JSON the same way.
+func (fakeApple) DecodeAppTransaction(jws string) (appstore.AppTransaction, error) {
+	var a appstore.AppTransaction
+	if err := json.Unmarshal([]byte(jws), &a); err != nil || a.AppTransactionID == "" {
+		return a, appstore.ErrSignature
+	}
+	return a, nil
+}
+
 func (fakeApple) DecodeNotification(body []byte) (appstore.Notification, error) {
 	var n appstore.Notification
 	if err := json.Unmarshal(body, &n); err != nil || n.NotificationType == "" {
@@ -103,6 +112,22 @@ func transaction(product string, expires time.Time) string {
 		"type":                  "Auto-Renewable Subscription",
 		"expiresDate":           expires.UnixMilli(),
 		"signedDate":            time.Now().UnixMilli(),
+	})
+	return string(b)
+}
+
+// An app transaction: the owner bought Calendar Mirror. Each call is a
+// distinct purchase unless id is given.
+func appTransaction(id, receiptType string) string {
+	if id == "" {
+		txSeq++
+		id = fmt.Sprintf("70428%09d", txSeq)
+	}
+	b, _ := json.Marshal(map[string]any{
+		"appTransactionId": id,
+		"bundleId":         "io.github.mattbaylor.cal-mirror",
+		"receiptType":      receiptType,
+		"signedDate":       time.Now().UnixMilli(),
 	})
 	return string(b)
 }
@@ -197,7 +222,7 @@ func TestCreateHandsBackTheTokenOnceAndStoresOnlyAHash(t *testing.T) {
 
 func TestCreateValidates(t *testing.T) {
 	o := setupOwner(t)
-	good := transaction("me.askwhen.page.annual", time.Now().Add(24*time.Hour))
+	good := transaction("me.askwhen.subdomain.annual", time.Now().Add(24*time.Hour))
 	for _, tc := range []struct {
 		name string
 		body map[string]any
@@ -218,15 +243,15 @@ func TestCreateNeedsALiveSubscriptionForOurApp(t *testing.T) {
 	o := setupOwner(t)
 	display := map[string]string{"name": "M", "tz": "UTC"}
 	future := time.Now().Add(24 * time.Hour)
-	otherApp := transaction("me.askwhen.page.annual", future)
+	otherApp := transaction("me.askwhen.subdomain.annual", future)
 	otherApp = strings.Replace(otherApp, "io.github.mattbaylor.cal-mirror", "com.example.other", 1)
-	revoked := strings.TrimSuffix(transaction("me.askwhen.page.annual", future), "}") + `,"revocationDate":` + fmt.Sprint(time.Now().UnixMilli()) + `}`
-	production := strings.Replace(transaction("me.askwhen.page.annual", future), `"Sandbox"`, `"Production"`, 1)
+	revoked := strings.TrimSuffix(transaction("me.askwhen.subdomain.annual", future), "}") + `,"revocationDate":` + fmt.Sprint(time.Now().UnixMilli()) + `}`
+	production := strings.Replace(transaction("me.askwhen.subdomain.annual", future), `"Sandbox"`, `"Production"`, 1)
 
 	for name, tx := range map[string]string{
 		"not signed by Apple":        "garbage",
 		"another app's subscription": otherApp,
-		"expired":                    transaction("me.askwhen.page.annual", time.Now().Add(-time.Hour)),
+		"expired":                    transaction("me.askwhen.subdomain.annual", time.Now().Add(-time.Hour)),
 		"refunded":                   revoked,
 		"a product we do not sell":   transaction("me.askwhen.gold.annual", future),
 	} {
@@ -243,7 +268,7 @@ func TestCreateNeedsALiveSubscriptionForOurApp(t *testing.T) {
 	}
 	// And sandbox is refused once the switch is off — launch day.
 	o.Entitle.Sandbox = false
-	if w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": transaction("me.askwhen.page.annual", future), "display": display}, "", nil, nil); w.Code != http.StatusPaymentRequired {
+	if w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": transaction("me.askwhen.subdomain.annual", future), "display": display}, "", nil, nil); w.Code != http.StatusPaymentRequired {
 		t.Fatalf("sandbox after launch: %d", w.Code)
 	}
 	// With no entitler at all, nothing can be created.
@@ -258,15 +283,15 @@ func TestTheTierBoundsPagesAndHostnames(t *testing.T) {
 	display := map[string]string{"name": "M", "tz": "UTC"}
 	future := time.Now().Add(24 * time.Hour)
 
-	// One page at the base tier. The same subscription presented again does
+	// One page on the free tier. The same app purchase presented again does
 	// not get a second.
-	base := transaction("me.askwhen.page.annual", future)
-	first := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": base, "display": display}, "", nil, nil)
+	base := appTransaction("", "Production")
+	first := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"app_transaction": base, "display": display}, "", nil, nil)
 	if first.Code != http.StatusCreated {
 		t.Fatalf("first page: %d %s", first.Code, first.Body.String())
 	}
-	if w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"transaction": base, "display": display}, "", nil, nil); w.Code != http.StatusPaymentRequired {
-		t.Fatalf("second page on the base tier: %d", w.Code)
+	if w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{"app_transaction": base, "display": display}, "", nil, nil); w.Code != http.StatusPaymentRequired {
+		t.Fatalf("second page on the free tier: %d", w.Code)
 	}
 	var out createResponse
 	json.Unmarshal(first.Body.Bytes(), &out)
@@ -812,5 +837,153 @@ func TestPublishAcceptsTheLargestDumpTheAppCanMake(t *testing.T) {
 	}
 	if got != dump {
 		t.Fatalf("stored dump differs from what was sent: %d bytes in, %d out", len(dump), len(got))
+	}
+}
+
+func TestTheFreeTierIsClaimedWithTheAppPurchase(t *testing.T) {
+	o := setupOwner(t)
+	display := map[string]string{"name": "M", "tz": "UTC"}
+	create := func(body map[string]any) *httptest.ResponseRecorder {
+		body["display"] = display
+		return do(o.Create, http.MethodPost, "/v1/pages", body, "", nil, nil)
+	}
+
+	if w := create(map[string]any{"app_transaction": appTransaction("", "Production")}); w.Code != http.StatusCreated {
+		t.Fatalf("production app purchase: %d %s", w.Code, w.Body.String())
+	}
+	// App Review's purchase is a sandbox one, and sandbox is on in production.
+	if w := create(map[string]any{"app_transaction": appTransaction("", "Sandbox")}); w.Code != http.StatusCreated {
+		t.Fatalf("sandbox app purchase: %d %s", w.Code, w.Body.String())
+	}
+	// Both proofs at once is a confused device, not a bigger entitlement.
+	both := map[string]any{"app_transaction": appTransaction("", "Production"),
+		"transaction": transaction("me.askwhen.domain.annual", time.Now().Add(24*time.Hour))}
+	if w := create(both); w.Code != http.StatusBadRequest {
+		t.Fatalf("both proofs: %d", w.Code)
+	}
+	if w := create(map[string]any{}); w.Code != http.StatusBadRequest {
+		t.Fatalf("no proof: %d", w.Code)
+	}
+
+	otherApp := strings.Replace(appTransaction("", "Production"), "io.github.mattbaylor.cal-mirror", "com.example.other", 1)
+	for name, a := range map[string]string{
+		"not signed by Apple": "garbage",
+		"another app":         otherApp,
+		"an Xcode receipt":    appTransaction("", "Xcode"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if w := create(map[string]any{"app_transaction": a}); w.Code != http.StatusPaymentRequired {
+				t.Fatalf("got %d %s", w.Code, w.Body.String())
+			}
+		})
+	}
+
+	o.Entitle.Sandbox = false
+	if w := create(map[string]any{"app_transaction": appTransaction("", "Sandbox")}); w.Code != http.StatusPaymentRequired {
+		t.Fatalf("sandbox app purchase with sandbox off: %d", w.Code)
+	}
+}
+
+// createFree makes a free-tier page and returns its slug, token and the
+// entitlement hash, read back from the page.
+func createFree(t *testing.T, o *Owner) (slug, token string, hash []byte) {
+	t.Helper()
+	w := do(o.Create, http.MethodPost, "/v1/pages", map[string]any{
+		"app_transaction": appTransaction("", "Production"),
+		"display":         map[string]string{"name": "Matt Baylor", "blurb": "30 minutes.", "tz": "America/Denver"},
+	}, "", nil, nil)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create free: %d %s", w.Code, w.Body.String())
+	}
+	var out createResponse
+	json.Unmarshal(w.Body.Bytes(), &out)
+	o.Store.DB().QueryRow(`SELECT entitlement_hash FROM page WHERE slug=?`, out.Slug).Scan(&hash)
+	return out.Slug, out.WriteToken, hash
+}
+
+func freeExpires(t *testing.T, o *Owner, hash []byte) time.Time {
+	t.Helper()
+	ent, err := o.Store.Entitlement(context.Background(), hash)
+	if err != nil || ent == nil {
+		t.Fatalf("entitlement: %v %v", ent, err)
+	}
+	return ent.ExpiresAt
+}
+
+func TestAnIdleFreePageLapsesAndPublishingBringsItBack(t *testing.T) {
+	o := setupOwner(t)
+	ctx := context.Background()
+	slug, token, hash := createFree(t, o)
+	if got := freeExpires(t, o, hash); got.Before(time.Now().Add(FreeIdle - time.Hour)) {
+		t.Fatalf("a new free page expires %s, want about %s out", got, FreeIdle)
+	}
+
+	// 91 days of nothing: the sweep's idle lapse starts the usual grace.
+	o.Store.DB().Exec(`UPDATE entitlement SET expires_at=? WHERE hash=?`,
+		time.Now().Add(-24*time.Hour).UTC().Format(time.RFC3339), hash)
+	n, err := o.Store.LapseIdle(ctx, time.Now(), FreeProduct, time.Now().Add(LapseGrace))
+	if err != nil || n != 1 {
+		t.Fatalf("lapse idle: %d %v", n, err)
+	}
+	if g, _ := o.Store.GraceUntil(ctx, slug); g.IsZero() {
+		t.Fatal("an idle free page is not in grace")
+	}
+
+	// The owner opens the app and it publishes: back, with a fresh clock.
+	w := do(o.Publish, http.MethodPut, "/v1/pages/"+slug, dumpFor(slug), token, map[string]string{"slug": slug}, nil)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("publish during idle grace: %d %s", w.Code, w.Body.String())
+	}
+	if g, _ := o.Store.GraceUntil(ctx, slug); !g.IsZero() {
+		t.Fatal("publishing did not lift the idle grace")
+	}
+	if got := freeExpires(t, o, hash); got.Before(time.Now().Add(FreeIdle - time.Hour)) {
+		t.Fatalf("publishing did not restart the idle clock: %s", got)
+	}
+
+	// A paid page is never touched: Apple owns that expiry, and a lapsed
+	// subscription still cannot publish its way out of grace.
+	paid, paidToken := createPage(t, o)
+	o.Store.DB().Exec(`UPDATE page SET grace_until=? WHERE slug=?`, time.Now().Add(LapseGrace).UTC().Format(time.RFC3339), paid)
+	if w := do(o.Publish, http.MethodPut, "/v1/pages/"+paid, dumpFor(paid), paidToken, map[string]string{"slug": paid}, nil); w.Code != http.StatusPaymentRequired {
+		t.Fatalf("publish on a lapsed paid page: %d", w.Code)
+	}
+}
+
+func TestUpgradingKeepsThePageAndItsLink(t *testing.T) {
+	o := setupOwner(t)
+	slug, token, freeHash := createFree(t, o)
+	d := &Domains{Owner: o, Zone: "askwhen.me", Verify: domainverify.Config{Target: "edge.askwhen.me"}, Resolver: &fakeDNS{}, Logger: o.Logger}
+	if code, _ := claim(d, slug, "matt.askwhen.me", token); code != http.StatusPaymentRequired {
+		t.Fatalf("subdomain on the free tier: %d", code)
+	}
+
+	upgrade := func(tx, bearer string) int {
+		return do(o.Upgrade, http.MethodPut, "/v1/pages/"+slug+"/entitlement",
+			map[string]any{"transaction": tx}, bearer, map[string]string{"slug": slug}, nil).Code
+	}
+	sub := transaction("me.askwhen.subdomain.annual", time.Now().Add(365*24*time.Hour))
+	if code := upgrade(sub, "wrong-token-wrong-token-wrong-token-xx"); code != http.StatusNotFound {
+		t.Fatalf("upgrade with the wrong token: %d", code)
+	}
+	if code := upgrade(transaction("me.askwhen.domain.annual", time.Now().Add(-time.Hour)), token); code != http.StatusPaymentRequired {
+		t.Fatalf("upgrade with an expired subscription: %d", code)
+	}
+	if code := upgrade(sub, token); code != http.StatusNoContent {
+		t.Fatalf("upgrade: %d", code)
+	}
+	// A retry after a dropped response is a no-op, not a page-limit refusal.
+	if code := upgrade(sub, token); code != http.StatusNoContent {
+		t.Fatalf("repeated upgrade: %d", code)
+	}
+
+	// Same slug, same token, now on the subscription: the subdomain is allowed.
+	var hash []byte
+	o.Store.DB().QueryRow(`SELECT entitlement_hash FROM page WHERE slug=?`, slug).Scan(&hash)
+	if bytes.Equal(hash, freeHash) {
+		t.Fatal("the page is still on the free entitlement")
+	}
+	if code, _ := claim(d, slug, "matt.askwhen.me", token); code != http.StatusCreated {
+		t.Fatalf("subdomain after upgrade: %d", code)
 	}
 }
