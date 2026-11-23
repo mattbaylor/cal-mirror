@@ -65,7 +65,7 @@ Slack. Also a Shortcuts action and a Siri phrase. Nothing leaves your device.
 ASKWHEN.ME — A SEPARATE PRODUCT YOU CAN TURN ON
 
 Off by default; until you turn it on, the app makes no network request of any
-kind. AskWhen.me is a subscription with its own server: a page at
+kind. AskWhen.me is a separate product with its own server: a page at
 askwhen.me/yourpage where people can ask you for a time.
 
 A request page, not a booking page. Your device works out which times to offer
@@ -78,13 +78,13 @@ Send times can carry a personal link: it opens your page once, for a week, and
 because you sent it there is no email confirmation — if the time is still
 clear, your device accepts it for you and they get the calendar file.
 
-Free for 90 days, then $19.99 a year; your own name on askwhen.me, or your own
-domain, are upgrades. Payment is Apple's. The privacy page says what the server
-holds, and for how long.
+One page is free with Calendar Mirror; your own name on askwhen.me, or your
+own domain, are upgrades. Payment is Apple's. The privacy page says what the
+server holds, and for how long.
 
 WHAT IT DOES NOT DO
 
-• No scheduling links unless you turn on AskWhen.me, a separate subscription.
+• No scheduling links unless you turn on AskWhen.me, a separate product.
 • No unified calendar view — it makes copies; your calendar app shows them.
 • No team, admin or SSO features. It is a single-person utility.
 • Attendees are never copied: Apple's calendar framework cannot set guests.
@@ -185,24 +185,17 @@ A healthy pair is silent. If one stops syncing, an all-day warning appears in
 the destination calendar, and clears the moment the pair recovers.
 """ + COMMON_TAIL
 
-NEW_COMMON = """Send times, and a request page you can turn on.
+NEW_COMMON = """Your AskWhen.me request page is now free.
 
-SEND TIMES — "When are you free?" One tap gives you your next three free times
-as a line of text, ready to paste into a message. Worked out on your device;
-nothing leaves it. Also a Shortcuts action and a Siri phrase.
+If you have Calendar Mirror, one AskWhen.me page is yours at no cost: turn it
+on from the Request page row and it is live, with no subscription and no
+trial to run out. It stays free for as long as you use it.
 
-ASKWHEN.ME — a separate subscription you can turn on from inside the app: a
-page where people ask you for a time, served by a server that never sees your
-calendar. Your device chooses what to offer and answers every request; nothing
-lands in your calendar until it has looked. Off by default; no network request
-of any kind until you turn on AskWhen.me. Free for 90 days.
+Your own name on askwhen.me and your own domain are now a step cheaper, and
+upgrading keeps the page and the link you already handed out.
 
-Setup asks nothing: turn it on, and the first thing you see is your own week.
-Send times can carry a personal link — one use, one week, no email
-confirmation, accepted for you if the time is still clear.
-
-Also: the settings read the way Apple's do, and the key to your page follows
-your iCloud Keychain to a new device.
+AskWhen.me is still off by default, and the app makes no network request of
+any kind until you turn it on.
 """
 
 # Notes for App Review. One text for both platforms; the reviewer reads it
@@ -216,25 +209,25 @@ network. New in 2.0: "Send times" — one tap gives the next three free times
 as a line of text via the share sheet, worked out on the device. Also a
 Shortcuts action ("Send Times") and a Siri phrase.
 
-2. ASKWHEN.ME (auto-renewable subscription, off by default). A request page
-at askwhen.me/<page> where other people can ask the owner for a time. It is
-a separate product turned on from inside the app; until the owner turns it
-on, the app makes no network request of any kind — the first request of the
-app's life is StoreKit loading the price, on the screen that shows it.
+2. ASKWHEN.ME (off by default). A request page at askwhen.me/<page> where
+other people can ask the owner for a time. It is a separate product turned
+on from inside the app; until the owner turns it on, the app makes no
+network request of any kind — the first request of the app's life is
+StoreKit loading the prices, on the screen that shows them. One page is free
+with the app (verified from Apple's AppTransaction); the two upgrades are
+auto-renewable subscriptions.
 
-WHERE THE IN-APP PURCHASES ARE. All three subscriptions are bought on one
-screen, reached like this from a fresh install:
+WHERE THE IN-APP PURCHASES ARE. On one screen, reached from a fresh install:
   1. Open the app; allow Calendar access (Full Access) when asked.
   2. On the main list, scroll to the "Request page" row and tap it.
   3. Tap Continue on the sheet that explains AskWhen.me.
   4. "What people see": type any name in the Name field at the top (the
      page needs one), then tap "See what it costs" at the bottom.
-  5. The offer screen loads the three products from the App Store:
-     - AskWhen.me Request Page, me.askwhen.page.annual, $19.99/yr with a
-       3-month free trial — "Start the free trial"
-     - AskWhen.me Custom Subdomain, me.askwhen.subdomain.annual, $34.99/yr
+  5. The offer screen loads both products from the App Store:
+     - AskWhen.me Request Page — free, "Turn on my page" (no purchase)
+     - AskWhen.me Custom Subdomain, me.askwhen.subdomain.annual, $19.99/yr
        — "Subscribe" under it
-     - AskWhen.me Custom Domain, me.askwhen.domain.annual, $69.99/yr
+     - AskWhen.me Custom Domain, me.askwhen.domain.annual, $34.99/yr
        — "Subscribe" under it
      "Restore Purchases" is at the bottom of the same screen.
   6. Under Custom Subdomain, a name field and "Check it" ask our server
@@ -244,16 +237,16 @@ screen, reached like this from a fresh install:
 Once a page exists, both higher tiers are also offered as upgrades on that
 page's screen, under "Your own name on AskWhen.me" and "A domain you own".
 On the Mac the row is last in the window's sidebar; the steps inside are the
-same. All three are one subscription group, so a higher tier bought after a
-lower one is an upgrade, prorated by Apple.
+same. One subscription group: Domain after Subdomain is a prorated upgrade,
+and either bought after the free page keeps that page's address.
 
 SANDBOX TESTER: in the demo-account fields of this submission. Sign into it
 under Settings › App Store › Sandbox Account on the test device before
 purchasing.
 
-What happens after a purchase: the app sends Apple's signed transaction to
-our server, which verifies it offline against Apple's root and creates the
-page. The screen then shows the page's address (askwhen.me/xxxxxx). To see
+What happens next: the app sends Apple's signed transaction (or app
+transaction) to our server, which verifies it offline against Apple's root
+and creates the page. The screen then shows the page's address (askwhen.me/xxxxxx). To see
 the whole loop: open that address in Safari, pick a time, enter a name and
 an email you can read, and confirm from the email that arrives (from
 no-reply@askwhen.me). The request then appears in the app under "Waiting for
