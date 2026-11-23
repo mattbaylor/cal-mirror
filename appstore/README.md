@@ -49,6 +49,45 @@ capture runs past 60% of the height. Hand-entered in App Store Connect:
 | Purchase requirement | Yes — AskWhen.me is a subscription |
 | Deep link | `calendarmirror://send-times` — the scheme is registered from iOS build 18 (#181). App Store Connect refuses a bare `calendarmirror://` as invalid; it wants a path. The app routes no paths, so any path opens the main list |
 
+## Creative assets: product page header and search result
+
+`creative/header-{en,de}.png` and `creative/search-{en,de}.png`, from
+`tools/gencreative.py`. These are the creative assets Apple added at WWDC26:
+a header above the product page, and an image that replaces the screenshots
+in a search result. They show on iOS 27 and iPadOS 27 and later only, so the
+Mac listing has none.
+
+| File | Placement | Size | Ratio |
+|---|---|---|---|
+| `header-en.png`, `header-de.png` | Product page header | 3840 x 1646 | 21:9 |
+| `search-en.png`, `search-de.png` | Search results | 3840 x 2560 (the maximum; minimum is 1920 x 1280) | 3:2 |
+
+PNG, RGB, no alpha channel (Apple refuses transparency on these). Apple also
+accepts JPEG for both, and a 16:9 "universal" 5244 x 2950 PNG that can serve
+both placements; neither is made here.
+
+What they say: Calendar Mirror only — mirroring one calendar into another, on
+the device, with no account and no server. No prices, no AskWhen.me and no
+URLs: Apple's asset guidance excludes pricing and website URLs, and
+AskWhen.me's pricing is about to change. Everything must also suit a 4+
+rating whatever the app's own rating.
+
+One image per language serves both appearances. App Store Connect has no
+light/dark slot for creative assets, so each sits on the screenshots'
+deep-blue gradient, which holds on a white page and a black one. Neither
+carries the app icon, because the store draws the icon, name and Get button
+right beside both placements. The header keeps its words in the middle (the
+21:9 frame may be cropped at the sides); the calendar cards either side can
+lose their outer edges. The search image's capture is the English list screen
+in both languages, because the app is English-only.
+
+Uploaded by hand to the app's **Asset Library** in App Store Connect, one
+localization each for English and German. They need
+no app version: a standalone asset is reviewed against the latest version, and
+once it is approved it can be put in the Header or Search Results placement
+of the live version and published without a new submission. Check the
+placement's Preview (iPhone and iPad, light and dark) before publishing.
+
 ## Listing fields — how to fill them in, and what to avoid
 
 Paste these from `metadata/<platform>/`. Two of the fields carry traps.
@@ -192,6 +231,7 @@ in the same change as the copy that starts making the claim.
 cd appstore/tools
 python3 genstore.py     # screenshots -> ../screenshots/<platform>/NN.png
 python3 genmeta.py      # metadata    -> ../metadata/<platform>/<field>.txt
+python3 gencreative.py  # header and search images -> ../creative/
 ```
 
 `genmeta.py` prints the character count against Apple's limit for every field and
